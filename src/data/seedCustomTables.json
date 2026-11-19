@@ -1,0 +1,420 @@
+[
+  {
+    "id": "table-users-export",
+    "name": "משתמשי פלטפורמה (Users Export)",
+    "description": "ייבוא משתמשים ולקוחות רשומים במערכת ClaimAI עם מעקב תביעות וימי ניסיון",
+    "category": "users",
+    "columns": [
+      {
+        "key": "id",
+        "label": "מזהה משתמש",
+        "type": "string"
+      },
+      {
+        "key": "fullName",
+        "label": "שם מלא",
+        "type": "string"
+      },
+      {
+        "key": "email",
+        "label": "אימייל",
+        "type": "email"
+      },
+      {
+        "key": "companyName",
+        "label": "שם חברה / עסק",
+        "type": "string"
+      },
+      {
+        "key": "companyPhone",
+        "label": "טלפון חברה",
+        "type": "phone"
+      },
+      {
+        "key": "caseCount",
+        "label": "תביעות במערכת",
+        "type": "number"
+      },
+      {
+        "key": "plan",
+        "label": "מסלול",
+        "type": "badge"
+      },
+      {
+        "key": "role",
+        "label": "תפקיד",
+        "type": "string"
+      },
+      {
+        "key": "authMethod",
+        "label": "שיטת התחברות",
+        "type": "string"
+      },
+      {
+        "key": "trialDaysLeft",
+        "label": "ימי ניסיון שנותרו",
+        "type": "number"
+      },
+      {
+        "key": "createdAt",
+        "label": "תאריך הצטרפות",
+        "type": "date"
+      }
+    ],
+    "rows": [
+      {
+        "id": "6afd94d75dd6a3f64675b8d1",
+        "fullName": "שילת אסתר קדם",
+        "email": "eti@on-ins.com",
+        "companyName": "עפר נוסנבאום",
+        "companyPhone": "035377182",
+        "caseCount": 1,
+        "plan": "Free Trial",
+        "role": "משתמש",
+        "authMethod": "outlook",
+        "trialDaysLeft": 0,
+        "createdAt": "18.11.2026"
+      },
+      {
+        "id": "6afd6d185dd6a3f6466eee8e",
+        "fullName": "muhamad Naamneh",
+        "email": "adv_naamneh@hotmail.com",
+        "companyName": "נעאמנה ושות'",
+        "companyPhone": "046081563",
+        "caseCount": 0,
+        "plan": "Free Trial",
+        "role": "משתמש",
+        "authMethod": "outlook",
+        "trialDaysLeft": 0,
+        "createdAt": "18.11.2026"
+      },
+      {
+        "id": "6afc153cc60c1f658ea96791",
+        "fullName": "שיינדי גרינבויים",
+        "email": "office4@5377177.co.il",
+        "companyName": "",
+        "companyPhone": "",
+        "caseCount": 0,
+        "plan": "Free Trial",
+        "role": "חבר צוות",
+        "authMethod": "local",
+        "trialDaysLeft": 0,
+        "createdAt": "17.11.2026"
+      },
+      {
+        "id": "6afc150cc60c1f658ea9615a",
+        "fullName": "נטע גורביץ",
+        "email": "office6@5377177.co.il",
+        "companyName": "",
+        "companyPhone": "",
+        "caseCount": 0,
+        "plan": "Free Trial",
+        "role": "חבר צוות",
+        "authMethod": "local",
+        "trialDaysLeft": 0,
+        "createdAt": "17.11.2026"
+      },
+      {
+        "id": "6afc14c3c60c1f658ea952fd",
+        "fullName": "rachel deshen",
+        "email": "rachel@5377177.co.il",
+        "companyName": "",
+        "companyPhone": "",
+        "caseCount": 0,
+        "plan": "Free Trial",
+        "role": "חבר צוות",
+        "authMethod": "outlook",
+        "trialDaysLeft": 0,
+        "createdAt": "17.11.2026"
+      },
+      {
+        "id": "6afc0a69c60c1f658ea7aa5d",
+        "fullName": "Yossi Refaeli",
+        "email": "yr@5377177.co.il",
+        "companyName": "רפאלי ביטוחים",
+        "companyPhone": "0528789000",
+        "caseCount": 6,
+        "plan": "Free Trial",
+        "role": "משתמש",
+        "authMethod": "outlook",
+        "trialDaysLeft": 0,
+        "createdAt": "17.11.2026"
+      },
+      {
+        "id": "6afc034fc60c1f658ea6a168",
+        "fullName": "רנדה עתמה",
+        "email": "randa.tviot@gmail.com",
+        "companyName": "בחוס יוסף",
+        "companyPhone": "0525779577",
+        "caseCount": 0,
+        "plan": "Free Trial",
+        "role": "משתמש",
+        "authMethod": "gmail",
+        "trialDaysLeft": 0,
+        "createdAt": "17.11.2026"
+      },
+      {
+        "id": "6afb3e0bc60c1f658e95c93d",
+        "fullName": "יוני זבולון",
+        "email": "nedac42278@jysnk.com",
+        "companyName": "joni",
+        "companyPhone": "0507987373",
+        "caseCount": 0,
+        "plan": "Free Trial",
+        "role": "משתמש",
+        "authMethod": "local",
+        "trialDaysLeft": 0,
+        "createdAt": "16.11.2026"
+      },
+      {
+        "id": "6afb3881c60c1f658e9528da",
+        "fullName": "John Tushar",
+        "email": "GoodyTushar@outlook.com",
+        "companyName": "Yaris&Maikl",
+        "companyPhone": "42424242",
+        "caseCount": 0,
+        "plan": "Free Trial",
+        "role": "משתמש",
+        "authMethod": "local",
+        "trialDaysLeft": 0,
+        "createdAt": "16.11.2026"
+      },
+      {
+        "id": "6afabff6c60c1f658e7f99fc",
+        "fullName": "מורן אלקיים",
+        "email": "moran@may-ins.co.il",
+        "companyName": "בת שבע גרשון",
+        "companyPhone": "0522696101",
+        "caseCount": 2,
+        "plan": "Free Trial",
+        "role": "משתמש",
+        "authMethod": "outlook",
+        "trialDaysLeft": 0,
+        "createdAt": "16.11.2026"
+      },
+      {
+        "id": "6af970d0c60c1f658e6363e5",
+        "fullName": "תביעות- קלופמן ביטוחים",
+        "email": "malkabrlinsky@gmail.com",
+        "companyName": "י. קלופמן ביטוחים בעמ",
+        "companyPhone": "0533186474",
+        "caseCount": 1,
+        "plan": "Free Trial",
+        "role": "משתמש",
+        "authMethod": "gmail",
+        "trialDaysLeft": 0,
+        "createdAt": "15.11.2026"
+      },
+      {
+        "id": "6af42c1625a74b01f1dbbd21",
+        "fullName": "chen guy",
+        "email": "chenguyezra@gmail.com",
+        "companyName": "",
+        "companyPhone": "",
+        "caseCount": 0,
+        "plan": "Free Trial",
+        "role": "משתמש",
+        "authMethod": "gmail",
+        "trialDaysLeft": 0,
+        "createdAt": "11.11.2026"
+      },
+      {
+        "id": "6af3143d30d737ce3a3d5804",
+        "fullName": "Rami H",
+        "email": "ramidnr@gmail.com",
+        "companyName": "הללי רמי ביטוחים",
+        "companyPhone": "0737770678",
+        "caseCount": 1,
+        "plan": "Free Trial",
+        "role": "משתמש",
+        "authMethod": "gmail",
+        "trialDaysLeft": 0,
+        "createdAt": "10.11.2026"
+      },
+      {
+        "id": "6af2c08230d737ce3a2b81b1",
+        "fullName": "רחלי אסרף",
+        "email": "racheli@aslaw.net",
+        "companyName": "",
+        "companyPhone": "",
+        "caseCount": 0,
+        "plan": "Free Trial",
+        "role": "חבר צוות",
+        "authMethod": "local",
+        "trialDaysLeft": 0,
+        "createdAt": "10.11.2026"
+      },
+      {
+        "id": "6af2c05730d737ce3a2b7e12",
+        "fullName": "מרדכי אסרף",
+        "email": "tviotr@aslaw.net",
+        "companyName": "",
+        "companyPhone": "",
+        "caseCount": 0,
+        "plan": "Free Trial",
+        "role": "חבר צוות",
+        "authMethod": "local",
+        "trialDaysLeft": 0,
+        "createdAt": "10.11.2026"
+      },
+      {
+        "id": "6af17dca30d737ce3a118f44",
+        "fullName": "מירה בוכניק",
+        "email": "mira@yesa.co.il",
+        "companyName": "",
+        "companyPhone": "",
+        "caseCount": 0,
+        "plan": "Free Trial",
+        "role": "חבר צוות",
+        "authMethod": "local",
+        "trialDaysLeft": 0,
+        "createdAt": "9.11.2026"
+      },
+      {
+        "id": "6aeed36730d737ce3ada46e3",
+        "fullName": "Dalit Segall",
+        "email": "segallldalit@gmail.com",
+        "companyName": "",
+        "companyPhone": "",
+        "caseCount": 0,
+        "plan": "Free Trial",
+        "role": "חבר צוות",
+        "authMethod": "gmail",
+        "trialDaysLeft": 0,
+        "createdAt": "7.11.2026"
+      },
+      {
+        "id": "6aec55388c0b35cddd2e1cf9",
+        "fullName": "אתי לוי",
+        "email": "etil@haiman-ins.co.il",
+        "companyName": "",
+        "companyPhone": "",
+        "caseCount": 0,
+        "plan": "Free Trial",
+        "role": "חבר צוות",
+        "authMethod": "outlook",
+        "trialDaysLeft": 0,
+        "createdAt": "5.11.2026"
+      },
+      {
+        "id": "6aeb2381035f5fd421bb2c4f",
+        "fullName": "עופר נחמן",
+        "email": "ofer@nachman-biz.co.il",
+        "companyName": "נחמן שירותי ביטוח",
+        "companyPhone": "088591915",
+        "caseCount": 2,
+        "plan": "Free Trial",
+        "role": "משתמש",
+        "authMethod": "local",
+        "trialDaysLeft": 0,
+        "createdAt": "4.11.2026"
+      },
+      {
+        "id": "6aeb0781035f5fd421b6dc30",
+        "fullName": "כפיר היימן",
+        "email": "kfir@haiman-ins.co.il",
+        "companyName": "היימן סוכנות לביטוח",
+        "companyPhone": "048783100",
+        "caseCount": 1,
+        "plan": "Free Trial",
+        "role": "משתמש",
+        "authMethod": "outlook",
+        "trialDaysLeft": 0,
+        "createdAt": "4.11.2026"
+      },
+      {
+        "id": "6ae9f4cc035f5fd421a0036d",
+        "fullName": "גיא לוי עזר",
+        "email": "bgn.2008@gmail.com",
+        "companyName": "ביג גיא ביטוח ופיננסים",
+        "companyPhone": "0522492453",
+        "caseCount": 0,
+        "plan": "Free Trial",
+        "role": "משתמש",
+        "authMethod": "gmail",
+        "trialDaysLeft": 0,
+        "createdAt": "3.11.2026"
+      },
+      {
+        "id": "6ae8a02a96226c28ab6ebbea",
+        "fullName": "לירז רייך",
+        "email": "tipulliraz@gmail.com",
+        "companyName": "לירז רייך",
+        "companyPhone": "0772181818",
+        "caseCount": 0,
+        "plan": "Free Trial",
+        "role": "משתמש",
+        "authMethod": "local",
+        "trialDaysLeft": 0,
+        "createdAt": "2.11.2026"
+      },
+      {
+        "id": "6ae8484e96226c28ab622514",
+        "fullName": "מיטל אומיד",
+        "email": "meitalo@elifim.co.il",
+        "companyName": "מיטל אומיד",
+        "companyPhone": "0507729966",
+        "caseCount": 2,
+        "plan": "Free Trial",
+        "role": "משתמש",
+        "authMethod": "outlook",
+        "trialDaysLeft": 0,
+        "createdAt": "2.11.2026"
+      },
+      {
+        "id": "6ae7120a96226c28ab45a84d",
+        "fullName": "Shany Arubas",
+        "email": "shanyarubas17@gmail.com",
+        "companyName": "",
+        "companyPhone": "",
+        "caseCount": 0,
+        "plan": "Free Trial",
+        "role": "משתמש",
+        "authMethod": "gmail",
+        "trialDaysLeft": 0,
+        "createdAt": "1.11.2026"
+      },
+      {
+        "id": "6ae3fe186b6f7ac3ae24ffbd",
+        "fullName": "איש הפח",
+        "email": "ishhapach26@gmail.com",
+        "companyName": "איש הפח",
+        "companyPhone": "0552647036",
+        "caseCount": 0,
+        "plan": "Free Trial",
+        "role": "משתמש",
+        "authMethod": "gmail",
+        "trialDaysLeft": 0,
+        "createdAt": "30.10.2026"
+      },
+      {
+        "id": "6ae351fa6b6f7ac3ae1cefc9",
+        "fullName": "לבקוביץ חיים",
+        "email": "haim@h-i-l.net",
+        "companyName": "חיים לבקו",
+        "companyPhone": "0469615919",
+        "caseCount": 0,
+        "plan": "Free Trial",
+        "role": "משתמש",
+        "authMethod": "outlook",
+        "trialDaysLeft": 0,
+        "createdAt": "29.10.2026"
+      },
+      {
+        "id": "6ae34fd56b6f7ac3ae1cb6b5",
+        "fullName": "",
+        "email": "aharon@pvi.co.il",
+        "companyName": "חיים לבקו",
+        "companyPhone": "0469615919",
+        "caseCount": 0,
+        "plan": "Free Trial",
+        "role": "משתמש",
+        "authMethod": "outlook",
+        "trialDaysLeft": 0,
+        "createdAt": "29.10.2026"
+      }
+    ],
+    "createdAt": "2026-11-19",
+    "updatedAt": "2026-11-19"
+  }
+]

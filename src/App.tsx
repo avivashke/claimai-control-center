@@ -8,21 +8,29 @@ import { NewClientModal } from './components/CRM/NewClientModal';
 import { ProductHub } from './components/Product/ProductHub';
 import { TicketDrawer } from './components/Product/TicketDrawer';
 import { NewTicketModal } from './components/Product/NewTicketModal';
+import { CustomTableView } from './components/CustomTables/CustomTableView';
+import { AITableStudio } from './components/AITableStudio/AITableStudio';
 import { DatabaseSettings } from './components/DatabaseSettings';
 import { 
   initDatabase, 
   getClients, 
   saveClient, 
+  saveMultipleClients,
   getProductItems, 
-  saveProductItem 
+  saveProductItem,
+  getCustomTables,
+  saveCustomTable,
+  deleteCustomTable
 } from './services/db';
-import { Client, ProductItem, ProductStatus } from './types';
+import { Client, ProductItem, ProductStatus, CustomTable } from './types';
 import { ShieldCheck, Sparkles, CheckCircle2 } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [clients, setClients] = useState<Client[]>([]);
   const [productItems, setProductItems] = useState<ProductItem[]>([]);
+  const [customTables, setCustomTables] = useState<CustomTable[]>([]);
+  const [selectedCustomTableId, setSelectedCustomTableId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
 
   // Search & Navigation
@@ -41,8 +49,13 @@ export const App: React.FC = () => {
     await initDatabase();
     const fetchedClients = await getClients();
     const fetchedProducts = await getProductItems();
+    const fetchedTables = await getCustomTables();
     setClients(fetchedClients);
     setProductItems(fetchedProducts);
+    setCustomTables(fetchedTables);
+    if (fetchedTables.length > 0) {
+      setSelectedCustomTableId(fetchedTables[0].id);
+    }
     setIsLoading(false);
   };
 
@@ -79,6 +92,11 @@ export const App: React.FC = () => {
     setSelectedClient(newClient);
   };
 
+  const handleSyncCustomRowsToCrm = async (newLeads: Client[]) => {
+    await saveMultipleClients(newLeads);
+    setClients(prev => [...newLeads, ...prev]);
+  };
+
   // Handlers for Product Items
   const handleUpdateTicketStatus = async (ticketId: string, newStatus: ProductStatus) => {
     const target = productItems.find(p => p.id === ticketId);
@@ -110,6 +128,30 @@ export const App: React.FC = () => {
   const handleOpenNewTicketForClient = (client: Client) => {
     setNewTicketDefaultClient(client.company || client.name);
     setIsNewTicketOpen(true);
+  };
+
+  // Handlers for Custom Tables
+  const handleTableCreated = async (newTable: CustomTable) => {
+    await saveCustomTable(newTable);
+    setCustomTables(prev => [newTable, ...prev]);
+    setSelectedCustomTableId(newTable.id);
+    setActiveTab('custom_tables');
+  };
+
+  const handleUpdateTable = async (updatedTable: CustomTable) => {
+    await saveCustomTable(updatedTable);
+    setCustomTables(prev => prev.map(t => t.id === updatedTable.id ? updatedTable : t));
+  };
+
+  const handleDeleteTable = async (tableId: string) => {
+    await deleteCustomTable(tableId);
+    setCustomTables(prev => prev.filter(t => t.id !== tableId));
+    if (selectedCustomTableId === tableId) {
+      const remaining = customTables.filter(t => t.id !== tableId);
+      if (remaining.length > 0) {
+        setSelectedCustomTableId(remaining[0].id);
+      }
+    }
   };
 
   // Calculate Next IDs
@@ -170,10 +212,12 @@ export const App: React.FC = () => {
           setNewTicketDefaultClient('');
           setIsNewTicketOpen(true);
         }}
+        onOpenAiStudio={() => setActiveTab('ai_studio')}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         clientsCount={clients.length}
         productCount={productItems.length}
+        customTablesCount={customTables.length}
         attentionCount={attentionCount}
       />
 
@@ -190,7 +234,11 @@ export const App: React.FC = () => {
               <Overview
                 clients={clients}
                 productItems={productItems}
-                onNavigateToTab={setActiveTab}
+                onNavigateToTab={(tab) => {
+                  if (tab === 'crm') setActiveTab('crm');
+                  else if (tab === 'product') setActiveTab('product');
+                  else if (tab === 'myday') setActiveTab('myday');
+                }}
                 onSelectClient={setSelectedClient}
                 onSelectTicket={setSelectedTicket}
               />
@@ -226,6 +274,25 @@ export const App: React.FC = () => {
               />
             )}
 
+            {activeTab === 'custom_tables' && (
+              <CustomTableView
+                tables={customTables}
+                selectedTableId={selectedCustomTableId}
+                onSelectTable={setSelectedCustomTableId}
+                onOpenAiStudio={() => setActiveTab('ai_studio')}
+                onUpdateTable={handleUpdateTable}
+                onDeleteTable={handleDeleteTable}
+              />
+            )}
+
+            {activeTab === 'ai_studio' && (
+              <AITableStudio
+                onTableCreated={handleTableCreated}
+                onSyncToCrm={handleSyncCustomRowsToCrm}
+                existingCrmLength={clients.length}
+              />
+            )}
+
             {activeTab === 'database' && (
               <DatabaseSettings
                 clientsCount={clients.length}
@@ -243,7 +310,7 @@ export const App: React.FC = () => {
           <div className="flex items-center gap-2">
             <span className="font-bold text-white">ClaimAI Control Center</span>
             <span>·</span>
-            <span>מוכן להעלאה ב-Netlify</span>
+            <span>כולל סטודיו AI ליצירת טבלאות</span>
             <span className="inline-flex items-center gap-1 text-emerald-400 font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px]">
               <CheckCircle2 className="w-3 h-3" />
               Build Ready
@@ -252,13 +319,20 @@ export const App: React.FC = () => {
 
           <div className="flex items-center gap-4">
             <button
+              onClick={() => setActiveTab('ai_studio')}
+              className="text-purple-400 hover:text-purple-300 font-semibold transition-colors"
+            >
+              סטודיו AI
+            </button>
+            <span>·</span>
+            <button
               onClick={() => setActiveTab('database')}
               className="hover:text-blue-400 transition-colors"
             >
               הגדרות מסד נתונים
             </button>
             <span>·</span>
-            <span className="font-mono text-slate-500">v1.0.0</span>
+            <span className="font-mono text-slate-500">v1.2.0</span>
           </div>
         </div>
       </footer>

@@ -111,3 +111,29 @@ export interface DatabaseConfig {
   isConnected?: boolean;
   lastSynced?: string;
 }
+
+// Custom Tables and AI Types
+export type ColumnType = 'string' | 'number' | 'date' | 'email' | 'phone' | 'badge' | 'boolean';
+
+export interface CustomTableColumn {
+  key: string;
+  label: string;
+  type: ColumnType;
+}
+
+export interface CustomTable {
+  id: string;
+  name: string;
+  description?: string;
+  category?: string;
+  columns: CustomTableColumn[];
+  rows: Record<string, any>[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AIConfig {
+  provider: 'builtin' | 'gemini' | 'openai';
+  apiKey?: string;
+  model?: string;
+}

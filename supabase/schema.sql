@@ -106,3 +106,18 @@ CREATE POLICY "Allow all for crm_clients" ON crm_clients FOR ALL USING (true) WI
 CREATE POLICY "Allow all for crm_contacts" ON crm_contacts FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for crm_activities" ON crm_activities FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for product_items" ON product_items FOR ALL USING (true) WITH CHECK (true);
+
+-- 5. Dynamic Custom Tables (created via Generative AI Studio)
+CREATE TABLE IF NOT EXISTS custom_tables (
+    id VARCHAR(64) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    category VARCHAR(100),
+    columns JSONB NOT NULL,
+    rows JSONB NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE custom_tables ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all for custom_tables" ON custom_tables FOR ALL USING (true) WITH CHECK (true);

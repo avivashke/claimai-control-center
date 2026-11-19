@@ -8,20 +8,23 @@ import {
   Plus, 
   Search,
   Sparkles,
-  ShieldCheck
+  ShieldCheck,
+  Table as TableIcon
 } from 'lucide-react';
 
-export type TabType = 'overview' | 'crm' | 'myday' | 'product' | 'database';
+export type TabType = 'overview' | 'crm' | 'myday' | 'product' | 'custom_tables' | 'ai_studio' | 'database';
 
 interface HeaderProps {
   activeTab: TabType;
   onTabChange: (tab: TabType) => void;
   onNewClient: () => void;
   onNewTicket: () => void;
+  onOpenAiStudio: () => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
   clientsCount: number;
   productCount: number;
+  customTablesCount: number;
   attentionCount: number;
 }
 
@@ -30,10 +33,12 @@ export const Header: React.FC<HeaderProps> = ({
   onTabChange,
   onNewClient,
   onNewTicket,
+  onOpenAiStudio,
   searchQuery,
   onSearchChange,
   clientsCount,
   productCount,
+  customTablesCount,
   attentionCount
 }) => {
   return (
@@ -56,7 +61,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-400 hidden sm:block">
-                שליטה וניהול לקוחות, מפת מוצר ובאגים
+                שליטה בלקוחות, מפת מוצר וסטודיו AI לטבלאות
               </p>
             </div>
           </div>
@@ -86,17 +91,24 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Action Buttons */}
           <div className="flex items-center gap-2">
             <button
+              onClick={onOpenAiStudio}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs sm:text-sm font-bold shadow-md shadow-purple-600/30 transition-all hover:scale-[1.02]"
+              title="זריקת נתוני לקוחות ויצירת טבלה בעזרת AI"
+            >
+              <Sparkles className="w-4 h-4 text-amber-300" />
+              <span>סטודיו AI</span>
+            </button>
+            <button
               onClick={onNewClient}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-medium shadow-md shadow-blue-600/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-medium shadow-md shadow-blue-600/30 transition-all hover:scale-[1.02]"
             >
               <Plus className="w-4 h-4" />
               <span>ליד חדש</span>
             </button>
             <button
               onClick={onNewTicket}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-slate-200 text-xs sm:text-sm font-medium transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs sm:text-sm font-medium transition-all hidden sm:flex"
             >
-              <Sparkles className="w-4 h-4 text-amber-400" />
               <span>פנייה למוצר</span>
             </button>
           </div>
@@ -157,10 +169,39 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <Layers className="w-4 h-4 text-emerald-400" />
-            <span>מוצר ומסירה (Product & Delivery)</span>
+            <span>מוצר ומסירה</span>
             <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-slate-800 text-slate-300 font-mono">
               {productCount}
             </span>
+          </button>
+
+          {/* New Custom Tables Tab */}
+          <button
+            onClick={() => onTabChange('custom_tables')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
+              activeTab === 'custom_tables'
+                ? 'bg-purple-600/20 text-purple-300 border border-purple-500/40'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+            }`}
+          >
+            <TableIcon className="w-4 h-4 text-purple-400" />
+            <span>טבלאות מותאמות & AI</span>
+            <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-purple-950 text-purple-300 border border-purple-700/50 font-mono">
+              {customTablesCount}
+            </span>
+          </button>
+
+          {/* AI Studio Tab */}
+          <button
+            onClick={() => onTabChange('ai_studio')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold whitespace-nowrap transition-all ${
+              activeTab === 'ai_studio'
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-400/40'
+                : 'text-amber-400/80 hover:text-amber-300 hover:bg-slate-800/60'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>סטודיו AI</span>
           </button>
 
           <button
