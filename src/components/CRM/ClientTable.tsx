@@ -352,9 +352,20 @@ export const ClientTable: React.FC<ClientTableProps> = ({
 
                       {/* Last Note */}
                       <td className="py-3 px-4 max-w-xs">
-                        <p className="text-xs text-slate-300 line-clamp-2" title={client.lastNote || ''}>
-                          {client.lastNote || <span className="text-slate-600">אין הערות רשומות</span>}
-                        </p>
+                        {client.lastNote ? (
+                          <div className="space-y-0.5" title={client.lastNote}>
+                            {client.lastNote.includes('👤') && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+                                {client.lastNote.match(/👤\s*([^|\n]+)/)?.[0] || '👤 הערה חתומה'}
+                              </span>
+                            )}
+                            <p className="text-xs text-slate-300 line-clamp-2">
+                              {client.lastNote.replace(/^[0-9/:\s|]+👤[^|]+\|\s*/, '')}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-600">אין הערות רשומות</span>
+                        )}
                       </td>
 
                       {/* Actions */}

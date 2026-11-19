@@ -123,9 +123,16 @@ export const MyDay: React.FC<MyDayProps> = ({
                   </div>
 
                   {client.lastNote && (
-                    <p className="text-xs text-slate-300 line-clamp-2 bg-slate-900/60 p-2 rounded-lg border border-slate-800">
-                      {client.lastNote}
-                    </p>
+                    <div className="text-xs bg-slate-900/60 p-2 rounded-lg border border-slate-800 space-y-1">
+                      {client.lastNote.includes('👤') && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+                          {client.lastNote.match(/👤\s*([^|\n]+)/)?.[0] || '👤 הערה חתומה'}
+                        </span>
+                      )}
+                      <p className="text-slate-300 line-clamp-2">
+                        {client.lastNote.replace(/^[0-9/:\s|]+👤[^|]+\|\s*/, '')}
+                      </p>
+                    </div>
                   )}
 
                   <div className="pt-2 flex items-center justify-between border-t border-slate-800/80 text-xs">
@@ -202,9 +209,16 @@ export const MyDay: React.FC<MyDayProps> = ({
                 </div>
 
                 {client.lastNote && (
-                  <p className="text-xs text-slate-300 line-clamp-2 bg-slate-900/60 p-2 rounded-lg border border-slate-800">
-                    {client.lastNote}
-                  </p>
+                  <div className="text-xs bg-slate-900/60 p-2 rounded-lg border border-slate-800 space-y-1">
+                    {client.lastNote.includes('👤') && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+                        {client.lastNote.match(/👤\s*([^|\n]+)/)?.[0] || '👤 הערה חתומה'}
+                      </span>
+                    )}
+                    <p className="text-slate-300 line-clamp-2">
+                      {client.lastNote.replace(/^[0-9/:\s|]+👤[^|]+\|\s*/, '')}
+                    </p>
+                  </div>
                 )}
 
                 <div className="pt-2 flex items-center justify-between border-t border-slate-800/80 text-xs">
@@ -280,9 +294,16 @@ export const MyDay: React.FC<MyDayProps> = ({
                 </div>
 
                 {client.lastNote && (
-                  <p className="text-xs text-slate-300 line-clamp-2 bg-slate-900/60 p-2 rounded-lg border border-slate-800">
-                    {client.lastNote}
-                  </p>
+                  <div className="text-xs bg-slate-900/60 p-2 rounded-lg border border-slate-800 space-y-1">
+                    {client.lastNote.includes('👤') && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+                        {client.lastNote.match(/👤\s*([^|\n]+)/)?.[0] || '👤 הערה חתומה'}
+                      </span>
+                    )}
+                    <p className="text-slate-300 line-clamp-2">
+                      {client.lastNote.replace(/^[0-9/:\s|]+👤[^|]+\|\s*/, '')}
+                    </p>
+                  </div>
                 )}
 
                 <div className="pt-2 flex items-center justify-between border-t border-slate-800/80 text-xs">

@@ -1,21 +1,25 @@
 import React, { useState } from 'react';
 import { X, UserPlus, Building, Phone, Mail, FileText } from 'lucide-react';
-import { Client } from '../../types';
+import { Client, AppUser } from '../../types';
 
 interface NewClientModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAddClient: (client: Client) => void;
   nextId: string;
+  currentUser?: AppUser;
 }
 
 export const NewClientModal: React.FC<NewClientModalProps> = ({
   isOpen,
   onClose,
   onAddClient,
-  nextId
+  nextId,
+  currentUser
 }) => {
   if (!isOpen) return null;
+
+  const authorName = currentUser?.name || currentUser?.email?.split('@')[0] || 'משתמש מערכת';
 
   const [formData, setFormData] = useState<Partial<Client>>({
     id: nextId,
@@ -36,6 +40,10 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
       return;
     }
 
+    const now = new Date();
+    const dateStr = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
+    const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
     const newClient: Client = {
       id: formData.id || nextId,
       name: formData.name || '',
@@ -46,7 +54,7 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
       email: formData.email || '',
       monthlyClaims: formData.monthlyClaims || '',
       createdDate: new Date().toISOString().slice(0, 10),
-      lastNote: formData.lastNote ? `${new Date().toLocaleDateString('he-IL')} | ${formData.lastNote}` : ''
+      lastNote: formData.lastNote ? `${dateStr} | ${timeStr} | 👤 ${authorName} | ${formData.lastNote.trim()}` : ''
     };
 
     onAddClient(newClient);

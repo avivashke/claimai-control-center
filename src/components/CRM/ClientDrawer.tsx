@@ -19,7 +19,7 @@ import {
   TrendingUp,
   FileText
 } from 'lucide-react';
-import { Client, ProductItem } from '../../types';
+import { Client, ProductItem, AppUser } from '../../types';
 
 interface ClientDrawerProps {
   client: Client | null;
@@ -29,6 +29,7 @@ interface ClientDrawerProps {
   onOpenTicket: (ticket: ProductItem) => void;
   onNewTicketForClient: (client: Client) => void;
   canEdit?: boolean;
+  currentUser?: AppUser;
 }
 
 const ALL_STATUSES = [
@@ -50,13 +51,16 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
   linkedTickets,
   onOpenTicket,
   onNewTicketForClient,
-  canEdit = true
+  canEdit = true,
+  currentUser
 }) => {
   if (!client) return null;
 
   const [formData, setFormData] = useState<Client>({ ...client });
   const [newNote, setNewNote] = useState('');
   const [isSavedAlert, setIsSavedAlert] = useState(false);
+
+  const authorName = currentUser?.name || currentUser?.email?.split('@')[0] || 'משתמש מערכת';
 
   const formatWhatsAppNumber = (phone?: string) => {
     if (!phone) return null;
@@ -74,7 +78,7 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
       const now = new Date();
       const dateStr = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
       const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-      const noteEntry = `${dateStr} | ${timeStr} | ${newNote.trim()}`;
+      const noteEntry = `${dateStr} | ${timeStr} | 👤 ${authorName} | ${newNote.trim()}`;
       updatedNotes = updatedNotes ? `${noteEntry}\n---\n${updatedNotes}` : noteEntry;
     }
 
@@ -82,7 +86,7 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
       ...formData,
       lastNote: updatedNotes,
       updatedDate: new Date().toISOString().slice(0, 10),
-      updatedBy: 'Aviv'
+      updatedBy: authorName
     };
 
     onSaveClient(updated);
@@ -377,9 +381,16 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
             {/* Add Note Input */}
             {canEdit ? (
               <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs text-slate-400 pb-0.5">
+                  <span className="font-medium text-slate-300">הוספת הערה או סיכום שיחה</span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/25 text-blue-300 text-[11px] font-semibold">
+                    <User className="w-3 h-3 text-blue-400" />
+                    <span>נכתב ע״י: <strong className="text-white font-bold">{authorName}</strong></span>
+                  </span>
+                </div>
                 <textarea
                   rows={3}
-                  placeholder="הוסף הערה או סיכום שיחה חדש... (יישמר עם חותמת תאריך ושעה)"
+                  placeholder={`הוסף הערה או סיכום שיחה חדש... (יישמר אוטומטית עם חתימת שמך: ${authorName})`}
                   value={newNote}
                   onChange={(e) => setNewNote(e.target.value)}
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -389,9 +400,9 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
                     type="button"
                     onClick={handleSave}
                     disabled={!newNote.trim()}
-                    className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:hover:bg-blue-600 text-white text-xs font-semibold transition-all"
+                    className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:hover:bg-blue-600 text-white text-xs font-semibold shadow-md shadow-blue-600/20 transition-all"
                   >
-                    הוסף הערה ליומן
+                    הוסף הערה חתומה ליומן
                   </button>
                 </div>
               </div>
@@ -402,13 +413,47 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
             )}
 
             {/* Existing Notes Display */}
-            <div className="mt-4 pt-3 border-t border-slate-800 space-y-2 max-h-60 overflow-y-auto">
+            <div className="mt-4 pt-3 border-t border-slate-800 space-y-2.5 max-h-64 overflow-y-auto">
               {formData.lastNote ? (
-                formData.lastNote.split('\n---\n').map((noteChunk, idx) => (
-                  <div key={idx} className="p-2.5 rounded-lg bg-slate-800/80 border border-slate-750 text-xs text-slate-200 leading-relaxed whitespace-pre-wrap">
-                    {noteChunk}
-                  </div>
-                ))
+                formData.lastNote.split('\n---\n').map((noteChunk, idx) => {
+                  const parts = noteChunk.split(' | ');
+                  const hasDate = parts.length >= 2 && parts[0].includes('/');
+                  const hasAuthor = parts.length >= 4 || (parts.length >= 3 && parts[2].includes('👤'));
+
+                  let dateInfo = '';
+                  let authorBadge = '';
+                  let content = noteChunk;
+
+                  if (hasAuthor) {
+                    dateInfo = `${parts[0]} ${parts[1]}`;
+                    authorBadge = parts[2].replace('👤', '').trim();
+                    content = parts.slice(3).join(' | ');
+                  } else if (hasDate && parts.length >= 3) {
+                    dateInfo = `${parts[0]} ${parts[1]}`;
+                    content = parts.slice(2).join(' | ');
+                  }
+
+                  return (
+                    <div key={idx} className="p-3 rounded-xl bg-slate-800/80 border border-slate-750 text-xs leading-relaxed space-y-1.5 shadow-sm">
+                      {(dateInfo || authorBadge) && (
+                        <div className="flex items-center justify-between text-[11px] pb-1.5 border-b border-slate-700/60">
+                          {authorBadge ? (
+                            <span className="inline-flex items-center gap-1 font-bold text-blue-300 bg-blue-500/10 px-2 py-0.5 rounded-md border border-blue-500/20">
+                              <User className="w-3 h-3 text-blue-400" />
+                              <span>{authorBadge}</span>
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 text-[10px]">ייבוא מ-Google Sheets</span>
+                          )}
+                          {dateInfo && (
+                            <span className="font-mono text-slate-400 text-[10px]">{dateInfo}</span>
+                          )}
+                        </div>
+                      )}
+                      <p className="text-slate-200 whitespace-pre-wrap">{content}</p>
+                    </div>
+                  );
+                })
               ) : (
                 <p className="text-xs text-slate-500 text-center py-2">אין היסטוריית הערות עדיין</p>
               )}

@@ -472,6 +472,7 @@ export const App: React.FC = () => {
         onOpenTicket={(ticket) => setSelectedTicket(ticket)}
         onNewTicketForClient={handleOpenNewTicketForClient}
         canEdit={canEditCrm}
+        currentUser={currentUser}
       />
 
       <TicketDrawer
@@ -480,6 +481,7 @@ export const App: React.FC = () => {
         onSaveTicket={handleSaveTicket}
         clients={clients}
         onOpenClientProfile={(c) => setSelectedClient(c)}
+        currentUser={currentUser}
       />
 
       {canEditCrm && (
@@ -488,6 +490,7 @@ export const App: React.FC = () => {
           onClose={() => setIsNewClientOpen(false)}
           onAddClient={handleAddClient}
           nextId={nextClientId}
+          currentUser={currentUser}
         />
       )}
 
