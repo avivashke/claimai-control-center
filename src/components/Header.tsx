@@ -34,6 +34,8 @@ interface HeaderProps {
   currentUser: AppUser;
   onOpenSwitchUser: () => void;
   onLogout: () => void;
+  supabaseConnected?: boolean | null;
+  blobsConnected?: boolean | null;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -50,7 +52,9 @@ export const Header: React.FC<HeaderProps> = ({
   attentionCount,
   currentUser,
   onOpenSwitchUser,
-  onLogout
+  onLogout,
+  supabaseConnected,
+  blobsConnected
 }) => {
   const isViewer = currentUser.role === 'viewer';
   const isAdmin = currentUser.role === 'admin' || currentUser.permissions.canManageUsers;
@@ -135,6 +139,32 @@ export const Header: React.FC<HeaderProps> = ({
                 <span>מצב צפייה בלבד</span>
               </span>
             )}
+
+            {/* Live Database & Blobs Status Indicator */}
+            <button
+              onClick={() => onTabChange('database')}
+              className="hidden lg:flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-750 border border-slate-700/80 text-xs transition-all hover:border-slate-600"
+              title="לחץ לפתיחת הגדרות ובדיקת תקינות מסד נתונים ו-Netlify Blobs"
+            >
+              <div className="flex items-center gap-1.5">
+                <span className={`w-2 h-2 rounded-full ${
+                  supabaseConnected === true ? 'bg-emerald-400 shadow-sm shadow-emerald-400/50' :
+                  supabaseConnected === false ? 'bg-rose-400' : 'bg-amber-400 animate-pulse'
+                }`} />
+                <span className="text-[11px] font-semibold text-slate-300">
+                  {supabaseConnected === true ? 'Supabase פעיל' : supabaseConnected === false ? 'Supabase מנותק' : 'Supabase בודק...'}
+                </span>
+              </div>
+              <span className="text-slate-600">|</span>
+              <div className="flex items-center gap-1.5">
+                <span className={`w-2 h-2 rounded-full ${
+                  blobsConnected === true ? 'bg-blue-400 shadow-sm shadow-blue-400/50' : 'bg-emerald-400'
+                }`} />
+                <span className="text-[11px] font-semibold text-slate-300">
+                  {blobsConnected === true ? 'Blobs פעיל' : 'Blobs מוכן'}
+                </span>
+              </div>
+            </button>
 
             {/* Google User Profile Menu */}
             <UserMenu
@@ -247,7 +277,10 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Database className="w-4 h-4 text-purple-400" />
             <span>דאטה-בייס ונטיפי</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span className={`w-2 h-2 rounded-full ${
+              supabaseConnected === true ? 'bg-emerald-400 shadow-sm shadow-emerald-400/50' :
+              supabaseConnected === false ? 'bg-rose-400' : 'bg-emerald-400 animate-pulse'
+            }`}></span>
           </button>
         </div>
       </div>

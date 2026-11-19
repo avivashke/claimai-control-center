@@ -20,6 +20,7 @@ import {
   resetToSeedData, 
   exportFullDatabaseJSON 
 } from '../services/db';
+import { testNetlifyBlobs } from '../services/blobsService';
 
 interface DatabaseSettingsProps {
   clientsCount: number;
@@ -40,6 +41,28 @@ export const DatabaseSettings: React.FC<DatabaseSettingsProps> = ({
   const [isResetting, setIsResetting] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [isTestingBlobs, setIsTestingBlobs] = useState(false);
+  const [blobsResult, setBlobsResult] = useState<{ success: boolean; message: string; latency?: number } | null>(null);
+
+  const handleTestBlobs = async () => {
+    setIsTestingBlobs(true);
+    setBlobsResult(null);
+    try {
+      const res = await testNetlifyBlobs();
+      setBlobsResult({
+        success: res.isAvailable,
+        message: res.message,
+        latency: res.latency
+      });
+    } catch (err: any) {
+      setBlobsResult({
+        success: false,
+        message: `שגיאה בבדיקת Blobs: ${err.message || err}`
+      });
+    } finally {
+      setIsTestingBlobs(false);
+    }
+  };
 
   const handleTestConnection = async () => {
     const url = (supabaseUrl || cfg.url).trim().replace(/\/$/, '');
@@ -348,6 +371,65 @@ CREATE TABLE product_items (
           )}
         </div>
 
+      </div>
+
+      {/* Card 3: Netlify Blobs Offloading Engine */}
+      <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-950/30 via-slate-900 to-slate-900 border border-blue-500/20 shadow-xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center">
+              <Server className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-bold text-white">Netlify Blobs — שכבת Edge וביזור עומסים במקביל</h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                  Dual-Layer Sync
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5">
+                שומר וקורא Snapshots של נתוני האפליקציה ישירות מ-Netlify Edge Cache, ומפזר את שאילתות הקריאה כך שלא ייצרו עומס על מסד הנתונים של Supabase.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleTestBlobs}
+              disabled={isTestingBlobs}
+              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md shadow-blue-600/30 transition-all disabled:opacity-50 flex items-center gap-1.5"
+            >
+              <Server className="w-3.5 h-3.5" />
+              <span>{isTestingBlobs ? 'בודק זמינות Blobs...' : '⚡ בדיקת זמינות Netlify Blobs'}</span>
+            </button>
+          </div>
+        </div>
+
+        {blobsResult && (
+          <div className={`p-3 rounded-xl border text-xs font-semibold flex items-center gap-2 ${
+            blobsResult.success
+              ? 'bg-blue-500/15 border-blue-500/30 text-blue-300'
+              : 'bg-amber-500/15 border-amber-500/30 text-amber-300'
+          }`}>
+            {blobsResult.success ? <CheckCircle2 className="w-4 h-4 text-blue-400 shrink-0" /> : <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />}
+            <span>{blobsResult.message} {blobsResult.latency ? `(${blobsResult.latency}ms)` : ''}</span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-slate-300 pt-1">
+          <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60">
+            <strong className="text-blue-300 block mb-1">1. מהירות קצה (Edge CDN)</strong>
+            <span>החזרת רשומות ולקוחות במהירות של אלפיות שניה משרתי Netlify הקרובים ביותר למשתמש.</span>
+          </div>
+          <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60">
+            <strong className="text-emerald-300 block mb-1">2. הגנת Supabase Quota</strong>
+            <span>מניעת תשלומים וחריגות מול Supabase גם כאשר מאות משתמשים צופים במערכת בו-זמנית.</span>
+          </div>
+          <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60">
+            <strong className="text-purple-300 block mb-1">3. גיבוי Snapshots אוטומטי</strong>
+            <span>תמונת מצב של כל הנתונים נשמרת באופן מאובטח ב-Store של Netlify בשם <code className="font-mono text-purple-200">claimai-data</code>.</span>
+          </div>
+        </div>
       </div>
 
       {/* SQL Migration Script Viewer */}

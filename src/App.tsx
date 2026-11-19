@@ -13,6 +13,7 @@ import { AITableStudio } from './components/AITableStudio/AITableStudio';
 import { AdminPortal } from './components/Admin/AdminPortal';
 import { GoogleLoginModal } from './components/Auth/GoogleLoginModal';
 import { DatabaseSettings } from './components/DatabaseSettings';
+import { FloatingAIChat } from './components/AI/FloatingAIChat';
 import { 
   initDatabase, 
   getClients, 
@@ -25,8 +26,10 @@ import {
   deleteCustomTable,
   getAppUsers,
   saveAppUser,
-  deleteAppUser
+  deleteAppUser,
+  checkSupabaseHealth
 } from './services/db';
+import { testNetlifyBlobs } from './services/blobsService';
 import { 
   getCurrentUser, 
   setCurrentUser, 
@@ -47,6 +50,26 @@ export const App: React.FC = () => {
   const [currentUser, setCurrentUserState] = useState<AppUser>(getCurrentUser());
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Cloud Database & Netlify Blobs Status
+  const [supabaseConnected, setSupabaseConnected] = useState<boolean | null>(null);
+  const [blobsConnected, setBlobsConnected] = useState<boolean | null>(null);
+
+  const checkConnectionStatuses = async () => {
+    try {
+      const supa = await checkSupabaseHealth();
+      setSupabaseConnected(supa.isConnected);
+    } catch {
+      setSupabaseConnected(false);
+    }
+
+    try {
+      const blob = await testNetlifyBlobs();
+      setBlobsConnected(blob.isAvailable);
+    } catch {
+      setBlobsConnected(false);
+    }
+  };
 
   // Search & Navigation
   const [searchQuery, setSearchQuery] = useState('');
@@ -74,6 +97,7 @@ export const App: React.FC = () => {
       setSelectedCustomTableId(fetchedTables[0].id);
     }
     setIsLoading(false);
+    checkConnectionStatuses();
   };
 
   useEffect(() => {
@@ -292,6 +316,8 @@ export const App: React.FC = () => {
         currentUser={currentUser}
         onOpenSwitchUser={() => setIsLoginModalOpen(true)}
         onLogout={handleLogout}
+        supabaseConnected={supabaseConnected}
+        blobsConnected={blobsConnected}
       />
 
       {/* Main Content Area */}
@@ -470,6 +496,19 @@ export const App: React.FC = () => {
         onClose={() => setIsLoginModalOpen(false)}
         onLogin={handleLogin}
         availableUsers={users}
+      />
+
+      {/* Floating AI Copilot & Data Navigator */}
+      <FloatingAIChat
+        clients={clients}
+        productItems={productItems}
+        customTables={customTables}
+        currentUser={currentUser}
+        onSelectClient={(c) => setSelectedClient(c)}
+        onSelectTicket={(t) => setSelectedTicket(t)}
+        onNavigateTab={(tab) => setActiveTab(tab)}
+        supabaseConnected={Boolean(supabaseConnected)}
+        blobsConnected={Boolean(blobsConnected)}
       />
 
     </div>

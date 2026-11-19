@@ -64,6 +64,34 @@ if (currentCfg.isConfigured) {
   }
 }
 
+export const checkSupabaseHealth = async (): Promise<{ isConnected: boolean; message: string; latency?: number }> => {
+  const cfg = getSupabaseConfig();
+  if (!cfg.isConfigured) {
+    return { isConnected: false, message: 'Supabase לא הוגדר (חסר URL או Anon Key)' };
+  }
+  const start = performance.now();
+  try {
+    const url = cfg.url.trim().replace(/\/$/, '');
+    const res = await fetch(`${url}/rest/v1/crm_clients?select=count&limit=1`, {
+      method: 'GET',
+      headers: {
+        apikey: cfg.key,
+        Authorization: `Bearer ${cfg.key}`
+      }
+    });
+    const latency = Math.round(performance.now() - start);
+    if (res.ok || res.status === 404) {
+      return { isConnected: true, message: 'Supabase פעיל ומגיב בהצלחה!', latency };
+    }
+    if (res.status === 401) {
+      return { isConnected: false, message: 'שגיאת הזדהות (401 - Anon Key אינו תואם)' };
+    }
+    return { isConnected: false, message: `קוד שגיאה מהשרת: ${res.status}` };
+  } catch (err: any) {
+    return { isConnected: false, message: `שגיאת רשת/חיבור: ${err.message || err}` };
+  }
+};
+
 // Database initialization & seeding
 export const initDatabase = async (): Promise<{ clientsCount: number; productCount: number; tablesCount: number; usersCount: number }> => {
   try {
