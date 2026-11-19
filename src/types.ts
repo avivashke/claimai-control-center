@@ -160,3 +160,5 @@ export interface AppUser {
   lastLogin?: string;
   assignedClients?: string[];
 }
+
+export type AppTheme = 'dark' | 'light' | 'sepia';

@@ -37,10 +37,20 @@ import {
   logoutUser, 
   hasPermission 
 } from './services/authService';
-import { Client, ProductItem, ProductStatus, CustomTable, AppUser } from './types';
+import { Client, ProductItem, ProductStatus, CustomTable, AppUser, AppTheme } from './types';
 import { ShieldCheck, Sparkles, CheckCircle2 } from 'lucide-react';
 
 export const App: React.FC = () => {
+  const [theme, setTheme] = useState<AppTheme>(() => {
+    return (localStorage.getItem('claimai_theme') as AppTheme) || 'dark';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    document.body.setAttribute('data-theme', theme);
+    localStorage.setItem('claimai_theme', theme);
+  }, [theme]);
+
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [clients, setClients] = useState<Client[]>([]);
   const [productItems, setProductItems] = useState<ProductItem[]>([]);
@@ -318,6 +328,8 @@ export const App: React.FC = () => {
         onLogout={handleLogout}
         supabaseConnected={supabaseConnected}
         blobsConnected={blobsConnected}
+        theme={theme}
+        onThemeChange={setTheme}
       />
 
       {/* Main Content Area */}

@@ -11,6 +11,7 @@ body {
   font-family: 'Assistant', 'Rubik', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: #0b0f19;
   color: #f1f5f9;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 /* Custom scrollbars */
@@ -38,4 +39,241 @@ body {
 
 .glow-card {
   box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+}
+
+/* ========================================================
+   LIGHT THEME OVERRIDES ([data-theme="light"])
+   Clean, modern, crisp daylight interface
+   ======================================================== */
+[data-theme="light"] {
+  color-scheme: light;
+}
+
+[data-theme="light"] body,
+[data-theme="light"] .min-h-screen,
+[data-theme="light"] .bg-\[\#0b0f19\] {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .bg-slate-900\/95,
+[data-theme="light"] .bg-slate-900\/90,
+[data-theme="light"] .bg-slate-900\/80,
+[data-theme="light"] .bg-slate-900\/60,
+[data-theme="light"] .bg-slate-900,
+[data-theme="light"] .bg-slate-950 {
+  background-color: #ffffff !important;
+}
+
+[data-theme="light"] .bg-slate-800,
+[data-theme="light"] .bg-slate-800\/90,
+[data-theme="light"] .bg-slate-800\/80,
+[data-theme="light"] .bg-slate-800\/60,
+[data-theme="light"] .bg-slate-800\/50,
+[data-theme="light"] .bg-slate-800\/40 {
+  background-color: #f1f5f9 !important;
+}
+
+[data-theme="light"] .hover\:bg-slate-800:hover,
+[data-theme="light"] .hover\:bg-slate-800\/60:hover,
+[data-theme="light"] .hover\:bg-slate-750:hover {
+  background-color: #e2e8f0 !important;
+}
+
+[data-theme="light"] .border-slate-800,
+[data-theme="light"] .border-slate-800\/80,
+[data-theme="light"] .border-slate-700,
+[data-theme="light"] .border-slate-700\/80,
+[data-theme="light"] .border-slate-750 {
+  border-color: #e2e8f0 !important;
+}
+
+[data-theme="light"] .text-white,
+[data-theme="light"] .text-slate-100,
+[data-theme="light"] .text-slate-200 {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .text-slate-300,
+[data-theme="light"] .text-slate-400 {
+  color: #475569 !important;
+}
+
+[data-theme="light"] .text-slate-500 {
+  color: #64748b !important;
+}
+
+/* Light Mode Inputs, Selects & Textareas */
+[data-theme="light"] input:not([type="checkbox"]):not([type="radio"]),
+[data-theme="light"] select,
+[data-theme="light"] textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+[data-theme="light"] input::placeholder,
+[data-theme="light"] textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Light Mode Table Styling */
+[data-theme="light"] tr:hover td {
+  background-color: #f8fafc !important;
+}
+
+[data-theme="light"] th {
+  background-color: #f1f5f9 !important;
+  color: #334155 !important;
+  border-color: #e2e8f0 !important;
+}
+
+[data-theme="light"] td {
+  border-color: #f1f5f9 !important;
+}
+
+/* Light Mode Shadows & Scrollbar */
+[data-theme="light"] .shadow-xl,
+[data-theme="light"] .shadow-2xl,
+[data-theme="light"] .shadow-lg {
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.07), 0 8px 10px -6px rgba(15, 23, 42, 0.04) !important;
+}
+
+[data-theme="light"] ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+
+/* ========================================================
+   SEPIA THEME OVERRIDES ([data-theme="sepia"])
+   Warm ivory & parchment tones, calming & easy on the eyes
+   ======================================================== */
+[data-theme="sepia"] {
+  color-scheme: light;
+}
+
+[data-theme="sepia"] body,
+[data-theme="sepia"] .min-h-screen,
+[data-theme="sepia"] .bg-\[\#0b0f19\] {
+  background-color: #f5efe6 !important;
+  color: #382c1e !important;
+}
+
+[data-theme="sepia"] .bg-slate-900\/95,
+[data-theme="sepia"] .bg-slate-900\/90,
+[data-theme="sepia"] .bg-slate-900\/80,
+[data-theme="sepia"] .bg-slate-900\/60,
+[data-theme="sepia"] .bg-slate-900,
+[data-theme="sepia"] .bg-slate-950 {
+  background-color: #fdfaf4 !important;
+}
+
+[data-theme="sepia"] .bg-slate-800,
+[data-theme="sepia"] .bg-slate-800\/90,
+[data-theme="sepia"] .bg-slate-800\/80,
+[data-theme="sepia"] .bg-slate-800\/60,
+[data-theme="sepia"] .bg-slate-800\/50,
+[data-theme="sepia"] .bg-slate-800\/40 {
+  background-color: #ece3d4 !important;
+}
+
+[data-theme="sepia"] .hover\:bg-slate-800:hover,
+[data-theme="sepia"] .hover\:bg-slate-800\/60:hover,
+[data-theme="sepia"] .hover\:bg-slate-750:hover {
+  background-color: #dfd4c1 !important;
+}
+
+[data-theme="sepia"] .border-slate-800,
+[data-theme="sepia"] .border-slate-800\/80,
+[data-theme="sepia"] .border-slate-700,
+[data-theme="sepia"] .border-slate-700\/80,
+[data-theme="sepia"] .border-slate-750 {
+  border-color: #e2d7c5 !important;
+}
+
+[data-theme="sepia"] .text-white,
+[data-theme="sepia"] .text-slate-100,
+[data-theme="sepia"] .text-slate-200 {
+  color: #382c1e !important;
+}
+
+[data-theme="sepia"] .text-slate-300,
+[data-theme="sepia"] .text-slate-400 {
+  color: #68543f !important;
+}
+
+[data-theme="sepia"] .text-slate-500 {
+  color: #8c765e !important;
+}
+
+/* Sepia Mode Inputs, Selects & Textareas */
+[data-theme="sepia"] input:not([type="checkbox"]):not([type="radio"]),
+[data-theme="sepia"] select,
+[data-theme="sepia"] textarea {
+  background-color: #fcf8f0 !important;
+  color: #382c1e !important;
+  border-color: #d9ccb9 !important;
+}
+
+[data-theme="sepia"] input::placeholder,
+[data-theme="sepia"] textarea::placeholder {
+  color: #a4917a !important;
+}
+
+/* Sepia Mode Table Styling */
+[data-theme="sepia"] tr:hover td {
+  background-color: #f7f1e5 !important;
+}
+
+[data-theme="sepia"] th {
+  background-color: #ece3d4 !important;
+  color: #4a3a29 !important;
+  border-color: #dfd3c0 !important;
+}
+
+[data-theme="sepia"] td {
+  border-color: #ece2d2 !important;
+}
+
+/* Sepia Mode Shadows & Scrollbars */
+[data-theme="sepia"] .shadow-xl,
+[data-theme="sepia"] .shadow-2xl,
+[data-theme="sepia"] .shadow-lg {
+  box-shadow: 0 10px 25px -5px rgba(56, 44, 30, 0.08), 0 8px 10px -6px rgba(56, 44, 30, 0.05) !important;
+}
+
+[data-theme="sepia"] ::-webkit-scrollbar-track {
+  background: #ece3d4;
+}
+[data-theme="sepia"] ::-webkit-scrollbar-thumb {
+  background: #cbbca8;
+}
+
+/* Polished Badges and Action Buttons */
+[data-theme="sepia"] .bg-purple-500\/20 {
+  background-color: rgba(180, 83, 9, 0.12) !important;
+  color: #78350f !important;
+  border-color: rgba(180, 83, 9, 0.28) !important;
+}
+
+[data-theme="sepia"] .bg-blue-500\/20,
+[data-theme="sepia"] .bg-blue-600\/20 {
+  background-color: rgba(30, 64, 175, 0.1) !important;
+  color: #1e3a8a !important;
+  border-color: rgba(30, 64, 175, 0.25) !important;
+}
+
+[data-theme="light"] .bg-purple-500\/20 {
+  background-color: #f3e8ff !important;
+  color: #7e22ce !important;
+  border-color: #d8b4fe !important;
+}
+
+[data-theme="light"] .bg-blue-500\/20,
+[data-theme="light"] .bg-blue-600\/20 {
+  background-color: #dbeafe !important;
+  color: #1d4ed8 !important;
+  border-color: #93c5fd !important;
 }

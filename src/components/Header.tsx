@@ -12,9 +12,12 @@ import {
   Table as TableIcon,
   ShieldAlert,
   Lock,
-  Eye
+  Eye,
+  Moon,
+  Sun,
+  Coffee
 } from 'lucide-react';
-import { AppUser } from '../types';
+import { AppUser, AppTheme } from '../types';
 import { UserMenu } from './Auth/UserMenu';
 
 export type TabType = 'overview' | 'crm' | 'myday' | 'product' | 'custom_tables' | 'ai_studio' | 'admin' | 'database';
@@ -36,6 +39,8 @@ interface HeaderProps {
   onLogout: () => void;
   supabaseConnected?: boolean | null;
   blobsConnected?: boolean | null;
+  theme: AppTheme;
+  onThemeChange: (theme: AppTheme) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -54,7 +59,9 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSwitchUser,
   onLogout,
   supabaseConnected,
-  blobsConnected
+  blobsConnected,
+  theme,
+  onThemeChange
 }) => {
   const isViewer = currentUser.role === 'viewer';
   const isAdmin = currentUser.role === 'admin' || currentUser.permissions.canManageUsers;
@@ -165,6 +172,51 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               </div>
             </button>
+
+            {/* Theme Selector (Dark, Light, Sepia) */}
+            <div className="flex items-center p-0.5 rounded-lg bg-slate-800/90 border border-slate-700/80">
+              <button
+                type="button"
+                onClick={() => onThemeChange('dark')}
+                title="מצב כהה (Dark Slate)"
+                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold transition-all ${
+                  theme === 'dark'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Moon className="w-3.5 h-3.5" />
+                <span className="hidden xl:inline text-[11px]">כהה</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onThemeChange('light')}
+                title="מצב בהיר (Clean Light)"
+                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold transition-all ${
+                  theme === 'light'
+                    ? 'bg-amber-500 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Sun className="w-3.5 h-3.5" />
+                <span className="hidden xl:inline text-[11px]">בהיר</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onThemeChange('sepia')}
+                title="מצב ספיה מעודן ונעים לעין (Warm Sepia)"
+                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold transition-all ${
+                  theme === 'sepia'
+                    ? 'bg-amber-700 text-amber-50 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Coffee className="w-3.5 h-3.5" />
+                <span className="hidden xl:inline text-[11px]">ספיה</span>
+              </button>
+            </div>
 
             {/* Google User Profile Menu */}
             <UserMenu
