@@ -38,6 +38,64 @@ export const DatabaseSettings: React.FC<DatabaseSettingsProps> = ({
   const [isSaved, setIsSaved] = useState(false);
   const [copiedSql, setCopiedSql] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const handleTestConnection = async () => {
+    const url = (supabaseUrl || cfg.url).trim().replace(/\/$/, '');
+    const key = (supabaseKey || cfg.key).trim();
+
+    if (!url || !key) {
+      setTestResult({
+        success: false,
+        message: 'נא להזין גם Project URL וגם Anon API Key לבדיקה'
+      });
+      return;
+    }
+
+    setIsTesting(true);
+    setTestResult(null);
+
+    try {
+      const res = await fetch(`${url}/rest/v1/crm_clients?select=count&limit=1`, {
+        method: 'GET',
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`
+        }
+      });
+
+      if (res.ok) {
+        setTestResult({
+          success: true,
+          message: 'החיבור ל-Supabase פעיל ותקין לחלוטין! (HTTP 200 OK)'
+        });
+      } else if (res.status === 401) {
+        setTestResult({
+          success: false,
+          message: 'שגיאת הזדהות (401): ה-Anon API Key אינו תואם לפרויקט.'
+        });
+      } else if (res.status === 404) {
+        setTestResult({
+          success: true,
+          message: 'החיבור ל-Supabase עובד! (יש לוודא שהרצת את טבלאות ה-SQL ב-Editor)'
+        });
+      } else {
+        const errText = await res.text();
+        setTestResult({
+          success: false,
+          message: `השרת החזיר קוד ${res.status}: ${errText}`
+        });
+      }
+    } catch (err: any) {
+      setTestResult({
+        success: false,
+        message: `שגיאת רשת/חיבור: ${err.message || err}`
+      });
+    } finally {
+      setIsTesting(false);
+    }
+  };
 
   const handleSaveSupabase = () => {
     initSupabase(supabaseUrl.trim(), supabaseKey.trim());
@@ -254,13 +312,22 @@ CREATE TABLE product_items (
             </div>
           </div>
 
-          <div className="flex items-center justify-between pt-1">
+          <div className="flex items-center gap-2 pt-1 flex-wrap">
             <button
               onClick={handleSaveSupabase}
               className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold shadow-md transition-all"
             >
               שמור הגדרות ענן
             </button>
+
+            <button
+              onClick={handleTestConnection}
+              disabled={isTesting}
+              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-200 text-xs font-semibold transition-all disabled:opacity-50"
+            >
+              {isTesting ? 'בודק חיבור בזמן אמת...' : '⚡ בדוק חיבור עכשיו'}
+            </button>
+
             {isSaved && (
               <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1">
                 <CheckCircle2 className="w-3.5 h-3.5" />
@@ -268,6 +335,17 @@ CREATE TABLE product_items (
               </span>
             )}
           </div>
+
+          {testResult && (
+            <div className={`p-3 rounded-xl border text-xs font-semibold flex items-center gap-2 ${
+              testResult.success
+                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+                : 'bg-rose-500/15 border-rose-500/30 text-rose-300'
+            }`}>
+              {testResult.success ? <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" /> : <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />}
+              <span>{testResult.message}</span>
+            </div>
+          )}
         </div>
 
       </div>
