@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS crm_clients (
     name VARCHAR(255),
     company VARCHAR(255),
     business_type VARCHAR(100),
-    status VARCHAR(100) DEFAULT '1'st Lead',
+    status VARCHAR(100) DEFAULT '1''st Lead',
     sub_status VARCHAR(100),
     assigned_to VARCHAR(100),
     group_name VARCHAR(100),
