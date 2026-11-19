@@ -1,0 +1,1037 @@
+[
+  {
+    "clientId": "L14",
+    "clientName": "רונן נאמן · מרתון רעננה, נאמן מוטורס כפר סבא",
+    "name": "אפרת",
+    "role": "צוות",
+    "phone": "0538910097",
+    "email": "",
+    "note": "אפרת - 0538910097"
+  },
+  {
+    "clientId": "L101",
+    "clientName": "רנדה (יוסף בחוס · סוכנות יוסף בחוס",
+    "name": "רנדה",
+    "role": "צוות",
+    "phone": "0525779577",
+    "email": "",
+    "note": "רנדה 0525779577"
+  },
+  {
+    "clientId": "L137",
+    "clientName": "יוסף קלופמן (יפה ) · סוכנות יוסף קלופמן",
+    "name": "יפה",
+    "role": "צוות",
+    "phone": "0533186474",
+    "email": "",
+    "note": "יפה 0533186474"
+  },
+  {
+    "clientId": "L144",
+    "clientName": "ערן בר · סוכן ביטוח / סוכנות ביטוח",
+    "name": "שיר מזכירה",
+    "role": "צוות",
+    "phone": "0524493579",
+    "email": "",
+    "note": "שיר מזכירה - 0524493579"
+  },
+  {
+    "clientId": "L147",
+    "clientName": "עאקף אלאסד · מוסך / מרכז שירות",
+    "name": "נטלי מסלקת",
+    "role": "צוות",
+    "phone": "0549790434",
+    "email": "",
+    "note": "0549790434 נטלי מסלקת"
+  },
+  {
+    "clientId": "L154",
+    "clientName": "Alex Azizov · מוסך אלפא",
+    "name": "מאיה מסלקת",
+    "role": "צוות",
+    "phone": "0523717920",
+    "email": "",
+    "note": "מאיה מסלקת - 0523717920"
+  },
+  {
+    "clientId": "L801",
+    "clientName": "Ofer Nussenbaum עופר נוסנבאום ·",
+    "name": "אתי פקידה",
+    "role": "צוות",
+    "phone": "035377182",
+    "email": "",
+    "note": "אתי פקידה - 035377182"
+  },
+  {
+    "clientId": "L1221",
+    "clientName": "מרתון תביעות · מרכז שירות מרתון רעננה",
+    "name": "אפרת ליאורה 0527451184",
+    "role": "צוות",
+    "phone": "0538910097",
+    "email": "",
+    "note": "אפרת - 0538910097  ליאורה - 0527451184"
+  },
+  {
+    "clientId": "L3",
+    "clientName": "ליאור לוי · גלדיס פחחות וצבע בע\"מ",
+    "name": "Lior Levi",
+    "role": "אחר",
+    "phone": "0506810094",
+    "email": "lior.levi73@gmail.com",
+    "note": "שורה 123 במקור"
+  },
+  {
+    "clientId": "L9",
+    "clientName": "מור בן שושן · בן שושן סוכנות לביטוח בע״מ",
+    "name": "tviot ben shoshan",
+    "role": "אחר",
+    "phone": "039300358",
+    "email": "tviot@benshoshan.co.il",
+    "note": "שורה 1817 במקור"
+  },
+  {
+    "clientId": "L12",
+    "clientName": "Anat Segev ·",
+    "name": "ענת",
+    "role": "אחר",
+    "phone": "0522366050",
+    "email": "",
+    "note": "שורה 1673 במקור"
+  },
+  {
+    "clientId": "L15",
+    "clientName": "Batsheva Gershon · מאי סוכנות לביטוח",
+    "name": "בת-שבע גרשון",
+    "role": "אחר",
+    "phone": "0522696101",
+    "email": "b@may-ins.co.il",
+    "note": "שורה 34 במקור"
+  },
+  {
+    "clientId": "L15",
+    "clientName": "Batsheva Gershon · מאי סוכנות לביטוח",
+    "name": "Batsheva Gershon בת שבע גרשון",
+    "role": "אחר",
+    "phone": "0522696101",
+    "email": "b@may-ins.co.il",
+    "note": "שורה 1663 במקור"
+  },
+  {
+    "clientId": "L36",
+    "clientName": "פרח ששון · פיני רייך",
+    "name": "פרח ששון (פיני)",
+    "role": "אחר",
+    "phone": "",
+    "email": "perach@pinir.co.il",
+    "note": "שורה 1953 במקור"
+  },
+  {
+    "clientId": "L37",
+    "clientName": "הרשקוביץ כפיר · מוסך / מרכז שירות",
+    "name": "נסים יוסף",
+    "role": "אחר",
+    "phone": "0537629050",
+    "email": "",
+    "note": "שורה 177 במקור"
+  },
+  {
+    "clientId": "L40",
+    "clientName": "ליאת דניאל ·",
+    "name": "Liat Daniel",
+    "role": "אחר",
+    "phone": "0527752626",
+    "email": "",
+    "note": "שורה 631 במקור"
+  },
+  {
+    "clientId": "L41",
+    "clientName": "רוהאם הדיה · האדיה רוהאם, משרד עוכי דין",
+    "name": "משרד מאסטר",
+    "role": "אחר",
+    "phone": "0777660850",
+    "email": "office@master-sn.co.il",
+    "note": "שורה 596 במקור"
+  },
+  {
+    "clientId": "L41",
+    "clientName": "רוהאם הדיה · האדיה רוהאם, משרד עוכי דין",
+    "name": "רוהאם האדיה",
+    "role": "אחר",
+    "phone": "0777660850",
+    "email": "roham@hadye.co.il",
+    "note": "שורה 632 במקור"
+  },
+  {
+    "clientId": "L42",
+    "clientName": "רעות צורים ביטוחים · יהודה צורים סוכנות לביטוח",
+    "name": "רעות לם לם",
+    "role": "אחר",
+    "phone": "035608485",
+    "email": "REUT@ZURIM.CO.IL",
+    "note": "שורה 1704 במקור"
+  },
+  {
+    "clientId": "L50",
+    "clientName": "אהרן שעיה · בעלים של צי רכב",
+    "name": "אהרן",
+    "role": "אחר",
+    "phone": "0543004632",
+    "email": "",
+    "note": "שורה 1534 במקור"
+  },
+  {
+    "clientId": "L50",
+    "clientName": "אהרן שעיה · בעלים של צי רכב",
+    "name": "אהרן שי",
+    "role": "אחר",
+    "phone": "0543004632",
+    "email": "alextaxi125@gmail.com",
+    "note": "שורה 1693 במקור"
+  },
+  {
+    "clientId": "L52",
+    "clientName": "איימן אבו עקסה · עזאם עזיז",
+    "name": "איימן קליבר שמאים",
+    "role": "אחר",
+    "phone": "0524668110",
+    "email": "",
+    "note": "שורה 789 במקור"
+  },
+  {
+    "clientId": "L71",
+    "clientName": "Artyom Dadash · סוכן ביטוח / סוכנות ביטוח",
+    "name": "AD:86",
+    "role": "אחר",
+    "phone": "0542406420",
+    "email": "",
+    "note": "שורה 1025 במקור"
+  },
+  {
+    "clientId": "L75",
+    "clientName": "Bassam Daood רוזלין · סוכן ביטוח / סוכנות ביטוח",
+    "name": "Bassam Daood",
+    "role": "אחר",
+    "phone": "0544347800",
+    "email": "",
+    "note": "שורה 1644 במקור"
+  },
+  {
+    "clientId": "L76",
+    "clientName": "Miki Yor מיקי · סוכן ביטוח / סוכנות ביטוח",
+    "name": "miki miki",
+    "role": "אחר",
+    "phone": "0504060744",
+    "email": "miki410@gmail.com",
+    "note": "שורה 1962 במקור"
+  },
+  {
+    "clientId": "L77",
+    "clientName": "Elram Nefosi · אלרם סוכנות לביטוח",
+    "name": "אלרם",
+    "role": "אחר",
+    "phone": "0524043185",
+    "email": "",
+    "note": "שורה 615 במקור"
+  },
+  {
+    "clientId": "L105",
+    "clientName": "שלמה תם · סוכן ביטוח / סוכנות ביטוח",
+    "name": "shlomo שער הרחמים tamשלמה תם",
+    "role": "אחר",
+    "phone": "0523208077",
+    "email": "shlomotam10@gmail.com",
+    "note": "שורה 1968 במקור"
+  },
+  {
+    "clientId": "L106",
+    "clientName": "Amnon Hadary אמנון הדרי · משרד עורכי דין תביעות רכב",
+    "name": "Amnon Hadary",
+    "role": "אחר",
+    "phone": "0508366716",
+    "email": "",
+    "note": "שורה 746 במקור"
+  },
+  {
+    "clientId": "L111",
+    "clientName": "ליאת משטה רובינשטיין · שירות מוביל סוכנות",
+    "name": "liat",
+    "role": "אחר",
+    "phone": "0544433370",
+    "email": "liat@sherutmovil.co.il",
+    "note": "שורה 238 במקור"
+  },
+  {
+    "clientId": "L111",
+    "clientName": "ליאת משטה רובינשטיין · שירות מוביל סוכנות",
+    "name": "Liat Mashata Rubinstein",
+    "role": "אחר",
+    "phone": "0544433370",
+    "email": "liat@sherutmovil.com",
+    "note": "שורה 1945 במקור"
+  },
+  {
+    "clientId": "L112",
+    "clientName": "רחל פחימה · פינקל סוכנויות לביטוח",
+    "name": "לילך לוי פורת",
+    "role": "אחר",
+    "phone": "098628208",
+    "email": "lilac@finkel-ins.co.il",
+    "note": "שורה 325 במקור"
+  },
+  {
+    "clientId": "L118",
+    "clientName": "Sagiv · מאסטר ביט-וגנר -סוכנות לביטוח",
+    "name": "מעיין יקותיאל",
+    "role": "אחר",
+    "phone": "036519955",
+    "email": "maayan@Masterbit.co.il",
+    "note": "שורה 229 במקור"
+  },
+  {
+    "clientId": "L118",
+    "clientName": "Sagiv · מאסטר ביט-וגנר -סוכנות לביטוח",
+    "name": "Maayan",
+    "role": "אחר",
+    "phone": "",
+    "email": "maayan@Masterbit.co.il",
+    "note": "שורה 1732 במקור"
+  },
+  {
+    "clientId": "L123",
+    "clientName": "חני קרייסמן, עמית מנכ\"ל · מוסך תהילה בע\"מ",
+    "name": "חני קרייסמן",
+    "role": "אחר",
+    "phone": "0559749456",
+    "email": "chani6192@gmail.com",
+    "note": "שורה 1860 במקור"
+  },
+  {
+    "clientId": "L130",
+    "clientName": "טויוטה י.מ האתגר · מוסך",
+    "name": "דור בורגמן",
+    "role": "אחר",
+    "phone": "0509929979",
+    "email": "dor@toyota-haetgar.co.il",
+    "note": "שורה 1705 במקור"
+  },
+  {
+    "clientId": "L134",
+    "clientName": "מוסך נגה דלפק גל · מוסך נגה בעמ",
+    "name": "מוסך נגה דלפק",
+    "role": "אחר",
+    "phone": "048400468",
+    "email": "dalpak@noga-g.com",
+    "note": "שורה 1833 במקור"
+  },
+  {
+    "clientId": "L156",
+    "clientName": "Rami Halali · סוכן ביטוח / סוכנות ביטוח",
+    "name": "רמי הללי",
+    "role": "אחר",
+    "phone": "0544450879",
+    "email": "ramidnr@gmail.com",
+    "note": "שורה 223 במקור"
+  },
+  {
+    "clientId": "L181",
+    "clientName": "יהודה בוכניק · סוכן ביטוח / סוכנות ביטוח",
+    "name": "יהודה",
+    "role": "אחר",
+    "phone": "0505239574",
+    "email": "",
+    "note": "שורה 1170 במקור"
+  },
+  {
+    "clientId": "L182",
+    "clientName": "חיים לבקוביץ · ח.י.ל ביטוחים",
+    "name": "לבקוביץ חיים",
+    "role": "אחר",
+    "phone": "0469615919",
+    "email": "haim@h-i-l.net",
+    "note": "שורה 1959 במקור"
+  },
+  {
+    "clientId": "L183",
+    "clientName": "Yosef Miller · משרד עורכי דין תביעות רכב",
+    "name": "יוסף",
+    "role": "אחר",
+    "phone": "0507833266",
+    "email": "tviotlaw@gmail.com",
+    "note": "שורה 614 במקור"
+  },
+  {
+    "clientId": "L183",
+    "clientName": "Yosef Miller · משרד עורכי דין תביעות רכב",
+    "name": "תביעות צדי ג'",
+    "role": "אחר",
+    "phone": "0505955150",
+    "email": "tviotlaw@gmail.com",
+    "note": "שורה 1904 במקור"
+  },
+  {
+    "clientId": "L196",
+    "clientName": "שמשון משה מוסך · מוסך / מרכז שירות",
+    "name": "Shimshon Moshe",
+    "role": "אחר",
+    "phone": "0525162606",
+    "email": "",
+    "note": "שורה 1667 במקור"
+  },
+  {
+    "clientId": "L219",
+    "clientName": "עבדאללה נאסר אלדין · עבדאללה",
+    "name": "עבדאללה נאסראלדין",
+    "role": "אחר",
+    "phone": "0546664366",
+    "email": "054@6664366.co.il",
+    "note": "שורה 673 במקור"
+  },
+  {
+    "clientId": "L221",
+    "clientName": "קדמי עמית (מורן) · קדמי-סוכנות לביטוח בע''מ",
+    "name": "jenni stump",
+    "role": "אחר",
+    "phone": "0506791970",
+    "email": "amit@kedmi-ins.co.il",
+    "note": "שורה 575 במקור"
+  },
+  {
+    "clientId": "L226",
+    "clientName": "ilan iritz,, לימור ·",
+    "name": "Saimon Normatov",
+    "role": "אחר",
+    "phone": "0543337299",
+    "email": "iritz@idgins.com",
+    "note": "שורה 847 במקור"
+  },
+  {
+    "clientId": "L228",
+    "clientName": "פטריק · סחליה סהואני ושות' משרד עו\"ד",
+    "name": "Patrick Sahwani, Adv.",
+    "role": "אחר",
+    "phone": "0776687777",
+    "email": "patrick@sahlia-law.com",
+    "note": "שורה 1735 במקור"
+  },
+  {
+    "clientId": "L232",
+    "clientName": "מיטל דנגור · אשל",
+    "name": "מיטל יעקב",
+    "role": "אחר",
+    "phone": "0507709094",
+    "email": "office@esl-cc.com",
+    "note": "שורה 677 במקור"
+  },
+  {
+    "clientId": "L238",
+    "clientName": "יונתן · רדיו צליל",
+    "name": "רדיו צליל פחחות",
+    "role": "אחר",
+    "phone": "0545588300",
+    "email": "rzp2626@gmail.com",
+    "note": "שורה 1789 במקור"
+  },
+  {
+    "clientId": "L253",
+    "clientName": "David mkhitar · דיזל גדס שירותי רכב בעמ",
+    "name": "Diesel - G.D.S Vehicle Services Ltd",
+    "role": "אחר",
+    "phone": "0547604774",
+    "email": "dieselcenter2002@gmail.com",
+    "note": "שורה 1901 במקור"
+  },
+  {
+    "clientId": "L262",
+    "clientName": "שמס עاصي ·",
+    "name": "شمس عاصي",
+    "role": "אחר",
+    "phone": "0532581153",
+    "email": "",
+    "note": "שורה 1137 במקור"
+  },
+  {
+    "clientId": "L275",
+    "clientName": "Michael yaaco ·",
+    "name": "Michael yaacov",
+    "role": "אחר",
+    "phone": "0547441340",
+    "email": "",
+    "note": "שורה 797 במקור"
+  },
+  {
+    "clientId": "L286",
+    "clientName": "דרך שבע קאר · דרך 7 קאר",
+    "name": "Re Doe",
+    "role": "אחר",
+    "phone": "0507112102",
+    "email": "reda@gmail.com",
+    "note": "שורה 1984 במקור"
+  },
+  {
+    "clientId": "L308",
+    "clientName": "דלתא ראשון · דלתא ראשון בע\"מ",
+    "name": "איתי בן חיים",
+    "role": "אחר",
+    "phone": "039669231",
+    "email": "benhaim172@gmail.com",
+    "note": "שורה 1715 במקור"
+  },
+  {
+    "clientId": "L314",
+    "clientName": "מוקד הרכב חיפה רפי ·",
+    "name": "claims mokedcar",
+    "role": "אחר",
+    "phone": "",
+    "email": "tviot@mokedcar.com",
+    "note": "שורה 1708 במקור"
+  },
+  {
+    "clientId": "L314",
+    "clientName": "מוקד הרכב חיפה רפי ·",
+    "name": "claims mokedcar רפי",
+    "role": "אחר",
+    "phone": "0532202756",
+    "email": "tviot@mokedcar.com",
+    "note": "שורה 1938 במקור"
+  },
+  {
+    "clientId": "L315",
+    "clientName": "אתי רפאלי · יוסף רפאלי סוכנות לביטוח בעמ",
+    "name": "יוסף רפאלי",
+    "role": "אחר",
+    "phone": "0528789000",
+    "email": "yosirrafaeli@gmail.com",
+    "note": "שורה 1890 במקור"
+  },
+  {
+    "clientId": "L316",
+    "clientName": "אורי מרקוביץ · סוכן ביטוח",
+    "name": "אורי מרקוביץ - Uri Marcovich",
+    "role": "אחר",
+    "phone": "0544540065",
+    "email": "uri@uri-ins.com",
+    "note": "שורה 1727 במקור"
+  },
+  {
+    "clientId": "L324",
+    "clientName": "ליאור ביניש · ביניש סוכנות לביטוח בעמ",
+    "name": "Lior Beinish",
+    "role": "אחר",
+    "phone": "0522694713",
+    "email": "",
+    "note": "שורה 1024 במקור"
+  },
+  {
+    "clientId": "L329",
+    "clientName": "Eyad Khateeb · איאד חטיב שירותי שמאות",
+    "name": "Eyad Shawki Khateeb",
+    "role": "אחר",
+    "phone": "0502124499",
+    "email": "",
+    "note": "שורה 1173 במקור"
+  },
+  {
+    "clientId": "L360",
+    "clientName": "נאור טדגי naor tedgi · נאור ש מ",
+    "name": "Naor Tedgi",
+    "role": "אחר",
+    "phone": "0545530731",
+    "email": "naor.tedgi@gmail.com",
+    "note": "שורה 1720 במקור"
+  },
+  {
+    "clientId": "L370",
+    "clientName": "מאהר עתאמנה ·",
+    "name": "מאהר עתאมנה",
+    "role": "אחר",
+    "phone": "0549389816",
+    "email": "",
+    "note": "שורה 1226 במקור"
+  },
+  {
+    "clientId": "L373",
+    "clientName": "سסس ·",
+    "name": "سسס",
+    "role": "אחר",
+    "phone": "0515991458",
+    "email": "",
+    "note": "שורה 1221 במקור"
+  },
+  {
+    "clientId": "L419",
+    "clientName": "אגבאריה עז אלדין · איה שירותי ביטוח",
+    "name": "דלתא שמאות עז אלדין אגבאריה",
+    "role": "אחר",
+    "phone": "0507330069",
+    "email": "aboaloassessing@gmail.com",
+    "note": "שורה 1722 במקור"
+  },
+  {
+    "clientId": "L419",
+    "clientName": "אגבאריה עז אלדין · איה שירותי ביטוח",
+    "name": "דלתא שמאות עד אלדין אגבאריה",
+    "role": "אחר",
+    "phone": "",
+    "email": "aboaloassessing@gmail.com",
+    "note": "שורה 1952 במקור"
+  },
+  {
+    "clientId": "L422",
+    "clientName": "יחיאל נקאש ·",
+    "name": "יחיאל נקאש..טלפ..053425011053425011205342501111.חדרהצ",
+    "role": "אחר",
+    "phone": "0534250111",
+    "email": "",
+    "note": "שורה 1293 במקור"
+  },
+  {
+    "clientId": "L432",
+    "clientName": "إم מأمون ·",
+    "name": "إم مأمون",
+    "role": "אחר",
+    "phone": "0529326047",
+    "email": "",
+    "note": "שורה 818 במקור"
+  },
+  {
+    "clientId": "L445",
+    "clientName": "שלום שלומקהאני איני רוצה כסף או אלואה רוצה גשם הגשם מאחר להגיע אילינו חבל ממש ממתנים לגשם תודה ·",
+    "name": "שלום שלומקה",
+    "role": "אחר",
+    "phone": "0507505522",
+    "email": "",
+    "note": "שורה 1133 במקור"
+  },
+  {
+    "clientId": "L479",
+    "clientName": "(س~ ي~م~ו) ·",
+    "name": "(ס~ י~מ~ו)",
+    "role": "אחר",
+    "phone": "0594367652",
+    "email": "",
+    "note": "שורה 1097 במקור"
+  },
+  {
+    "clientId": "L486",
+    "clientName": "محمد عاصله- بطاطا ·",
+    "name": "محمد עاصله- بطاطا",
+    "role": "אחר",
+    "phone": "0526500842",
+    "email": "",
+    "note": "שורה 870 במקור"
+  },
+  {
+    "clientId": "L503",
+    "clientName": "ابו קארם شاهين ·",
+    "name": "ابو كارم شاهين",
+    "role": "אחר",
+    "phone": "0527008965",
+    "email": "",
+    "note": "שורה 1062 במקור"
+  },
+  {
+    "clientId": "L522",
+    "clientName": "hamza ezzaki ·",
+    "name": "adam sanal",
+    "role": "אחר",
+    "phone": "0617502515",
+    "email": "hamzaezzaki0@gmail.com",
+    "note": "שורה 1712 במקור"
+  },
+  {
+    "clientId": "L540",
+    "clientName": "שגיא צרויה · שגיא צרויה",
+    "name": "Zemer Tzruia",
+    "role": "אחר",
+    "phone": "0542343710",
+    "email": "zemertzruia@gmail.com",
+    "note": "שורה 1683 במקור"
+  },
+  {
+    "clientId": "L541",
+    "clientName": "Niv Fridman · מרכז שירות בסגנון 2000",
+    "name": "ניב פרידמן",
+    "role": "אחר",
+    "phone": "0545614098",
+    "email": "niv@signon2000.co.il",
+    "note": "שורה 595 במקור"
+  },
+  {
+    "clientId": "L546",
+    "clientName": "Татьяна Корень · אסף ביטוחים",
+    "name": "רונן לוייב",
+    "role": "אחר",
+    "phone": "086274624",
+    "email": "ronen@asaf-bit.co.il",
+    "note": "שורה 674 במקור"
+  },
+  {
+    "clientId": "L554",
+    "clientName": "Yehuda · פ.נ.ל פתרון ניהול לתביעות",
+    "name": "It",
+    "role": "אחר",
+    "phone": "0737200200",
+    "email": "it@ybakshi.onmicrosoft.com",
+    "note": "שורה 585 במקור"
+  },
+  {
+    "clientId": "L560",
+    "clientName": "אבי אלקיים · אבי אלקיים",
+    "name": "דלית סגל",
+    "role": "אחר",
+    "phone": "0504589999",
+    "email": "",
+    "note": "שורה 711 במקור"
+  },
+  {
+    "clientId": "L586",
+    "clientName": "Wafa Hal · קרים",
+    "name": "Kareem Nassif",
+    "role": "אחר",
+    "phone": "0525768725",
+    "email": "adv.kareem.nassif@gmail.com",
+    "note": "שורה 1697 במקור"
+  },
+  {
+    "clientId": "L603",
+    "clientName": "Mohamed Gassan Mahameed · מחאמיד ושות' - משרד עורכי דין Mahameed & co. Law office",
+    "name": "מוחמד מחאמיד",
+    "role": "אחר",
+    "phone": "0525525221",
+    "email": "mhmd.kewan2911@gmail.com",
+    "note": "שורה 687 במקור"
+  },
+  {
+    "clientId": "L615",
+    "clientName": "יוסי אורן · 2000",
+    "name": "יוסי אורנשטיין",
+    "role": "אחר",
+    "phone": "036821470",
+    "email": "yossioren113@gmail.com",
+    "note": "שורה 651 במקור"
+  },
+  {
+    "clientId": "L625",
+    "clientName": "badusi saeid · סעיד",
+    "name": "סעיד בדוסי",
+    "role": "אחר",
+    "phone": "0536657600",
+    "email": "badusi.adv@gmail.com",
+    "note": "שורה 1895 במקור"
+  },
+  {
+    "clientId": "L625",
+    "clientName": "badusi saeid · סעיד",
+    "name": "סעיד בדוי",
+    "role": "אחר",
+    "phone": "",
+    "email": "badusi.adv@gmail.com",
+    "note": "שורה 1926 במקור"
+  },
+  {
+    "clientId": "L639",
+    "clientName": "Muhammed Murad · מ מוראד",
+    "name": "Muhammed 7 Murad",
+    "role": "אחר",
+    "phone": "0535741247",
+    "email": "hmodemurad7@gmail.com",
+    "note": "שורה 1824 במקור"
+  },
+  {
+    "clientId": "L717",
+    "clientName": "Osama manna · אוסמה מנאע",
+    "name": "Osama -",
+    "role": "אחר",
+    "phone": "0544392525",
+    "email": "osama@almajd-ins.com",
+    "note": "שורה 1888 במקור"
+  },
+  {
+    "clientId": "L801",
+    "clientName": "Ofer Nussenbaum עופר נוסנבאום ·",
+    "name": "Ofer Nussenbaum",
+    "role": "אחר",
+    "phone": "0505394310",
+    "email": "",
+    "note": "שורה 1384 במקור"
+  },
+  {
+    "clientId": "L820",
+    "clientName": "صباح قراعنه محاميد ·",
+    "name": "صباح قراعנה محاميد",
+    "role": "אחר",
+    "phone": "0549807081",
+    "email": "",
+    "note": "שורה 1365 במקור"
+  },
+  {
+    "clientId": "L831",
+    "clientName": "מוחמד אבו אלحسن ·",
+    "name": "מוחמד אבו אלחסן",
+    "role": "אחר",
+    "phone": "0528859317",
+    "email": "",
+    "note": "שורה 1351 במקור"
+  },
+  {
+    "clientId": "L832",
+    "clientName": "שלמה פנחס ·",
+    "name": "שלמה פנחס hi",
+    "role": "אחר",
+    "phone": "05082424490",
+    "email": "",
+    "note": "שורה 1350 במקור"
+  },
+  {
+    "clientId": "L851",
+    "clientName": "שמחה עזן ·",
+    "name": "שמחה עזןחחםרא",
+    "role": "אחר",
+    "phone": "0509470962",
+    "email": "",
+    "note": "שורה 1329 במקור"
+  },
+  {
+    "clientId": "L856",
+    "clientName": "ابو محمد مشعل ·",
+    "name": "ابו محمد مشعل",
+    "role": "אחר",
+    "phone": "970598197209",
+    "email": "",
+    "note": "שורה 1318 במקור"
+  },
+  {
+    "clientId": "L859",
+    "clientName": "ابو احمد ·",
+    "name": "ابו احمد",
+    "role": "אחר",
+    "phone": "0522842789",
+    "email": "",
+    "note": "שורה 1321 במקור"
+  },
+  {
+    "clientId": "L870",
+    "clientName": "חלוש 🤍 ·",
+    "name": "حلوش 🤍",
+    "role": "אחר",
+    "phone": "0567487400",
+    "email": "",
+    "note": "שורה 1305 במקור"
+  },
+  {
+    "clientId": "L871",
+    "clientName": "רائدة توفيق ·",
+    "name": "رائدة توفيقزזتلتا أن تأخذه فشؤ",
+    "role": "אחר",
+    "phone": "0566075063",
+    "email": "",
+    "note": "שורה 1306 במקור"
+  },
+  {
+    "clientId": "L881",
+    "clientName": "ג'וג'ו אוחנה ·",
+    "name": "ג'וג'ו0 אוחנהוטא2פ",
+    "role": "אחר",
+    "phone": "0587864393",
+    "email": "",
+    "note": "שורה 1290 במקור"
+  },
+  {
+    "clientId": "L894",
+    "clientName": "إنـتـصـار الـزاويـة ·",
+    "name": "إنـتـصـאר الـزاويـة",
+    "role": "אחר",
+    "phone": "0547650450",
+    "email": "",
+    "note": "שורה 1285 במקור"
+  },
+  {
+    "clientId": "L895",
+    "clientName": "איתן דרי | Eitan ·",
+    "name": "איתן דרי | Eitan ך",
+    "role": "אחר",
+    "phone": "05453252645",
+    "email": "",
+    "note": "שורה 1284 במקור"
+  },
+  {
+    "clientId": "L896",
+    "clientName": "Hend-sad ·",
+    "name": "Hend-asad",
+    "role": "אחר",
+    "phone": "0502572285",
+    "email": "",
+    "note": "שורה 1283 במקור"
+  },
+  {
+    "clientId": "L903",
+    "clientName": "عامר جعبري ·",
+    "name": "عامر جعبري",
+    "role": "אחר",
+    "phone": "0523301307",
+    "email": "",
+    "note": "שורה 1276 במקור"
+  },
+  {
+    "clientId": "L915",
+    "clientName": "𝓮𝓵𝓲𝔂α_𝓮𝓲𝓿𝓰𝓲י ·",
+    "name": "𝓮𝓵𝓲𝔂𝓪_𝓮𝓲𝓿𝓰𝓲𝓲",
+    "role": "אחר",
+    "phone": "0539230822",
+    "email": "",
+    "note": "שורה 1264 במקור"
+  },
+  {
+    "clientId": "L925",
+    "clientName": "عبدالله المالحي ·",
+    "name": "عبدالله המالحي",
+    "role": "אחר",
+    "phone": "0506611059",
+    "email": "",
+    "note": "שורה 1253 במקור"
+  },
+  {
+    "clientId": "L938",
+    "clientName": "نورالدين الزربا ·",
+    "name": "نורالدين الزربا",
+    "role": "אחר",
+    "phone": "0525484822",
+    "email": "",
+    "note": "שורה 1233 במקור"
+  },
+  {
+    "clientId": "L950",
+    "clientName": "خليل محمد صالح عليان · עורך דין עליאן כליל",
+    "name": "خليل عليان",
+    "role": "אחר",
+    "phone": "0537751043",
+    "email": "khalil48@gmail.com",
+    "note": "שורה 1886 במקור"
+  },
+  {
+    "clientId": "L951",
+    "clientName": "ברכה סבג ·",
+    "name": "תת....ברכה סבגyh",
+    "role": "אחר",
+    "phone": "971525019898",
+    "email": "",
+    "note": "שורה 1209 במקור"
+  },
+  {
+    "clientId": "L954",
+    "clientName": "ام نمر ابو صبيح ·",
+    "name": "ام נמר ابو صبيح",
+    "role": "אחר",
+    "phone": "0524404552",
+    "email": "",
+    "note": "שורה 1206 במקור"
+  },
+  {
+    "clientId": "L955",
+    "clientName": "ابو قصي مرعي ·",
+    "name": "ابו قصي مرعي",
+    "role": "אחר",
+    "phone": "0525798369",
+    "email": "",
+    "note": "שורה 1205 במקור"
+  },
+  {
+    "clientId": "L983",
+    "clientName": "מוסך קשת חאלד ·",
+    "name": "מוסק קשת חאלד",
+    "role": "אחר",
+    "phone": "0534627389",
+    "email": "",
+    "note": "שורה 1650 במקור"
+  },
+  {
+    "clientId": "L990",
+    "clientName": "ameer · אוטו קינג",
+    "name": "Auto King אמיר",
+    "role": "אחר",
+    "phone": "0522777777",
+    "email": "autoking2026@gmail.com",
+    "note": "שורה 1889 במקור"
+  },
+  {
+    "clientId": "L996",
+    "clientName": "וובה בדיקה ·",
+    "name": "וובה בדיקה 2",
+    "role": "אחר",
+    "phone": "0542648077",
+    "email": "",
+    "note": "שורה 1188 במקור"
+  },
+  {
+    "clientId": "L1024",
+    "clientName": "Nir Ayalon · נויה סוכנות לביטוח",
+    "name": "ניר איילון",
+    "role": "אחר",
+    "phone": "0506894405",
+    "email": "nir@noya-ins.co.il",
+    "note": "שורה 1880 במקור"
+  },
+  {
+    "clientId": "L1051",
+    "clientName": "Nabiha Daas · נביהא סולטאן",
+    "name": "Nabiha sultan",
+    "role": "אחר",
+    "phone": "0546226650",
+    "email": "nabiha1984@gmail.com",
+    "note": "שורה 1721 במקור"
+  },
+  {
+    "clientId": "L1186",
+    "clientName": "Nili Rogovske Elharar · ע.ל.י הדייקן בעמ",
+    "name": "נילי אלחרר (אבו אלקיעין עלי)",
+    "role": "אחר",
+    "phone": "0524891411",
+    "email": "nili2263@walla.com",
+    "note": "שורה 1828 במקור"
+  },
+  {
+    "clientId": "L1186",
+    "clientName": "Nili Rogovske Elharar · ע.ל.י הדייקן בעמ",
+    "name": "נילי אלחרר",
+    "role": "אחר",
+    "phone": "",
+    "email": "nili2263@walla.com",
+    "note": "שורה 1921 במקור"
+  },
+  {
+    "clientId": "L1215",
+    "clientName": "אחמד אמארה · אחמד אמארה עו\"ד",
+    "name": "ahmed amara",
+    "role": "אחר",
+    "phone": "00543300548",
+    "email": "ahmed.nazih.law@gmail.com",
+    "note": "שורה 1882 במקור"
+  },
+  {
+    "clientId": "L1221",
+    "clientName": "מרתון תביעות · מרכז שירות מרתון רעננה",
+    "name": "Efrat Hanin",
+    "role": "אחר",
+    "phone": "097404408",
+    "email": "maraton-tviot@outlook.com",
+    "note": "שורה 1703 במקור"
+  },
+  {
+    "clientId": "L1221",
+    "clientName": "מרתון תביעות · מרכז שירות מרתון רעננה",
+    "name": "Maraton Tviot",
+    "role": "אחר",
+    "phone": "097404408",
+    "email": "maraton.tviot@outlook.com",
+    "note": "שורה 1894 במקור"
+  },
+  {
+    "clientId": "L1232",
+    "clientName": "גלי מנשירוב · סלקה ניהול תביעות",
+    "name": "גלי מנשרוב",
+    "role": "אחר",
+    "phone": "",
+    "email": "tviot@salka.co.il",
+    "note": "שורה 1936 במקור"
+  }
+]
