@@ -9,10 +9,15 @@ import {
   Search,
   Sparkles,
   ShieldCheck,
-  Table as TableIcon
+  Table as TableIcon,
+  ShieldAlert,
+  Lock,
+  Eye
 } from 'lucide-react';
+import { AppUser } from '../types';
+import { UserMenu } from './Auth/UserMenu';
 
-export type TabType = 'overview' | 'crm' | 'myday' | 'product' | 'custom_tables' | 'ai_studio' | 'database';
+export type TabType = 'overview' | 'crm' | 'myday' | 'product' | 'custom_tables' | 'ai_studio' | 'admin' | 'database';
 
 interface HeaderProps {
   activeTab: TabType;
@@ -26,6 +31,9 @@ interface HeaderProps {
   productCount: number;
   customTablesCount: number;
   attentionCount: number;
+  currentUser: AppUser;
+  onOpenSwitchUser: () => void;
+  onLogout: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -39,8 +47,14 @@ export const Header: React.FC<HeaderProps> = ({
   clientsCount,
   productCount,
   customTablesCount,
-  attentionCount
+  attentionCount,
+  currentUser,
+  onOpenSwitchUser,
+  onLogout
 }) => {
+  const isViewer = currentUser.role === 'viewer';
+  const isAdmin = currentUser.role === 'admin' || currentUser.permissions.canManageUsers;
+
   return (
     <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -56,12 +70,16 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="font-extrabold text-xl tracking-tight text-white font-sans">
                   Claim<span className="text-blue-400">AI</span>
                 </span>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                  Control Hub
+                <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border ${
+                  isViewer
+                    ? 'bg-purple-500/20 text-purple-300 border-purple-500/30'
+                    : 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+                }`}>
+                  {isViewer ? 'Viewer Portal' : 'Control Hub'}
                 </span>
               </div>
               <p className="text-xs text-slate-400 hidden sm:block">
-                שליטה בלקוחות, מפת מוצר וסטודיו AI לטבלאות
+                שליטה בלקוחות, מפת מוצר, סטודיו AI ופורטלים
               </p>
             </div>
           </div>
@@ -88,29 +106,42 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Action Buttons */}
+          {/* User Profile & Actions */}
           <div className="flex items-center gap-2">
-            <button
-              onClick={onOpenAiStudio}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs sm:text-sm font-bold shadow-md shadow-purple-600/30 transition-all hover:scale-[1.02]"
-              title="זריקת נתוני לקוחות ויצירת טבלה בעזרת AI"
-            >
-              <Sparkles className="w-4 h-4 text-amber-300" />
-              <span>סטודיו AI</span>
-            </button>
-            <button
-              onClick={onNewClient}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-medium shadow-md shadow-blue-600/30 transition-all hover:scale-[1.02]"
-            >
-              <Plus className="w-4 h-4" />
-              <span>ליד חדש</span>
-            </button>
-            <button
-              onClick={onNewTicket}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs sm:text-sm font-medium transition-all hidden sm:flex"
-            >
-              <span>פנייה למוצר</span>
-            </button>
+            {!isViewer && (
+              <>
+                <button
+                  onClick={onOpenAiStudio}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs sm:text-sm font-bold shadow-md shadow-purple-600/30 transition-all hover:scale-[1.02]"
+                  title="זריקת נתוני לקוחות ויצירת טבלה בעזרת AI"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                  <span className="hidden sm:inline">סטודיו AI</span>
+                </button>
+
+                <button
+                  onClick={onNewClient}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-medium shadow-md shadow-blue-600/30 transition-all hover:scale-[1.02]"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>ליד חדש</span>
+                </button>
+              </>
+            )}
+
+            {isViewer && (
+              <span className="px-2.5 py-1 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold flex items-center gap-1">
+                <Eye className="w-3.5 h-3.5" />
+                <span>מצב צפייה בלבד</span>
+              </span>
+            )}
+
+            {/* Google User Profile Menu */}
+            <UserMenu
+              currentUser={currentUser}
+              onOpenSwitchUser={onOpenSwitchUser}
+              onLogout={onLogout}
+            />
           </div>
         </div>
 
@@ -175,7 +206,7 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
           </button>
 
-          {/* New Custom Tables Tab */}
+          {/* Custom Tables Tab */}
           <button
             onClick={() => onTabChange('custom_tables')}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
@@ -191,18 +222,20 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
           </button>
 
-          {/* AI Studio Tab */}
-          <button
-            onClick={() => onTabChange('ai_studio')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold whitespace-nowrap transition-all ${
-              activeTab === 'ai_studio'
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-400/40'
-                : 'text-amber-400/80 hover:text-amber-300 hover:bg-slate-800/60'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>סטודיו AI</span>
-          </button>
+          {/* Admin Portal Tab (Visible only to Admin or users with manage permission) */}
+          {isAdmin && (
+            <button
+              onClick={() => onTabChange('admin')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold whitespace-nowrap transition-all ${
+                activeTab === 'admin'
+                  ? 'bg-amber-500/20 text-amber-300 border border-amber-400/40'
+                  : 'text-amber-400 hover:text-amber-300 hover:bg-slate-800/60'
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4 text-amber-400" />
+              <span>פורטל אדמין</span>
+            </button>
+          )}
 
           <button
             onClick={() => onTabChange('database')}

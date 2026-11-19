@@ -137,3 +137,26 @@ export interface AIConfig {
   apiKey?: string;
   model?: string;
 }
+
+// User Portals, Authentication & Permissions
+export type UserRole = 'admin' | 'editor' | 'viewer';
+
+export interface UserPermissions {
+  canEditCrm: boolean;
+  canEditProduct: boolean;
+  canEditTables: boolean;
+  canManageUsers: boolean;
+}
+
+export interface AppUser {
+  id: string;
+  email: string;
+  name: string;
+  role: UserRole;
+  avatarUrl?: string;
+  permissions: UserPermissions;
+  isActive: boolean;
+  createdAt: string;
+  lastLogin?: string;
+  assignedClients?: string[];
+}

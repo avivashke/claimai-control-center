@@ -28,6 +28,7 @@ interface ClientDrawerProps {
   linkedTickets: ProductItem[];
   onOpenTicket: (ticket: ProductItem) => void;
   onNewTicketForClient: (client: Client) => void;
+  canEdit?: boolean;
 }
 
 const ALL_STATUSES = [
@@ -48,7 +49,8 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
   onSaveClient,
   linkedTickets,
   onOpenTicket,
-  onNewTicketForClient
+  onNewTicketForClient,
+  canEdit = true
 }) => {
   if (!client) return null;
 
@@ -117,13 +119,19 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleSave}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md transition-all"
-            >
-              <Save className="w-4 h-4" />
-              <span>שמור שינויים</span>
-            </button>
+            {canEdit ? (
+              <button
+                onClick={handleSave}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md transition-all"
+              >
+                <Save className="w-4 h-4" />
+                <span>שמור שינויים</span>
+              </button>
+            ) : (
+              <span className="px-2 py-1 rounded-lg bg-slate-850 border border-slate-750 text-[11px] text-purple-300 font-medium">
+                צפייה בלבד
+              </span>
+            )}
             <button
               onClick={onClose}
               className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-all"
@@ -367,25 +375,31 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
             </h3>
 
             {/* Add Note Input */}
-            <div className="space-y-2">
-              <textarea
-                rows={3}
-                placeholder="הוסף הערה או סיכום שיחה חדש... (יישמר עם חותמת תאריך ושעה)"
-                value={newNote}
-                onChange={(e) => setNewNote(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={!newNote.trim()}
-                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:hover:bg-blue-600 text-white text-xs font-semibold transition-all"
-                >
-                  הוסף הערה ליומן
-                </button>
+            {canEdit ? (
+              <div className="space-y-2">
+                <textarea
+                  rows={3}
+                  placeholder="הוסף הערה או סיכום שיחה חדש... (יישמר עם חותמת תאריך ושעה)"
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={!newNote.trim()}
+                    className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:hover:bg-blue-600 text-white text-xs font-semibold transition-all"
+                  >
+                    הוסף הערה ליומן
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="p-2.5 rounded-lg bg-slate-800/40 border border-slate-800 text-[11px] text-slate-400">
+                🔒 הרשאת צפייה בלבד – הוספת הערות שמורה לעורכים ומנהלים
+              </div>
+            )}
 
             {/* Existing Notes Display */}
             <div className="mt-4 pt-3 border-t border-slate-800 space-y-2 max-h-60 overflow-y-auto">

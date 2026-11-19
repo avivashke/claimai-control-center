@@ -10,6 +10,8 @@ import { TicketDrawer } from './components/Product/TicketDrawer';
 import { NewTicketModal } from './components/Product/NewTicketModal';
 import { CustomTableView } from './components/CustomTables/CustomTableView';
 import { AITableStudio } from './components/AITableStudio/AITableStudio';
+import { AdminPortal } from './components/Admin/AdminPortal';
+import { GoogleLoginModal } from './components/Auth/GoogleLoginModal';
 import { DatabaseSettings } from './components/DatabaseSettings';
 import { 
   initDatabase, 
@@ -20,9 +22,19 @@ import {
   saveProductItem,
   getCustomTables,
   saveCustomTable,
-  deleteCustomTable
+  deleteCustomTable,
+  getAppUsers,
+  saveAppUser,
+  deleteAppUser
 } from './services/db';
-import { Client, ProductItem, ProductStatus, CustomTable } from './types';
+import { 
+  getCurrentUser, 
+  setCurrentUser, 
+  loginWithGoogleEmail, 
+  logoutUser, 
+  hasPermission 
+} from './services/authService';
+import { Client, ProductItem, ProductStatus, CustomTable, AppUser } from './types';
 import { ShieldCheck, Sparkles, CheckCircle2 } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -31,6 +43,9 @@ export const App: React.FC = () => {
   const [productItems, setProductItems] = useState<ProductItem[]>([]);
   const [customTables, setCustomTables] = useState<CustomTable[]>([]);
   const [selectedCustomTableId, setSelectedCustomTableId] = useState<string>('');
+  const [users, setUsers] = useState<AppUser[]>([]);
+  const [currentUser, setCurrentUserState] = useState<AppUser>(getCurrentUser());
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   // Search & Navigation
@@ -50,9 +65,11 @@ export const App: React.FC = () => {
     const fetchedClients = await getClients();
     const fetchedProducts = await getProductItems();
     const fetchedTables = await getCustomTables();
+    const fetchedUsers = await getAppUsers();
     setClients(fetchedClients);
     setProductItems(fetchedProducts);
     setCustomTables(fetchedTables);
+    setUsers(fetchedUsers);
     if (fetchedTables.length > 0) {
       setSelectedCustomTableId(fetchedTables[0].id);
     }
@@ -63,8 +80,51 @@ export const App: React.FC = () => {
     loadData();
   }, []);
 
+  // Permissions helpers
+  const canEditCrm = currentUser.role === 'admin' || currentUser.permissions.canEditCrm;
+  const canEditProduct = currentUser.role === 'admin' || currentUser.permissions.canEditProduct;
+  const canEditTables = currentUser.role === 'admin' || currentUser.permissions.canEditTables;
+  const canManageUsers = currentUser.role === 'admin' || currentUser.permissions.canManageUsers;
+
+  // Handlers for Users & Auth
+  const handleLogin = async (email: string, name?: string) => {
+    const user = await loginWithGoogleEmail(email, name);
+    setCurrentUserState(user);
+    const updatedUsers = await getAppUsers();
+    setUsers(updatedUsers);
+    setIsLoginModalOpen(false);
+  };
+
+  const handleSwitchUser = (user: AppUser) => {
+    setCurrentUser(user);
+    setCurrentUserState(user);
+  };
+
+  const handleLogout = () => {
+    logoutUser();
+    setIsLoginModalOpen(true);
+  };
+
+  const handleSaveUser = async (user: AppUser) => {
+    await saveAppUser(user);
+    setUsers(prev => {
+      const exists = prev.some(u => u.id === user.id);
+      if (exists) return prev.map(u => u.id === user.id ? user : u);
+      return [user, ...prev];
+    });
+    if (currentUser.id === user.id) {
+      setCurrentUserState(user);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    await deleteAppUser(userId);
+    setUsers(prev => prev.filter(u => u.id !== userId));
+  };
+
   // Handlers for CRM Clients
   const handleUpdateClientStatus = async (clientId: string, newStatus: string) => {
+    if (!canEditCrm) return;
     const target = clients.find(c => c.id === clientId);
     if (!target) return;
     const updated = { 
@@ -81,24 +141,28 @@ export const App: React.FC = () => {
   };
 
   const handleSaveClient = async (updatedClient: Client) => {
+    if (!canEditCrm) return;
     await saveClient(updatedClient);
     setClients(prev => prev.map(c => c.id === updatedClient.id ? updatedClient : c));
     setSelectedClient(updatedClient);
   };
 
   const handleAddClient = async (newClient: Client) => {
+    if (!canEditCrm) return;
     await saveClient(newClient);
     setClients(prev => [newClient, ...prev]);
     setSelectedClient(newClient);
   };
 
   const handleSyncCustomRowsToCrm = async (newLeads: Client[]) => {
+    if (!canEditCrm) return;
     await saveMultipleClients(newLeads);
     setClients(prev => [...newLeads, ...prev]);
   };
 
   // Handlers for Product Items
   const handleUpdateTicketStatus = async (ticketId: string, newStatus: ProductStatus) => {
+    if (!canEditProduct) return;
     const target = productItems.find(p => p.id === ticketId);
     if (!target) return;
     const updated = { 
@@ -114,24 +178,28 @@ export const App: React.FC = () => {
   };
 
   const handleSaveTicket = async (updatedTicket: ProductItem) => {
+    if (!canEditProduct) return;
     await saveProductItem(updatedTicket);
     setProductItems(prev => prev.map(p => p.id === updatedTicket.id ? updatedTicket : p));
     setSelectedTicket(updatedTicket);
   };
 
   const handleAddTicket = async (newTicket: ProductItem) => {
+    if (!canEditProduct) return;
     await saveProductItem(newTicket);
     setProductItems(prev => [newTicket, ...prev]);
     setSelectedTicket(newTicket);
   };
 
   const handleOpenNewTicketForClient = (client: Client) => {
+    if (!canEditProduct) return;
     setNewTicketDefaultClient(client.company || client.name);
     setIsNewTicketOpen(true);
   };
 
   // Handlers for Custom Tables
   const handleTableCreated = async (newTable: CustomTable) => {
+    if (!canEditTables) return;
     await saveCustomTable(newTable);
     setCustomTables(prev => [newTable, ...prev]);
     setSelectedCustomTableId(newTable.id);
@@ -139,11 +207,13 @@ export const App: React.FC = () => {
   };
 
   const handleUpdateTable = async (updatedTable: CustomTable) => {
+    if (!canEditTables) return;
     await saveCustomTable(updatedTable);
     setCustomTables(prev => prev.map(t => t.id === updatedTable.id ? updatedTable : t));
   };
 
   const handleDeleteTable = async (tableId: string) => {
+    if (!canEditTables) return;
     await deleteCustomTable(tableId);
     setCustomTables(prev => prev.filter(t => t.id !== tableId));
     if (selectedCustomTableId === tableId) {
@@ -219,6 +289,9 @@ export const App: React.FC = () => {
         productCount={productItems.length}
         customTablesCount={customTables.length}
         attentionCount={attentionCount}
+        currentUser={currentUser}
+        onOpenSwitchUser={() => setIsLoginModalOpen(true)}
+        onLogout={handleLogout}
       />
 
       {/* Main Content Area */}
@@ -250,6 +323,7 @@ export const App: React.FC = () => {
                 onSelectClient={setSelectedClient}
                 onUpdateClientStatus={handleUpdateClientStatus}
                 searchFilter={searchQuery}
+                canEdit={canEditCrm}
               />
             )}
 
@@ -271,6 +345,7 @@ export const App: React.FC = () => {
                   setIsNewTicketOpen(true);
                 }}
                 searchFilter={searchQuery}
+                canEdit={canEditProduct}
               />
             )}
 
@@ -282,6 +357,7 @@ export const App: React.FC = () => {
                 onOpenAiStudio={() => setActiveTab('ai_studio')}
                 onUpdateTable={handleUpdateTable}
                 onDeleteTable={handleDeleteTable}
+                canEdit={canEditTables}
               />
             )}
 
@@ -290,6 +366,16 @@ export const App: React.FC = () => {
                 onTableCreated={handleTableCreated}
                 onSyncToCrm={handleSyncCustomRowsToCrm}
                 existingCrmLength={clients.length}
+              />
+            )}
+
+            {activeTab === 'admin' && canManageUsers && (
+              <AdminPortal
+                users={users}
+                currentUser={currentUser}
+                onSaveUser={handleSaveUser}
+                onDeleteUser={handleDeleteUser}
+                onSwitchUser={handleSwitchUser}
               />
             )}
 
@@ -310,7 +396,7 @@ export const App: React.FC = () => {
           <div className="flex items-center gap-2">
             <span className="font-bold text-white">ClaimAI Control Center</span>
             <span>·</span>
-            <span>כולל סטודיו AI ליצירת טבלאות</span>
+            <span>פורטלים מותאמים עם Google Auth</span>
             <span className="inline-flex items-center gap-1 text-emerald-400 font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px]">
               <CheckCircle2 className="w-3 h-3" />
               Build Ready
@@ -318,12 +404,14 @@ export const App: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => setActiveTab('ai_studio')}
-              className="text-purple-400 hover:text-purple-300 font-semibold transition-colors"
-            >
-              סטודיו AI
-            </button>
+            {canManageUsers && (
+              <button
+                onClick={() => setActiveTab('admin')}
+                className="text-amber-400 hover:text-amber-300 font-semibold transition-colors"
+              >
+                פורטל אדמין
+              </button>
+            )}
             <span>·</span>
             <button
               onClick={() => setActiveTab('database')}
@@ -332,7 +420,7 @@ export const App: React.FC = () => {
               הגדרות מסד נתונים
             </button>
             <span>·</span>
-            <span className="font-mono text-slate-500">v1.2.0</span>
+            <span className="font-mono text-slate-500">v1.3.0</span>
           </div>
         </div>
       </footer>
@@ -345,6 +433,7 @@ export const App: React.FC = () => {
         linkedTickets={getLinkedTicketsForClient(selectedClient)}
         onOpenTicket={(ticket) => setSelectedTicket(ticket)}
         onNewTicketForClient={handleOpenNewTicketForClient}
+        canEdit={canEditCrm}
       />
 
       <TicketDrawer
@@ -355,21 +444,32 @@ export const App: React.FC = () => {
         onOpenClientProfile={(c) => setSelectedClient(c)}
       />
 
-      <NewClientModal
-        isOpen={isNewClientOpen}
-        onClose={() => setIsNewClientOpen(false)}
-        onAddClient={handleAddClient}
-        nextId={nextClientId}
-      />
+      {canEditCrm && (
+        <NewClientModal
+          isOpen={isNewClientOpen}
+          onClose={() => setIsNewClientOpen(false)}
+          onAddClient={handleAddClient}
+          nextId={nextClientId}
+        />
+      )}
 
-      <NewTicketModal
-        isOpen={isNewTicketOpen}
-        onClose={() => setIsNewTicketOpen(false)}
-        onAddTicket={handleAddTicket}
-        clients={clients}
-        defaultClient={newTicketDefaultClient}
-        nextBugId={nextBugId}
-        nextRoadmapId={nextRoadmapId}
+      {canEditProduct && (
+        <NewTicketModal
+          isOpen={isNewTicketOpen}
+          onClose={() => setIsNewTicketOpen(false)}
+          onAddTicket={handleAddTicket}
+          clients={clients}
+          defaultClient={newTicketDefaultClient}
+          nextBugId={nextBugId}
+          nextRoadmapId={nextRoadmapId}
+        />
+      )}
+
+      <GoogleLoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onLogin={handleLogin}
+        availableUsers={users}
       />
 
     </div>

@@ -21,6 +21,7 @@ interface ClientTableProps {
   onSelectClient: (client: Client) => void;
   onUpdateClientStatus: (clientId: string, newStatus: string) => void;
   searchFilter: string;
+  canEdit?: boolean;
 }
 
 const STATUS_COLORS: { [key: string]: { bg: string; text: string; border: string } } = {
@@ -52,7 +53,8 @@ export const ClientTable: React.FC<ClientTableProps> = ({
   clients,
   onSelectClient,
   onUpdateClientStatus,
-  searchFilter
+  searchFilter,
+  canEdit = true
 }) => {
   const [localSearch, setLocalSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -281,17 +283,23 @@ export const ClientTable: React.FC<ClientTableProps> = ({
 
                       {/* Status */}
                       <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
-                        <select
-                          value={client.status}
-                          onChange={(e) => onUpdateClientStatus(client.id, e.target.value)}
-                          className={`text-xs font-semibold px-2 py-1 rounded-md border focus:outline-none transition-all cursor-pointer ${style.bg} ${style.text} ${style.border}`}
-                        >
-                          {ALL_STATUSES.map(s => (
-                            <option key={s} value={s} className="bg-slate-900 text-slate-200">
-                              {s}
-                            </option>
-                          ))}
-                        </select>
+                        {canEdit ? (
+                          <select
+                            value={client.status}
+                            onChange={(e) => onUpdateClientStatus(client.id, e.target.value)}
+                            className={`text-xs font-semibold px-2 py-1 rounded-md border focus:outline-none transition-all cursor-pointer ${style.bg} ${style.text} ${style.border}`}
+                          >
+                            {ALL_STATUSES.map(s => (
+                              <option key={s} value={s} className="bg-slate-900 text-slate-200">
+                                {s}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-md border inline-block ${style.bg} ${style.text} ${style.border}`}>
+                            {client.status}
+                          </span>
+                        )}
                         {client.subStatus && (
                           <div className="text-[10px] text-slate-400 mt-1">
                             {client.subStatus}

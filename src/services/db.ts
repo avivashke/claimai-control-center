@@ -1,10 +1,11 @@
 import Dexie, { Table } from 'dexie';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Client, ProductItem, Contact, ActivityLog, CustomTable } from '../types';
+import { Client, ProductItem, Contact, ActivityLog, CustomTable, AppUser } from '../types';
 import seedClientsData from '../data/seedClients.json';
 import seedProductItemsData from '../data/seedProductItems.json';
 import seedContactsData from '../data/seedContacts.json';
 import seedCustomTablesData from '../data/seedCustomTables.json';
+import seedUsersData from '../data/seedUsers.json';
 
 class ClaimAIDatabase extends Dexie {
   clients!: Table<Client, string>;
@@ -12,15 +13,17 @@ class ClaimAIDatabase extends Dexie {
   contacts!: Table<Contact, number>;
   activities!: Table<ActivityLog, number>;
   customTables!: Table<CustomTable, string>;
+  users!: Table<AppUser, string>;
 
   constructor() {
     super('ClaimAIControlDB');
-    this.version(2).stores({
+    this.version(3).stores({
       clients: 'id, name, company, businessType, status, priority, requiresAttention, phone, email, nextFollowUpDate',
       productItems: 'id, category, client, type, priority, status, release, module',
       contacts: '++id, clientId, name, phone, email',
       activities: '++id, clientId, author, type, timestamp',
-      customTables: 'id, name, category, createdAt'
+      customTables: 'id, name, category, createdAt',
+      users: 'id, email, name, role, isActive'
     });
   }
 }
@@ -62,11 +65,12 @@ if (currentCfg.isConfigured) {
 }
 
 // Database initialization & seeding
-export const initDatabase = async (): Promise<{ clientsCount: number; productCount: number; tablesCount: number }> => {
+export const initDatabase = async (): Promise<{ clientsCount: number; productCount: number; tablesCount: number; usersCount: number }> => {
   try {
     const clientsCount = await db.clients.count();
     const productCount = await db.productItems.count();
     const tablesCount = await db.customTables.count();
+    const usersCount = await db.users.count();
 
     if (clientsCount === 0) {
       console.log('Seeding initial CRM clients into IndexedDB...');
@@ -88,13 +92,24 @@ export const initDatabase = async (): Promise<{ clientsCount: number; productCou
       await db.customTables.bulkAdd(seedCustomTablesData as CustomTable[]);
     }
 
+    if (usersCount === 0) {
+      console.log('Seeding initial App Users into IndexedDB...');
+      await db.users.bulkAdd(seedUsersData as AppUser[]);
+    }
+
     const finalClients = await db.clients.count();
     const finalProduct = await db.productItems.count();
     const finalTables = await db.customTables.count();
-    return { clientsCount: finalClients, productCount: finalProduct, tablesCount: finalTables };
+    const finalUsers = await db.users.count();
+    return { 
+      clientsCount: finalClients, 
+      productCount: finalProduct, 
+      tablesCount: finalTables,
+      usersCount: finalUsers 
+    };
   } catch (err) {
     console.error('Error during DB init/seed:', err);
-    return { clientsCount: seedClientsData.length, productCount: seedProductItemsData.length, tablesCount: 1 };
+    return { clientsCount: seedClientsData.length, productCount: seedProductItemsData.length, tablesCount: 1, usersCount: seedUsersData.length };
   }
 };
 
@@ -249,6 +264,55 @@ export const deleteCustomTable = async (tableId: string): Promise<void> => {
   }
 };
 
+// Users & Permissions Management Operations
+export const getAppUsers = async (): Promise<AppUser[]> => {
+  try {
+    const list = await db.users.toArray();
+    if (list.length === 0) {
+      await initDatabase();
+      return await db.users.toArray();
+    }
+    return list;
+  } catch (e) {
+    console.error('Failed to get app users', e);
+    return seedUsersData as AppUser[];
+  }
+};
+
+export const saveAppUser = async (user: AppUser): Promise<void> => {
+  await db.users.put(user);
+  if (supabase) {
+    try {
+      await supabase.from('app_users').upsert({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        permissions: JSON.stringify(user.permissions),
+        is_active: user.isActive,
+        last_login: user.lastLogin
+      });
+    } catch (e) {
+      console.warn('Supabase user sync skipped:', e);
+    }
+  }
+};
+
+export const deleteAppUser = async (userId: string): Promise<void> => {
+  await db.users.delete(userId);
+  if (supabase) {
+    try {
+      await supabase.from('app_users').delete().eq('id', userId);
+    } catch (e) {
+      console.warn('Supabase delete user failed:', e);
+    }
+  }
+};
+
+export const findUserByEmail = async (email: string): Promise<AppUser | undefined> => {
+  return await db.users.where('email').equalsIgnoreCase(email.trim()).first();
+};
+
 // Contacts
 export const getContactsForClient = async (clientId: string): Promise<Contact[]> => {
   try {
@@ -282,10 +346,12 @@ export const resetToSeedData = async (): Promise<void> => {
   await db.contacts.clear();
   await db.activities.clear();
   await db.customTables.clear();
+  await db.users.clear();
   await db.clients.bulkAdd(seedClientsData as Client[]);
   await db.productItems.bulkAdd(seedProductItemsData as ProductItem[]);
   await db.contacts.bulkAdd(seedContactsData as Contact[]);
   await db.customTables.bulkAdd(seedCustomTablesData as CustomTable[]);
+  await db.users.bulkAdd(seedUsersData as AppUser[]);
 };
 
 // Export all data as JSON
@@ -295,15 +361,17 @@ export const exportFullDatabaseJSON = async (): Promise<string> => {
   const contacts = await db.contacts.toArray();
   const activities = await db.activities.toArray();
   const customTables = await db.customTables.toArray();
+  const users = await db.users.toArray();
 
   const bundle = {
     exportedAt: new Date().toISOString(),
-    version: '1.1.0',
+    version: '1.3.0',
     clients,
     productItems,
     contacts,
     activities,
-    customTables
+    customTables,
+    users
   };
 
   return JSON.stringify(bundle, null, 2);

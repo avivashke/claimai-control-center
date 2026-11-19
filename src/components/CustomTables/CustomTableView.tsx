@@ -25,6 +25,7 @@ interface CustomTableViewProps {
   onOpenAiStudio: () => void;
   onUpdateTable: (table: CustomTable) => void;
   onDeleteTable: (tableId: string) => void;
+  canEdit?: boolean;
 }
 
 export const CustomTableView: React.FC<CustomTableViewProps> = ({
@@ -33,7 +34,8 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
   onSelectTable,
   onOpenAiStudio,
   onUpdateTable,
-  onDeleteTable
+  onDeleteTable,
+  canEdit = true
 }) => {
   const currentTable = tables.find(t => t.id === selectedTableId) || tables[0];
   const [searchQuery, setSearchQuery] = useState('');
@@ -181,13 +183,15 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
               />
             </div>
 
-            <button
-              onClick={() => setIsAddRowOpen(true)}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-all shadow-sm"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>הוסף שורה</span>
-            </button>
+            {canEdit && (
+              <button
+                onClick={() => setIsAddRowOpen(true)}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-all shadow-sm"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>הוסף שורה</span>
+              </button>
+            )}
 
             <button
               onClick={handleExportXLSX}
@@ -198,7 +202,7 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
               <span>ייצוא Excel</span>
             </button>
 
-            {tables.length > 1 && (
+            {canEdit && tables.length > 1 && (
               <button
                 onClick={() => {
                   if (confirm(`האם אתה בטוח שברצונך למחוק את הטבלה "${currentTable.name}"?`)) {

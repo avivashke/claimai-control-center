@@ -121,3 +121,18 @@ CREATE TABLE IF NOT EXISTS custom_tables (
 
 ALTER TABLE custom_tables ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow all for custom_tables" ON custom_tables FOR ALL USING (true) WITH CHECK (true);
+
+-- 6. User Portals, Roles & Permissions (Google Auth)
+CREATE TABLE IF NOT EXISTS app_users (
+    id VARCHAR(64) PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    role VARCHAR(50) DEFAULT 'viewer', -- 'admin', 'editor', 'viewer'
+    permissions JSONB NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    last_login TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE app_users ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all for app_users" ON app_users FOR ALL USING (true) WITH CHECK (true);

@@ -23,6 +23,7 @@ interface ProductHubProps {
   onUpdateTicketStatus: (ticketId: string, newStatus: ProductStatus) => void;
   onNewTicket: () => void;
   searchFilter: string;
+  canEdit?: boolean;
 }
 
 const PRIORITY_BADGES: { [key: string]: string } = {
@@ -46,7 +47,8 @@ export const ProductHub: React.FC<ProductHubProps> = ({
   onSelectTicket,
   onUpdateTicketStatus,
   onNewTicket,
-  searchFilter
+  searchFilter,
+  canEdit = true
 }) => {
   const [activeTab, setActiveTab] = useState<'all' | 'bug' | 'roadmap' | 'board'>('all');
   const [selectedClient, setSelectedClient] = useState<string>('all');
@@ -362,15 +364,21 @@ export const ProductHub: React.FC<ProductHubProps> = ({
 
                       {/* Status */}
                       <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
-                        <select
-                          value={item.status}
-                          onChange={(e) => onUpdateTicketStatus(item.id, e.target.value as ProductStatus)}
-                          className="bg-slate-800 border border-slate-700 rounded-lg text-xs py-1 px-2.5 text-slate-200 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        >
-                          {STATUS_OPTIONS.map(st => (
-                            <option key={st} value={st}>{st}</option>
-                          ))}
-                        </select>
+                        {canEdit ? (
+                          <select
+                            value={item.status}
+                            onChange={(e) => onUpdateTicketStatus(item.id, e.target.value as ProductStatus)}
+                            className="bg-slate-800 border border-slate-700 rounded-lg text-xs py-1 px-2.5 text-slate-200 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          >
+                            {STATUS_OPTIONS.map(st => (
+                              <option key={st} value={st}>{st}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-800 text-slate-300 border border-slate-700">
+                            {item.status}
+                          </span>
+                        )}
                       </td>
 
                       {/* Release / Target */}

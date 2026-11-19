@@ -1,0 +1,61 @@
+[
+  {
+    "id": "user-admin-1",
+    "email": "aviv.claimai@gmail.com",
+    "name": "אביב אשכנזי (מנהל מערכת)",
+    "role": "admin",
+    "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
+    "permissions": {
+      "canEditCrm": true,
+      "canEditProduct": true,
+      "canEditTables": true,
+      "canManageUsers": true
+    },
+    "isActive": true,
+    "createdAt": "2026-11-19",
+    "lastLogin": "2026-11-19 13:40"
+  },
+  {
+    "id": "user-editor-2",
+    "email": "avivashke95@gmail.com",
+    "name": "אביב (עורך CRM ומוצר)",
+    "role": "editor",
+    "permissions": {
+      "canEditCrm": true,
+      "canEditProduct": true,
+      "canEditTables": true,
+      "canManageUsers": false
+    },
+    "isActive": true,
+    "createdAt": "2026-11-19",
+    "lastLogin": "2026-11-19 11:20"
+  },
+  {
+    "id": "user-admin-3",
+    "email": "eyal@claimai.com",
+    "name": "אייל (מנהל שותף)",
+    "role": "admin",
+    "permissions": {
+      "canEditCrm": true,
+      "canEditProduct": true,
+      "canEditTables": true,
+      "canManageUsers": true
+    },
+    "isActive": true,
+    "createdAt": "2026-11-19"
+  },
+  {
+    "id": "user-viewer-4",
+    "email": "viewer@claimai.com",
+    "name": "משתמש פורטל צפייה (Viewer)",
+    "role": "viewer",
+    "permissions": {
+      "canEditCrm": false,
+      "canEditProduct": false,
+      "canEditTables": false,
+      "canManageUsers": false
+    },
+    "isActive": true,
+    "createdAt": "2026-11-19"
+  }
+]
