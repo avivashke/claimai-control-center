@@ -307,7 +307,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                 <tr>
                   <th className="py-1.5 px-2 min-w-[150px]">איש קשר / חברה</th>
                   <th className="py-1.5 px-2 min-w-[140px]">סוג עסק</th>
-                  <th className="py-1.5 px-2 min-w-[150px]">סטטוס CRM</th>
+                  <th className="py-1.5 px-2 min-w-[180px]">סטטוס CRM</th>
                   <th className="py-1.5 px-2">פרטי התקשרות</th>
                   <th className="py-1.5 px-2">הערה אחרונה</th>
                   <th className="py-1.5 px-2 text-center w-20">פעולות</th>
@@ -382,7 +382,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                               </td>
 
                               {/* Status */}
-                              <td className="py-1.5 px-2 min-w-[150px]" onClick={(e) => e.stopPropagation()}>
+                              <td className="py-1.5 px-2 min-w-[180px]" onClick={(e) => e.stopPropagation()}>
                                 {canEdit ? (
                                   <select
                                     value={client.status}
@@ -390,7 +390,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                                     className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-md border focus:outline-none transition-all cursor-pointer ${style.bg} ${style.text} ${style.border} w-full`}
                                   >
                                     {ALL_STATUSES.map(s => (
-                                      <option key={s} value={s} className="bg-slate-900 text-slate-200">
+                                      <option key={s} value={s} className="bg-slate-900 text-slate-200 truncate">
                                         {s}
                                       </option>
                                     ))}

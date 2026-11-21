@@ -91,23 +91,28 @@ export const App: React.FC = () => {
   const [isNewTicketOpen, setIsNewTicketOpen] = useState(false);
   const [newTicketDefaultClient, setNewTicketDefaultClient] = useState('');
 
-  // Initial Load
+  // Initial Load - clients first for fast CRM tab open, rest in background
   const loadData = async () => {
     setIsLoading(true);
     await initDatabase();
+    // Load clients first so CRM tab opens immediately
     const fetchedClients = await getClients();
-    const fetchedProducts = await getProductItems();
-    const fetchedTables = await getCustomTables();
-    const fetchedUsers = await getAppUsers();
     setClients(fetchedClients);
-    setProductItems(fetchedProducts);
-    setCustomTables(fetchedTables);
-    setUsers(fetchedUsers);
-    if (fetchedTables.length > 0) {
-      setSelectedCustomTableId(fetchedTables[0].id);
-    }
-    setIsLoading(false);
-    checkConnectionStatuses();
+    // Load remaining data in background (non-blocking)
+    Promise.all([
+      getProductItems(),
+      getCustomTables(),
+      getAppUsers()
+    ]).then(([fetchedProducts, fetchedTables, fetchedUsers]) => {
+      setProductItems(fetchedProducts);
+      setCustomTables(fetchedTables);
+      setUsers(fetchedUsers);
+      if (fetchedTables.length > 0) {
+        setSelectedCustomTableId(fetchedTables[0].id);
+      }
+      setIsLoading(false);
+      checkConnectionStatuses();
+    });
   };
 
   useEffect(() => {
