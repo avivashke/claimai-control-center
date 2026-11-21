@@ -33,7 +33,7 @@
   {
     "id": "user-admin-3",
     "email": "eyal@claimai.com",
-    "name": "אייל (מנהל שותף)",
+    "name": "אייל מנכ\"ל",
     "role": "admin",
     "permissions": {
       "canEditCrm": true,

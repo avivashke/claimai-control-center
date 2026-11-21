@@ -299,13 +299,14 @@ export const verifyAuthCode = (phone: string, code: string, type: 'login' | 'res
   }
 };
 
-export const sendAuthCodeToWhatsApp = (phone: string, code: string, type: 'login' | 'reset'): { success: boolean; message: string } => {
+export const sendAuthCodeToWhatsApp = (phone: string, code: string, type: 'login' | 'reset'): { success: boolean; message: string; code: string } => {
   // In production, integrate with a WhatsApp Business API / SMS gateway.
   // For local operation, the code is stored in localStorage and displayed to the user.
   storeAuthCode(phone, code, type);
   return {
     success: true,
-    message: `קוד האימות ${code} נשלח לוואטסאפ ${phone} (נשמר מקומית לפיתוח ובדיקה).`
+    message: `קוד האימות ${code} נשלח לוואטסאפ ${phone} (נשמר מקומית לפיתוח ובדיקה).`,
+    code
   };
 };
 
@@ -334,7 +335,7 @@ export const localLogin = (phone: string, code: string): { success: boolean; use
   return { success: true, user, message: 'התחברת בהצלחה למערכת.' };
 };
 
-export const requestPasswordReset = (phone: string): { success: boolean; message: string } => {
+export const requestPasswordReset = (phone: string): { success: boolean; message: string; code?: string } => {
   const user = findLocalUserByPhone(phone);
   if (!user) {
     // Don't reveal whether phone exists

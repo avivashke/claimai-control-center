@@ -275,191 +275,218 @@ export const ClientTable: React.FC<ClientTableProps> = ({
 
       {/* Main Table */}
       <div className="rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden shadow-xl">
-        <div className="overflow-x-auto">
-          <table className="w-full text-right text-sm">
-            <thead className="bg-slate-800/90 text-xs text-slate-400 font-semibold border-b border-slate-800 sticky top-0 z-20">
-              <tr>
-                <th className="py-2 px-3 min-w-[170px]">איש קשר / חברה</th>
-                <th className="py-2 px-3 min-w-[170px]">סוג עסק</th>
-                <th className="py-2 px-3">סטטוס CRM</th>
-                <th className="py-2 px-3">פרטי התקשרות</th>
-                <th className="py-2 px-3">הערה אחרונה</th>
-                <th className="py-2 px-3 text-center w-24">פעולות</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60">
-              {groupedClients.length === 0 ? (
+        <div className="flex h-[calc(100vh-320px)]">
+          {/* Side Group Navigation */}
+          <div className="w-20 border-r border-slate-800 bg-slate-900/60 flex-none shrink-0">
+            <div className="p-2 space-y-1 overflow-y-auto">
+              {groupedClients.map(({ status, clients: groupClients }) => (
+                <button
+                  key={`nav-${status}`}
+                  onClick={() => {
+                    const el = document.getElementById(`group-${status.replace(/[^\w]/g, '')}`);
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                  className={`w-full py-1.5 px-2 rounded-lg text-[9px] font-semibold transition-all flex items-center justify-between ${
+                    status === '(ללא סטטוס)'
+                      ? 'bg-slate-800 text-slate-300 border border-slate-700'
+                      : (STATUS_COLORS[status]?.text || 'text-slate-300') + ' border border-slate-700/50 bg-slate-800/50'
+                  }`}
+                  title={`${status} (${groupClients.length})`}
+                >
+                  <span className="truncate">{status === '(ללא סטטוס)' ? 'ללא סטטוס' : status.length > 10 ? status.slice(0, 8) + '…' : status}</span>
+                  <span className="text-[9px] opacity-60">{groupClients.length}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Scrollable Table Area */}
+          <div className="flex-1 overflow-y-auto overflow-x-hidden relative">
+            <table className="w-full text-right text-[9px]">
+              <thead className="bg-slate-800/95 text-[9px] text-slate-400 font-semibold border-b border-slate-800 sticky top-0 z-20">
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-500 text-sm">
-                    לא נמצאו רשומות העונות לסינון המבוקש
-                  </td>
+                  <th className="py-1.5 px-2 min-w-[150px]">איש קשר / חברה</th>
+                  <th className="py-1.5 px-2 min-w-[140px]">סוג עסק</th>
+                  <th className="py-1.5 px-2">סטטוס CRM</th>
+                  <th className="py-1.5 px-2">פרטי התקשרות</th>
+                  <th className="py-1.5 px-2">הערה אחרונה</th>
+                  <th className="py-1.5 px-2 text-center w-20">פעולות</th>
                 </tr>
-              ) : (
-                <>
-                  {groupedClients.map(({ status, clients: groupClients }) => (
-                    <>
-                      {/* Group header */}
-                      <tr key={`group-${status}`}>
-                        <td colSpan={6} className="py-2 px-4 bg-slate-800/80 text-xs font-bold text-slate-200 border-b border-slate-800/80 flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`px-2 py-1 rounded-md border inline-flex items-center gap-1.5 ${groupStyle(status).bg} ${groupStyle(status).text} ${groupStyle(status).border} font-semibold`}
-                            >
-                              {status === '(ללא סטטוס)' ? 'ללא סטטוס' : status}
-                            </span>
-                            <span className="ml-2 text-slate-400 font-normal">({groupClients.length})</span>
-                          </div>
-                        </td>
-                      </tr>
-                      {groupClients.map((client) => {
-                        const style = STATUS_COLORS[client.status] || {
-                          bg: 'bg-slate-800',
-                          text: 'text-slate-300',
-                          border: 'border-slate-700'
-                        };
-                        const waNumber = formatWhatsAppNumber(client.phone);
-
-                        return (
-                          <tr 
-                            key={client.id}
-                            className="hover:bg-slate-800/40 transition-colors group cursor-pointer"
-                            onClick={() => onSelectClient(client)}
-                          >
-                            {/* Name & Company */}
-                            <td className="py-2 px-3 min-w-[170px]">
-                              <div className="font-semibold text-white group-hover:text-blue-400 transition-colors text-xs">
-                                {client.name || 'ללא שם'}
-                              </div>
-                              {client.company && client.company !== client.name && (
-                                <div className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
-                                  <Building className="w-2.5 h-2.5 text-slate-500" />
-                                  <span>{client.company}</span>
-                                </div>
-                              )}
-                              {client.requiresAttention && (
-                                <span className="inline-flex items-center gap-1 text-[9px] text-rose-400 font-semibold mt-1">
-                                  <AlertCircle className="w-2.5 h-2.5" />
-                                  <span>דורש טיפול מיידי</span>
-                                </span>
-                              )}
-                            </td>
-
-                            {/* Business Type */}
-                            <td className="py-2 px-3 min-w-[170px]">
-                              {canEdit ? (
-                                renderBusinessTypeCell(client)
-                              ) : (
-                                <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-300 border border-slate-700 block max-w-xs truncate" title={client.businessType || ''}>
-                                  {client.businessType || '-'}
-                                </span>
-                              )}
-                            </td>
-
-                            {/* Status */}
-                            <td className="py-2 px-3" onClick={(e) => e.stopPropagation()}>
-                              {canEdit ? (
-                                <select
-                                  value={client.status}
-                                  onChange={(e) => onUpdateClientStatus(client.id, e.target.value)}
-                                  className={`text-[10px] font-semibold px-2 py-1 rounded-md border focus:outline-none transition-all cursor-pointer ${style.bg} ${style.text} ${style.border} w-full`}
-                                >
-                                  {ALL_STATUSES.map(s => (
-                                    <option key={s} value={s} className="bg-slate-900 text-slate-200">
-                                      {s}
-                                    </option>
-                                  ))}
-                                </select>
-                              ) : (
-                                <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-md border inline-block ${style.bg} ${style.text} ${style.border}`}>
-                                  {client.status}
-                                </span>
-                              )}
-                              {client.subStatus && (
-                                <div className="text-[9px] text-slate-400 mt-0.5">
-                                  {client.subStatus}
-                                </div>
-                              )}
-                            </td>
-
-                            {/* Contact Channels */}
-                            <td className="py-2 px-3" onClick={(e) => e.stopPropagation()}>
-                              <div className="flex items-center gap-1.5">
-                                {client.phone && (
-                                  <>
-                                    <a
-                                      href={`tel:${client.phone}`}
-                                      title={`חייג: ${client.phone}`}
-                                      className="w-6 h-6 rounded-lg bg-slate-800 hover:bg-blue-600/30 border border-slate-700 hover:border-blue-500/50 text-slate-300 hover:text-blue-300 flex items-center justify-center transition-all"
-                                    >
-                                      <Phone className="w-3 h-3" />
-                                    </a>
-                                    {waNumber && (
-                                      <a
-                                        href={`https://wa.me/${waNumber}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        title={`שלח הודעת וואטסאפ ל-${client.phone}`}
-                                        className="w-6 h-6 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/30 text-emerald-300 flex items-center justify-center transition-all"
-                                      >
-                                        <MessageSquare className="w-3 h-3" />
-                                      </a>
-                                    )}
-                                    <span className="font-mono text-[10px] text-slate-300 truncate max-w-xs">
-                                      {client.phone}
-                                    </span>
-                                  </>
-                                )}
-                                {!client.phone && (
-                                  <span className="text-slate-600 text-[10px]">אין טלפון</span>
-                                )}
-                                {client.email && (
-                                  <a
-                                    href={`mailto:${client.email}`}
-                                    title={client.email}
-                                    className="w-6 h-6 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-all mr-1"
-                                  >
-                                    <Mail className="w-3 h-3" />
-                                  </a>
-                                )}
-                              </div>
-                            </td>
-
-                            {/* Last Note */}
-                            <td className="py-2 px-3 max-w-xs">
-                              {client.lastNote ? (
-                                <div className="space-y-0.5" title={client.lastNote}>
-                                  {client.lastNote.includes('👤') && (
-                                    <span className="inline-flex items-center gap-1 text-[9px] font-bold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
-                                      {client.lastNote.match(/👤\s*([^|\n]+)/)?.[0] || '👤 הערה חתומה'}
-                                    </span>
-                                  )}
-                                  <p className="text-[10px] text-slate-300 line-clamp-2">
-                                    {client.lastNote.replace(/^[0-9/:\s|]+👤[^|]+\|\s*/, '')}
-                                  </p>
-                                </div>
-                              ) : (
-                                <span className="text-[10px] text-slate-600">אין הערות רשומות</span>
-                              )}
-                            </td>
-
-                            {/* Actions */}
-                            <td className="py-2 px-3 text-center">
-                              <button
-                                onClick={() => onSelectClient(client)}
-                                className="px-2 py-1 rounded-lg bg-slate-800 group-hover:bg-blue-600 group-hover:text-white border border-slate-700 group-hover:border-blue-500 text-slate-300 text-[10px] font-medium transition-all"
+              </thead>
+              <tbody className="divide-y divide-slate-800/60">
+                {groupedClients.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-slate-500 text-[10px]">
+                      לא נמצאו רשומות העונות לסינון המבוקש
+                    </td>
+                  </tr>
+                ) : (
+                  <>
+                    {groupedClients.map(({ status, clients: groupClients }) => (
+                      <>
+                        {/* Group header */}
+                        <tr key={`group-${status}`} id={`group-${status.replace(/[^\w]/g, '')}`}>
+                          <td colSpan={6} className="py-1.5 px-3 bg-slate-800/70 text-[9px] font-bold text-slate-200 border-b border-slate-800/80 flex items-center justify-between sticky top-14 z-10 bg-slate-900/80">
+                            <div className="flex items-center gap-1.5">
+                              <span
+                                className={`px-1.5 py-0.5 rounded border inline-flex items-center gap-1 ${groupStyle(status).bg} ${groupStyle(status).text} ${groupStyle(status).border} font-bold`}
                               >
-                                פרופיל
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </>
-                  ))}
-                </>
-              )}
-            </tbody>
-          </table>
+                                {status === '(ללא סטטוס)' ? 'ללא סטטוס' : status}
+                              </span>
+                              <span className="ml-1.5 text-slate-400 font-normal">({groupClients.length})</span>
+                            </div>
+                          </td>
+                        </tr>
+                        {groupClients.map((client) => {
+                          const style = STATUS_COLORS[client.status] || {
+                            bg: 'bg-slate-800',
+                            text: 'text-slate-300',
+                            border: 'border-slate-700'
+                          };
+                          const waNumber = formatWhatsAppNumber(client.phone);
+
+                          return (
+                            <tr 
+                              key={client.id}
+                              className="hover:bg-slate-800/30 transition-colors group cursor-pointer"
+                              onClick={() => onSelectClient(client)}
+                            >
+                              {/* Name & Company */}
+                              <td className="py-1.5 px-2 min-w-[150px]">
+                                <div className="font-semibold text-white group-hover:text-blue-400 transition-colors text-[9px] leading-tight">
+                                  {client.name || 'ללא שם'}
+                                </div>
+                                {client.company && client.company !== client.name && (
+                                  <div className="text-[8px] text-slate-400 flex items-center gap-0.5 mt-0.5">
+                                    <Building className="w-2 h-2 text-slate-500" />
+                                    <span className="truncate">{client.company}</span>
+                                  </div>
+                                )}
+                                {client.requiresAttention && (
+                                  <span className="inline-flex items-center gap-0.5 text-[8px] text-rose-400 font-semibold mt-0.5">
+                                    <AlertCircle className="w-2 h-2" />
+                                    <span>דחוף</span>
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Business Type */}
+                              <td className="py-1.5 px-2 min-w-[140px]">
+                                {canEdit ? (
+                                  renderBusinessTypeCell(client)
+                                ) : (
+                                  <span className="px-1.5 py-0.5 rounded text-[8px] font-medium bg-slate-800 text-slate-300 border border-slate-700 block max-w-xs truncate" title={client.businessType || ''}>
+                                    {client.businessType || '-'}
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Status */}
+                              <td className="py-1.5 px-2" onClick={(e) => e.stopPropagation()}>
+                                {canEdit ? (
+                                  <select
+                                    value={client.status}
+                                    onChange={(e) => onUpdateClientStatus(client.id, e.target.value)}
+                                    className={`text-[8px] font-semibold px-1.5 py-0.5 rounded-md border focus:outline-none transition-all cursor-pointer ${style.bg} ${style.text} ${style.border} w-full`}
+                                  >
+                                    {ALL_STATUSES.map(s => (
+                                      <option key={s} value={s} className="bg-slate-900 text-slate-200">
+                                        {s}
+                                      </option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <span className={`text-[8px] font-semibold px-2 py-0.5 rounded-md border inline-block ${style.bg} ${style.text} ${style.border}`}>
+                                    {client.status}
+                                  </span>
+                                )}
+                                {client.subStatus && (
+                                  <div className="text-[8px] text-slate-400 mt-0.5">
+                                    {client.subStatus}
+                                  </div>
+                                )}
+                              </td>
+
+                              {/* Contact Channels */}
+                              <td className="py-1.5 px-2" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex items-center gap-1">
+                                  {client.phone && (
+                                    <>
+                                      <a
+                                        href={`tel:${client.phone}`}
+                                        title={`חייג: ${client.phone}`}
+                                        className="w-5 h-5 rounded-lg bg-slate-800 hover:bg-blue-600/30 border border-slate-700 hover:border-blue-500/50 text-slate-300 hover:text-blue-300 flex items-center justify-center transition-all"
+                                      >
+                                        <Phone className="w-2.5 h-2.5" />
+                                      </a>
+                                      {waNumber && (
+                                        <a
+                                          href={`https://wa.me/${waNumber}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          title={`שלח הודעת וואטסאפ ל-${client.phone}`}
+                                          className="w-5 h-5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/30 text-emerald-300 flex items-center justify-center transition-all"
+                                        >
+                                          <MessageSquare className="w-2.5 h-2.5" />
+                                        </a>
+                                      )}
+                                      <span className="font-mono text-[8px] text-slate-300 truncate max-w-xs">
+                                        {client.phone}
+                                      </span>
+                                    </>
+                                  )}
+                                  {!client.phone && (
+                                    <span className="text-slate-600 text-[8px]">אין טלפון</span>
+                                  )}
+                                  {client.email && (
+                                    <a
+                                      href={`mailto:${client.email}`}
+                                      title={client.email}
+                                      className="w-5 h-5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-all mr-0.5"
+                                    >
+                                      <Mail className="w-2.5 h-2.5" />
+                                    </a>
+                                  )}
+                                </div>
+                              </td>
+
+                              {/* Last Note */}
+                              <td className="py-1.5 px-2 max-w-xs">
+                                {client.lastNote ? (
+                                  <div className="space-y-0.5" title={client.lastNote}>
+                                    {client.lastNote.includes('👤') && (
+                                      <span className="inline-flex items-center gap-0.5 text-[8px] font-bold text-blue-400 bg-blue-500/10 px-1 py-0.5 rounded border border-blue-500/20">
+                                        {client.lastNote.match(/👤\s*([^|\n]+)/)?.[0] || '👤 הערה חתומה'}
+                                      </span>
+                                    )}
+                                    <p className="text-[8px] text-slate-300 line-clamp-2">
+                                      {client.lastNote.replace(/^[0-9/:\s|]+👤[^|]+\|\s*/, '')}
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <span className="text-[8px] text-slate-600">אין הערות</span>
+                                )}
+                              </td>
+
+                              {/* Actions */}
+                              <td className="py-1.5 px-2 text-center">
+                                <button
+                                  onClick={() => onSelectClient(client)}
+                                  className="px-1.5 py-0.5 rounded-lg bg-slate-800 group-hover:bg-blue-600 group-hover:text-white border border-slate-700 group-hover:border-blue-500 text-slate-300 text-[8px] font-medium transition-all"
+                                >
+                                  פרופיל
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </>
+                    ))}
+                  </>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 

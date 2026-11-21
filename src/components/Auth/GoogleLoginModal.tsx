@@ -29,6 +29,8 @@ export const GoogleLoginModal: React.FC<GoogleLoginModalProps> = ({
   const [step, setStep] = useState<'phone' | 'code' | 'reset'>('phone');
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
+  const [sentCode, setSentCode] = useState<string | null>(null);
+  const [resetSentCode, setResetSentCode] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [message, setMessage] = useState({ text: '', type: 'info' as 'info' | 'success' | 'error' });
@@ -49,12 +51,13 @@ export const GoogleLoginModal: React.FC<GoogleLoginModalProps> = ({
       return;
     }
     setLoading(true);
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const result = sendAuthCodeToWhatsApp(p, code, 'login');
+    const generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const result = sendAuthCodeToWhatsApp(p, generatedCode, 'login');
+    setSentCode(generatedCode);
+    setCodeSent(true);
     setLoading(false);
     if (result.success) {
-      setCodeSent(true);
-      showMessage(result.message, 'success');
+      showMessage(result.message + ` קוד להצגה בדמו: ${generatedCode}`, 'success');
     } else {
       showMessage(result.message, 'error');
     }
@@ -86,8 +89,9 @@ export const GoogleLoginModal: React.FC<GoogleLoginModalProps> = ({
     }
     setLoading(true);
     const result = requestPasswordReset(p);
+    if (result.code) setResetSentCode(result.code);
     setLoading(false);
-    showMessage(result.message, result.success ? 'success' : 'error');
+    showMessage(result.message + (result.code ? ` קוד להצגה בדמו: ${result.code}` : ''), result.success ? 'success' : 'error');
     if (result.success) setStep('reset');
   };
 
@@ -179,8 +183,22 @@ export const GoogleLoginModal: React.FC<GoogleLoginModalProps> = ({
                   </button>
                 </div>
                 <p className="text-[10px] text-slate-500">
-                 {codeSent ? 'הקוד נשלח למכשירך. הזן אותו להלן.' : 'קוד בן 6 ספרות יישלח לוואטסאפ שלך לכניסה למערכת.'}
+                 {codeSent ? 'הקוד הופק ונשלח. הקוד להצגה בדמו:' : 'קוד בן 6 ספרות יישלח לוואטסאפ שלך לכניסה למערכת.'}
                 </p>
+                {sentCode && (
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <span className="text-[10px] text-slate-400">קוד אימות:</span>
+                    <span className="font-mono text-xl font-bold text-blue-400 bg-blue-900/30 px-3 py-1 rounded border border-blue-500/30">
+                      {sentCode}
+                    </span>
+                    <button
+                      onClick={() => setCode(sentCode)}
+                      className="text-[9px] text-blue-400 hover:text-blue-300 underline underline-offset-2"
+                    >
+                      העתק קוד
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="relative flex py-1 items-center mt-2">
@@ -266,6 +284,23 @@ export const GoogleLoginModal: React.FC<GoogleLoginModalProps> = ({
           {step === 'reset' && (
             <>
               <div className="space-y-3">
+                <p className="text-[10px] text-slate-500 mb-2">
+                  קוד איפוס נשלח ל־<span className="font-mono text-slate-200">{phone}</span>. הקוד תקף ל־10 דקות.
+                </p>
+                {resetSentCode && (
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="text-[10px] text-slate-400">קוד איפוס:</span>
+                    <span className="font-mono text-xl font-bold text-emerald-400 bg-emerald-900/30 px-3 py-1 rounded border border-emerald-500/30">
+                      {resetSentCode}
+                    </span>
+                    <button
+                      onClick={() => setCode(resetSentCode)}
+                      className="text-[9px] text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
+                    >
+                      השתמש בקוד זה
+                    </button>
+                  </div>
+                )}
                 <label className="block text-xs font-medium text-slate-300">
                   סיסמה חדשה
                 </label>
