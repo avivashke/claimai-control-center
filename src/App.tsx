@@ -94,24 +94,25 @@ export const App: React.FC = () => {
   // Initial Load - clients first for fast CRM tab open, rest in background
   const loadData = async () => {
     setIsLoading(true);
-    await initDatabase();
-    // Load clients first so CRM tab opens immediately
+    // Load clients immediately without waiting for initDatabase (fast CRM open)
     const fetchedClients = await getClients();
     setClients(fetchedClients);
-    // Load remaining data in background (non-blocking)
-    Promise.all([
-      getProductItems(),
-      getCustomTables(),
-      getAppUsers()
-    ]).then(([fetchedProducts, fetchedTables, fetchedUsers]) => {
-      setProductItems(fetchedProducts);
-      setCustomTables(fetchedTables);
-      setUsers(fetchedUsers);
-      if (fetchedTables.length > 0) {
-        setSelectedCustomTableId(fetchedTables[0].id);
-      }
-      setIsLoading(false);
-      checkConnectionStatuses();
+    setIsLoading(false);
+    // Initialize DB and load remaining data in background (non-blocking)
+    initDatabase().then(() => {
+      Promise.all([
+        getProductItems(),
+        getCustomTables(),
+        getAppUsers()
+      ]).then(([fetchedProducts, fetchedTables, fetchedUsers]) => {
+        setProductItems(fetchedProducts);
+        setCustomTables(fetchedTables);
+        setUsers(fetchedUsers);
+        if (fetchedTables.length > 0) {
+          setSelectedCustomTableId(fetchedTables[0].id);
+        }
+        checkConnectionStatuses();
+      });
     });
   };
 
