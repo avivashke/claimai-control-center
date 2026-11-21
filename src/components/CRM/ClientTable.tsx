@@ -59,10 +59,12 @@ export const ClientTable: React.FC<ClientTableProps> = ({
   const [localSearch, setLocalSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedBusinessType, setSelectedBusinessType] = useState<string>('all');
-  const [page, setPage] = useState(1);
-  const pageSize = 25;
 
   const combinedSearch = (searchFilter || localSearch).trim().toLowerCase();
+
+  const groupStyle = (status: string) => STATUS_COLORS[status] || {
+    bg: 'bg-slate-800', text: 'text-slate-300', border: 'border-slate-700'
+  };
 
   // Extract unique business types
   const businessTypes = useMemo(() => {
@@ -73,7 +75,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
     return Array.from(set);
   }, [clients]);
 
-  // Filtered clients
+  // Filtered clients (applied before grouping)
   const filteredClients = useMemo(() => {
     return clients.filter(c => {
       if (selectedStatus !== 'all' && c.status !== selectedStatus) {
@@ -95,11 +97,30 @@ export const ClientTable: React.FC<ClientTableProps> = ({
     });
   }, [clients, selectedStatus, selectedBusinessType, combinedSearch]);
 
-  const totalPages = Math.ceil(filteredClients.length / pageSize) || 1;
-  const paginatedClients = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return filteredClients.slice(start, start + pageSize);
-  }, [filteredClients, page]);
+  // Group clients by status. Defined statuses first (in ALL_STATUSES order),
+  // then statusless / unknown statuses at the bottom.
+  const groupedClients = useMemo(() => {
+    const byStatus = new Map<string, Client[]>();
+    filteredClients.forEach(c => {
+      const key = c.status || '(ללא סטטוס)';
+      if (!byStatus.has(key)) byStatus.set(key, []);
+      byStatus.get(key)!.push(c);
+    });
+
+    const ordered: { status: string; clients: Client[] }[] = [];
+    ALL_STATUSES.forEach(st => {
+      const items = byStatus.get(st);
+      if (items && items.length) {
+        ordered.push({ status: st, clients: items });
+        byStatus.delete(st);
+      }
+    });
+    // Remaining (statusless / unknown) go last
+    byStatus.forEach((items, key) => {
+      ordered.push({ status: key, clients: items });
+    });
+    return ordered;
+  }, [filteredClients]);
 
   // Export to CSV
   const handleExportCSV = () => {
@@ -154,7 +175,6 @@ export const ClientTable: React.FC<ClientTableProps> = ({
               value={localSearch}
               onChange={(e) => {
                 setLocalSearch(e.target.value);
-                setPage(1);
               }}
               className="w-full pr-9 pl-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
@@ -165,7 +185,6 @@ export const ClientTable: React.FC<ClientTableProps> = ({
             value={selectedStatus}
             onChange={(e) => {
               setSelectedStatus(e.target.value);
-              setPage(1);
             }}
             className="bg-slate-800 border border-slate-700 rounded-lg text-xs py-2 px-3 text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
@@ -182,7 +201,6 @@ export const ClientTable: React.FC<ClientTableProps> = ({
             value={selectedBusinessType}
             onChange={(e) => {
               setSelectedBusinessType(e.target.value);
-              setPage(1);
             }}
             className="bg-slate-800 border border-slate-700 rounded-lg text-xs py-2 px-3 text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
@@ -216,8 +234,8 @@ export const ClientTable: React.FC<ClientTableProps> = ({
             <thead className="bg-slate-800/80 text-xs text-slate-400 font-semibold border-b border-slate-800">
               <tr>
                 <th className="py-3 px-4 w-16">ID</th>
-                <th className="py-3 px-4">איש קשר / חברה</th>
-                <th className="py-3 px-4">סוג עסק</th>
+                <th className="py-3 px-4 min-w-[170px]">איש קשר / חברה</th>
+                <th className="py-3 px-4 min-w-[170px]">סוג עסק</th>
                 <th className="py-3 px-4">סטטוס CRM</th>
                 <th className="py-3 px-4">פרטי התקשרות</th>
                 <th className="py-3 px-4">הערה אחרונה</th>
@@ -225,193 +243,185 @@ export const ClientTable: React.FC<ClientTableProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
-              {paginatedClients.length === 0 ? (
+              {groupedClients.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-slate-500 text-sm">
                     לא נמצאו רשומות העונות לסינון המבוקש
                   </td>
                 </tr>
               ) : (
-                paginatedClients.map((client) => {
-                  const style = STATUS_COLORS[client.status] || {
-                    bg: 'bg-slate-800',
-                    text: 'text-slate-300',
-                    border: 'border-slate-700'
-                  };
-                  const waNumber = formatWhatsAppNumber(client.phone);
-
-                  return (
-                    <tr 
-                      key={client.id}
-                      className="hover:bg-slate-800/40 transition-colors group cursor-pointer"
-                      onClick={() => onSelectClient(client)}
-                    >
-                      {/* ID */}
-                      <td className="py-3 px-4 font-mono text-xs font-bold text-slate-400">
-                        {client.id}
-                      </td>
-
-                      {/* Name & Company */}
-                      <td className="py-3 px-4">
-                        <div className="font-semibold text-white group-hover:text-blue-400 transition-colors">
-                          {client.name || 'ללא שם'}
-                        </div>
-                        {client.company && client.company !== client.name && (
-                          <div className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                            <Building className="w-3 h-3 text-slate-500" />
-                            <span>{client.company}</span>
-                          </div>
-                        )}
-                        {client.requiresAttention && (
-                          <span className="inline-flex items-center gap-1 text-[10px] text-rose-400 font-semibold mt-1">
-                            <AlertCircle className="w-3 h-3" />
-                            <span>דורש טיפול מיידי</span>
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Business Type */}
-                      <td className="py-3 px-4">
-                        {client.businessType ? (
-                          <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-800 text-slate-300 border border-slate-700">
-                            {client.businessType}
-                          </span>
-                        ) : (
-                          <span className="text-slate-600 text-xs">-</span>
-                        )}
-                      </td>
-
-                      {/* Status */}
-                      <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
-                        {canEdit ? (
-                          <select
-                            value={client.status}
-                            onChange={(e) => onUpdateClientStatus(client.id, e.target.value)}
-                            className={`text-xs font-semibold px-2 py-1 rounded-md border focus:outline-none transition-all cursor-pointer ${style.bg} ${style.text} ${style.border}`}
+                <>
+                  {groupedClients.map(({ status, clients: groupClients }) => (
+                    <>
+                      {/* Group header */}
+                      <tr key={`group-${status}`}>
+                        <td colSpan={7} className="py-3 px-4 bg-slate-800/60 text-xs font-bold text-slate-300 border-b border-slate-800/80">
+                          <span
+                            className={`px-2.5 py-1 rounded-md border inline-flex items-center gap-1.5 ${groupStyle(status).bg} ${groupStyle(status).text} ${groupStyle(status).border}`}
                           >
-                            {ALL_STATUSES.map(s => (
-                              <option key={s} value={s} className="bg-slate-900 text-slate-200">
-                                {s}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-md border inline-block ${style.bg} ${style.text} ${style.border}`}>
-                            {client.status}
+                            {status === '(ללא סטטוס)' ? 'ללא סטטוס' : status}
                           </span>
-                        )}
-                        {client.subStatus && (
-                          <div className="text-[10px] text-slate-400 mt-1">
-                            {client.subStatus}
-                          </div>
-                        )}
-                      </td>
+                          <span className="ml-2 text-slate-500 font-normal">({groupClients.length})</span>
+                        </td>
+                      </tr>
+                      {groupClients.map((client) => {
+                        const style = STATUS_COLORS[client.status] || {
+                          bg: 'bg-slate-800',
+                          text: 'text-slate-300',
+                          border: 'border-slate-700'
+                        };
+                        const waNumber = formatWhatsAppNumber(client.phone);
 
-                      {/* Contact Channels */}
-                      <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-2">
-                          {client.phone && (
-                            <>
-                              <a
-                                href={`tel:${client.phone}`}
-                                title={`חייג: ${client.phone}`}
-                                className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-blue-600/30 border border-slate-700 hover:border-blue-500/50 text-slate-300 hover:text-blue-300 flex items-center justify-center transition-all"
-                              >
-                                <Phone className="w-3.5 h-3.5" />
-                              </a>
-                              {waNumber && (
-                                <a
-                                  href={`https://wa.me/${waNumber}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  title={`שלח הודעת וואטסאפ ל-${client.phone}`}
-                                  className="w-7 h-7 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/30 text-emerald-300 flex items-center justify-center transition-all"
-                                >
-                                  <MessageSquare className="w-3.5 h-3.5" />
-                                </a>
+                        return (
+                          <tr 
+                            key={client.id}
+                            className="hover:bg-slate-800/40 transition-colors group cursor-pointer"
+                            onClick={() => onSelectClient(client)}
+                          >
+                            {/* ID */}
+                            <td className="py-3 px-4 font-mono text-xs font-bold text-slate-400">
+                              {client.id}
+                            </td>
+
+                            {/* Name & Company */}
+                            <td className="py-3 px-4">
+                              <div className="font-semibold text-white group-hover:text-blue-400 transition-colors">
+                                {client.name || 'ללא שם'}
+                              </div>
+                              {client.company && client.company !== client.name && (
+                                <div className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+                                  <Building className="w-3 h-3 text-slate-500" />
+                                  <span>{client.company}</span>
+                                </div>
                               )}
-                              <span className="font-mono text-xs text-slate-300">
-                                {client.phone}
-                              </span>
-                            </>
-                          )}
-                          {!client.phone && (
-                            <span className="text-slate-600 text-xs">אין טלפון</span>
-                          )}
-                          {client.email && (
-                            <a
-                              href={`mailto:${client.email}`}
-                              title={client.email}
-                              className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-all mr-1"
-                            >
-                              <Mail className="w-3.5 h-3.5" />
-                            </a>
-                          )}
-                        </div>
-                      </td>
+                              {client.requiresAttention && (
+                                <span className="inline-flex items-center gap-1 text-[10px] text-rose-400 font-semibold mt-1">
+                                  <AlertCircle className="w-3 h-3" />
+                                  <span>דורש טיפול מיידי</span>
+                                </span>
+                              )}
+                            </td>
 
-                      {/* Last Note */}
-                      <td className="py-3 px-4 max-w-xs">
-                        {client.lastNote ? (
-                          <div className="space-y-0.5" title={client.lastNote}>
-                            {client.lastNote.includes('👤') && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
-                                {client.lastNote.match(/👤\s*([^|\n]+)/)?.[0] || '👤 הערה חתומה'}
-                              </span>
-                            )}
-                            <p className="text-xs text-slate-300 line-clamp-2">
-                              {client.lastNote.replace(/^[0-9/:\s|]+👤[^|]+\|\s*/, '')}
-                            </p>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-slate-600">אין הערות רשומות</span>
-                        )}
-                      </td>
+                            {/* Business Type */}
+                            <td className="py-3 px-4 min-w-[170px]">
+                              {client.businessType ? (
+                                <span
+                                  title={client.businessType}
+                                  className="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-800 text-slate-300 border border-slate-700 block max-w-xs truncate"
+                                >
+                                  {client.businessType}
+                                </span>
+                              ) : (
+                                <span className="text-slate-600 text-xs">-</span>
+                              )}
+                            </td>
 
-                      {/* Actions */}
-                      <td className="py-3 px-4 text-center">
-                        <button
-                          onClick={() => onSelectClient(client)}
-                          className="px-2.5 py-1 rounded-lg bg-slate-800 group-hover:bg-blue-600 group-hover:text-white border border-slate-700 group-hover:border-blue-500 text-slate-300 text-xs font-medium transition-all"
-                        >
-                          פרופיל
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
+                            {/* Status */}
+                            <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                              {canEdit ? (
+                                <select
+                                  value={client.status}
+                                  onChange={(e) => onUpdateClientStatus(client.id, e.target.value)}
+                                  className={`text-xs font-semibold px-2 py-1 rounded-md border focus:outline-none transition-all cursor-pointer ${style.bg} ${style.text} ${style.border}`}
+                                >
+                                  {ALL_STATUSES.map(s => (
+                                    <option key={s} value={s} className="bg-slate-900 text-slate-200">
+                                      {s}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <span className={`text-xs font-semibold px-2.5 py-1 rounded-md border inline-block ${style.bg} ${style.text} ${style.border}`}>
+                                  {client.status}
+                                </span>
+                              )}
+                              {client.subStatus && (
+                                <div className="text-[10px] text-slate-400 mt-1">
+                                  {client.subStatus}
+                                </div>
+                              )}
+                            </td>
+
+                            {/* Contact Channels */}
+                            <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center gap-2">
+                                {client.phone && (
+                                  <>
+                                    <a
+                                      href={`tel:${client.phone}`}
+                                      title={`חייג: ${client.phone}`}
+                                      className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-blue-600/30 border border-slate-700 hover:border-blue-500/50 text-slate-300 hover:text-blue-300 flex items-center justify-center transition-all"
+                                    >
+                                      <Phone className="w-3.5 h-3.5" />
+                                    </a>
+                                    {waNumber && (
+                                      <a
+                                        href={`https://wa.me/${waNumber}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        title={`שלח הודעת וואטסאפ ל-${client.phone}`}
+                                        className="w-7 h-7 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/30 text-emerald-300 flex items-center justify-center transition-all"
+                                      >
+                                        <MessageSquare className="w-3.5 h-3.5" />
+                                      </a>
+                                    )}
+                                    <span className="font-mono text-xs text-slate-300">
+                                      {client.phone}
+                                    </span>
+                                  </>
+                                )}
+                                {!client.phone && (
+                                  <span className="text-slate-600 text-xs">אין טלפון</span>
+                                )}
+                                {client.email && (
+                                  <a
+                                    href={`mailto:${client.email}`}
+                                    title={client.email}
+                                    className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-all mr-1"
+                                  >
+                                    <Mail className="w-3.5 h-3.5" />
+                                  </a>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Last Note */}
+                            <td className="py-3 px-4 max-w-xs">
+                              {client.lastNote ? (
+                                <div className="space-y-0.5" title={client.lastNote}>
+                                  {client.lastNote.includes('👤') && (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+                                      {client.lastNote.match(/👤\s*([^|\n]+)/)?.[0] || '👤 הערה חתומה'}
+                                    </span>
+                                  )}
+                                  <p className="text-xs text-slate-300 line-clamp-2">
+                                    {client.lastNote.replace(/^[0-9/:\s|]+👤[^|]+\|\s*/, '')}
+                                  </p>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-slate-600">אין הערות רשומות</span>
+                              )}
+                            </td>
+
+                            {/* Actions */}
+                            <td className="py-3 px-4 text-center">
+                              <button
+                                onClick={() => onSelectClient(client)}
+                                className="px-2.5 py-1 rounded-lg bg-slate-800 group-hover:bg-blue-600 group-hover:text-white border border-slate-700 group-hover:border-blue-500 text-slate-300 text-xs font-medium transition-all"
+                              >
+                                פרופיל
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </>
+                  ))}
+                </>
               )}
             </tbody>
           </table>
         </div>
-
-        {/* Pagination Controls */}
-        <div className="flex items-center justify-between p-4 bg-slate-900/80 border-t border-slate-800 text-xs text-slate-400">
-          <div>
-            עמוד <span className="text-white font-bold">{page}</span> מתוך <span className="text-white font-bold">{totalPages}</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:hover:bg-slate-800 border border-slate-700 text-slate-200 flex items-center gap-1 transition-all"
-            >
-              <ChevronRight className="w-4 h-4" />
-              <span>הקודם</span>
-            </button>
-
-            <button
-              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:hover:bg-slate-800 border border-slate-700 text-slate-200 flex items-center gap-1 transition-all"
-            >
-              <span>הבא</span>
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
       </div>
 
     </div>

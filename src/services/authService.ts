@@ -124,3 +124,63 @@ export const initGoogleIdentityServices = (
   }
   return false;
 };
+
+// Load the Google Identity Services client library from CDN
+const GSI_SCRIPT_URL = 'https://accounts.google.com/gsi/client';
+let gsiLoaded = false;
+let gsiLoadPromise: Promise<void> | null = null;
+
+export const loadGoogleIdentityServices = (): Promise<void> => {
+  if (gsiLoaded) return Promise.resolve();
+  if (gsiLoadPromise) return gsiLoadPromise;
+  gsiLoadPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = GSI_SCRIPT_URL;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => { gsiLoaded = true; resolve(); };
+    script.onerror = () => reject(new Error('Failed to load Google Identity Services library'));
+    document.head.appendChild(script);
+  });
+  return gsiLoadPromise;
+};
+
+// Render the official Google "Sign in with Google" button into a container
+export const renderGoogleSignInButton = (
+  containerId: string,
+  clientId: string,
+  onSuccess: (email: string, name: string) => void
+): boolean => {
+  const w = window as any;
+  if (!w.google?.accounts?.id) return false;
+  const container = document.getElementById(containerId);
+  if (!container) return false;
+  container.innerHTML = '';
+  try {
+    w.google.accounts.id.initialize({
+      client_id: clientId,
+      callback: (response: any) => {
+        try {
+          const payloadBase64 = response.credential.split('.')[1];
+          const decodedJson = JSON.parse(atob(payloadBase64));
+          if (decodedJson.email) {
+            onSuccess(decodedJson.email, decodedJson.name || decodedJson.email.split('@')[0]);
+          }
+        } catch (err) {
+          console.error('Failed to decode Google token', err);
+        }
+      }
+    });
+    w.google.accounts.id.renderButton(container, {
+      theme: 'outline',
+      size: 'large',
+      width: '100%',
+      logo_alignment: 'center'
+    } as any);
+    try { w.google.accounts.id.prompt(); } catch {}
+    return true;
+  } catch (err) {
+    console.warn('Google Sign-In button render error:', err);
+    return false;
+  }
+};
