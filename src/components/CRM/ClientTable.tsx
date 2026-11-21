@@ -277,8 +277,8 @@ export const ClientTable: React.FC<ClientTableProps> = ({
       <div className="rounded-2xl border border-slate-800 bg-slate-900/40 shadow-xl">
         <div className="flex min-h-[calc(100vh-340px)]">
           {/* Side Group Navigation */}
-          <div className="w-28 border-r border-slate-800 bg-slate-900/60 flex-none shrink-0">
-            <div className="p-1 space-y-0.5 overflow-y-auto">
+          <div className="w-28 border-r border-slate-800 bg-slate-900/60 flex-none shrink-0 sticky top-4 z-30">
+            <div className="p-1 space-y-0.5 max-h-[calc(100vh-400px)] overflow-y-auto">
               {groupedClients.map(({ status, clients: groupClients }) => (
                 <button
                   key={`nav-${status}`}
@@ -303,7 +303,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
           {/* Scrollable Table Area */}
           <div className="flex-1 overflow-y-auto overflow-x-hidden relative min-h-full">
             <table className="w-full text-right text-[9px]">
-              <thead className="bg-slate-800/95 text-[9px] text-slate-400 font-semibold border-b border-slate-800 sticky top-0 z-20">
+              <thead className="bg-slate-800/95 text-[9px] text-slate-400 font-semibold border-b border-slate-800 sticky top-0 z-40">
                 <tr>
                   <th className="py-1.5 px-2 min-w-[150px]">איש קשר / חברה</th>
                   <th className="py-1.5 px-2 min-w-[140px]">סוג עסק</th>
@@ -326,7 +326,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                       <>
                         {/* Group header */}
                         <tr key={`group-${status}`} id={`group-${status.replace(/[^\w]/g, '')}`}>
-                          <td colSpan={6} className="py-2 px-3 bg-slate-800/70 text-[9px] font-bold text-slate-200 border-b border-slate-800/80 flex items-center justify-between sticky top-14 z-10 bg-slate-900/80">
+                          <td colSpan={6} className="py-2 px-3 bg-slate-800/70 text-[9px] font-bold text-slate-200 border-b border-slate-800/80 flex items-center justify-between sticky top-[34px] z-30 bg-slate-900/90">
                             <div className="flex items-center gap-1.5">
                               <span
                                 className={`px-1.5 py-0.5 rounded border inline-flex items-center gap-1 ${groupStyle(status).bg} ${groupStyle(status).text} ${groupStyle(status).border} font-bold`}
