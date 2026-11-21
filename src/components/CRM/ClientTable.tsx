@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { 
   Search, 
   Filter, 
@@ -12,7 +12,9 @@ import {
   Download,
   AlertCircle,
   ExternalLink,
-  UserCheck
+  UserCheck,
+  Plus,
+  Edit
 } from 'lucide-react';
 import { Client } from '../../types';
 
@@ -20,6 +22,7 @@ interface ClientTableProps {
   clients: Client[];
   onSelectClient: (client: Client) => void;
   onUpdateClientStatus: (clientId: string, newStatus: string) => void;
+  onUpdateClientBusinessType: (clientId: string, newBusinessType: string) => void;
   searchFilter: string;
   canEdit?: boolean;
 }
@@ -53,12 +56,14 @@ export const ClientTable: React.FC<ClientTableProps> = ({
   clients,
   onSelectClient,
   onUpdateClientStatus,
+  onUpdateClientBusinessType,
   searchFilter,
   canEdit = true
 }) => {
   const [localSearch, setLocalSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedBusinessType, setSelectedBusinessType] = useState<string>('all');
+  const [additionalBusinessTypes, setAdditionalBusinessTypes] = useState<string[]>([]);
 
   const combinedSearch = (searchFilter || localSearch).trim().toLowerCase();
 
@@ -66,14 +71,15 @@ export const ClientTable: React.FC<ClientTableProps> = ({
     bg: 'bg-slate-800', text: 'text-slate-300', border: 'border-slate-700'
   };
 
-  // Extract unique business types
-  const businessTypes = useMemo(() => {
+  // All business types available globally (from data + user-added)
+  const allBusinessTypes = useMemo(() => {
     const set = new Set<string>();
     clients.forEach(c => {
       if (c.businessType) set.add(c.businessType);
     });
+    additionalBusinessTypes.forEach(bt => set.add(bt));
     return Array.from(set);
-  }, [clients]);
+  }, [clients, additionalBusinessTypes]);
 
   // Filtered clients (applied before grouping)
   const filteredClients = useMemo(() => {
@@ -159,8 +165,48 @@ export const ClientTable: React.FC<ClientTableProps> = ({
     return `972${cleaned}`;
   };
 
+  const handleAddGlobalBusinessType = useCallback((clientId: string) => {
+    const name = window.prompt('הזן שם לסוג עסק חדש שיתווסף לרשימה הגלובלית:');
+    if (!name || !name.trim()) return;
+    const trimmed = name.trim();
+    setAdditionalBusinessTypes(prev => (prev.includes(trimmed) ? prev : [...prev, trimmed]));
+    onUpdateClientBusinessType(clientId, trimmed);
+  }, [onUpdateClientBusinessType]);
+
+  const renderBusinessTypeCell = (client: Client) => {
+    const currentType = client.businessType || '';
+    const isAdding = false;
+
+    return (
+      <select
+        value={currentType}
+        onChange={(e) => {
+          const val = e.target.value;
+          if (val === '__add_new__') {
+            handleAddGlobalBusinessType(client.id);
+            return;
+          }
+          onUpdateClientBusinessType(client.id, val);
+        }}
+        className="w-full text-[10px] bg-slate-800 text-slate-200 border border-slate-700 rounded py-1 px-2 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+      >
+        <option value="" className="bg-slate-900 text-slate-500">
+          {!currentType ? '— ללא סוג —' : currentType}
+        </option>
+        {allBusinessTypes.map(bt => (
+          <option key={bt} value={bt} className="bg-slate-900 text-slate-200">
+            {bt}
+          </option>
+        ))}
+        <option value="__add_new__" className="bg-slate-800 text-blue-400 font-semibold italic">
+          + הוסף סוג עסק חדש…
+        </option>
+      </select>
+    );
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       
       {/* Filters and Controls Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
@@ -205,7 +251,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
             className="bg-slate-800 border border-slate-700 rounded-lg text-xs py-2 px-3 text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
             <option value="all">כל סוגי העסקים</option>
-            {businessTypes.map(bt => (
+            {allBusinessTypes.map(bt => (
               <option key={bt} value={bt}>{bt}</option>
             ))}
           </select>
@@ -231,15 +277,15 @@ export const ClientTable: React.FC<ClientTableProps> = ({
       <div className="rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-right text-sm">
-            <thead className="bg-slate-800/80 text-xs text-slate-400 font-semibold border-b border-slate-800">
+            <thead className="bg-slate-800/90 text-xs text-slate-400 font-semibold border-b border-slate-800 sticky top-0 z-20">
               <tr>
-                <th className="py-3 px-4 w-16">ID</th>
-                <th className="py-3 px-4 min-w-[170px]">איש קשר / חברה</th>
-                <th className="py-3 px-4 min-w-[170px]">סוג עסק</th>
-                <th className="py-3 px-4">סטטוס CRM</th>
-                <th className="py-3 px-4">פרטי התקשרות</th>
-                <th className="py-3 px-4">הערה אחרונה</th>
-                <th className="py-3 px-4 text-center w-24">פעולות</th>
+                <th className="py-2 px-3 w-16 sticky left-0 z-30 bg-slate-800/90 border-r border-slate-800">ID</th>
+                <th className="py-2 px-3 min-w-[170px]">איש קשר / חברה</th>
+                <th className="py-2 px-3 min-w-[170px]">סוג עסק</th>
+                <th className="py-2 px-3">סטטוס CRM</th>
+                <th className="py-2 px-3">פרטי התקשרות</th>
+                <th className="py-2 px-3">הערה אחרונה</th>
+                <th className="py-2 px-3 text-center w-24">פעולות</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
@@ -255,13 +301,15 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                     <>
                       {/* Group header */}
                       <tr key={`group-${status}`}>
-                        <td colSpan={7} className="py-3 px-4 bg-slate-800/60 text-xs font-bold text-slate-300 border-b border-slate-800/80">
-                          <span
-                            className={`px-2.5 py-1 rounded-md border inline-flex items-center gap-1.5 ${groupStyle(status).bg} ${groupStyle(status).text} ${groupStyle(status).border}`}
-                          >
-                            {status === '(ללא סטטוס)' ? 'ללא סטטוס' : status}
-                          </span>
-                          <span className="ml-2 text-slate-500 font-normal">({groupClients.length})</span>
+                        <td colSpan={7} className="py-2 px-4 bg-slate-800/80 text-xs font-bold text-slate-200 border-b border-slate-800/80 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`px-2 py-1 rounded-md border inline-flex items-center gap-1.5 ${groupStyle(status).bg} ${groupStyle(status).text} ${groupStyle(status).border} font-semibold`}
+                            >
+                              {status === '(ללא סטטוס)' ? 'ללא סטטוס' : status}
+                            </span>
+                            <span className="ml-2 text-slate-400 font-normal">({groupClients.length})</span>
+                          </div>
                         </td>
                       </tr>
                       {groupClients.map((client) => {
@@ -278,51 +326,48 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                             className="hover:bg-slate-800/40 transition-colors group cursor-pointer"
                             onClick={() => onSelectClient(client)}
                           >
-                            {/* ID */}
-                            <td className="py-3 px-4 font-mono text-xs font-bold text-slate-400">
+                            {/* ID - Sticky */}
+                            <td className="py-2 px-3 font-mono text-xs font-bold text-slate-400 sticky left-0 z-30 bg-slate-900/80 border-r border-slate-800">
                               {client.id}
                             </td>
 
                             {/* Name & Company */}
-                            <td className="py-3 px-4">
-                              <div className="font-semibold text-white group-hover:text-blue-400 transition-colors">
+                            <td className="py-2 px-3 min-w-[170px]">
+                              <div className="font-semibold text-white group-hover:text-blue-400 transition-colors text-xs">
                                 {client.name || 'ללא שם'}
                               </div>
                               {client.company && client.company !== client.name && (
-                                <div className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                                  <Building className="w-3 h-3 text-slate-500" />
+                                <div className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                                  <Building className="w-2.5 h-2.5 text-slate-500" />
                                   <span>{client.company}</span>
                                 </div>
                               )}
                               {client.requiresAttention && (
-                                <span className="inline-flex items-center gap-1 text-[10px] text-rose-400 font-semibold mt-1">
-                                  <AlertCircle className="w-3 h-3" />
+                                <span className="inline-flex items-center gap-1 text-[9px] text-rose-400 font-semibold mt-1">
+                                  <AlertCircle className="w-2.5 h-2.5" />
                                   <span>דורש טיפול מיידי</span>
                                 </span>
                               )}
                             </td>
 
                             {/* Business Type */}
-                            <td className="py-3 px-4 min-w-[170px]">
-                              {client.businessType ? (
-                                <span
-                                  title={client.businessType}
-                                  className="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-800 text-slate-300 border border-slate-700 block max-w-xs truncate"
-                                >
-                                  {client.businessType}
-                                </span>
+                            <td className="py-2 px-3 min-w-[170px]">
+                              {canEdit ? (
+                                renderBusinessTypeCell(client)
                               ) : (
-                                <span className="text-slate-600 text-xs">-</span>
+                                <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-300 border border-slate-700 block max-w-xs truncate" title={client.businessType || ''}>
+                                  {client.businessType || '-'}
+                                </span>
                               )}
                             </td>
 
                             {/* Status */}
-                            <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                            <td className="py-2 px-3" onClick={(e) => e.stopPropagation()}>
                               {canEdit ? (
                                 <select
                                   value={client.status}
                                   onChange={(e) => onUpdateClientStatus(client.id, e.target.value)}
-                                  className={`text-xs font-semibold px-2 py-1 rounded-md border focus:outline-none transition-all cursor-pointer ${style.bg} ${style.text} ${style.border}`}
+                                  className={`text-[10px] font-semibold px-2 py-1 rounded-md border focus:outline-none transition-all cursor-pointer ${style.bg} ${style.text} ${style.border} w-full`}
                                 >
                                   {ALL_STATUSES.map(s => (
                                     <option key={s} value={s} className="bg-slate-900 text-slate-200">
@@ -331,28 +376,28 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                                   ))}
                                 </select>
                               ) : (
-                                <span className={`text-xs font-semibold px-2.5 py-1 rounded-md border inline-block ${style.bg} ${style.text} ${style.border}`}>
+                                <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-md border inline-block ${style.bg} ${style.text} ${style.border}`}>
                                   {client.status}
                                 </span>
                               )}
                               {client.subStatus && (
-                                <div className="text-[10px] text-slate-400 mt-1">
+                                <div className="text-[9px] text-slate-400 mt-0.5">
                                   {client.subStatus}
                                 </div>
                               )}
                             </td>
 
                             {/* Contact Channels */}
-                            <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
-                              <div className="flex items-center gap-2">
+                            <td className="py-2 px-3" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center gap-1.5">
                                 {client.phone && (
                                   <>
                                     <a
                                       href={`tel:${client.phone}`}
                                       title={`חייג: ${client.phone}`}
-                                      className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-blue-600/30 border border-slate-700 hover:border-blue-500/50 text-slate-300 hover:text-blue-300 flex items-center justify-center transition-all"
+                                      className="w-6 h-6 rounded-lg bg-slate-800 hover:bg-blue-600/30 border border-slate-700 hover:border-blue-500/50 text-slate-300 hover:text-blue-300 flex items-center justify-center transition-all"
                                     >
-                                      <Phone className="w-3.5 h-3.5" />
+                                      <Phone className="w-3 h-3" />
                                     </a>
                                     {waNumber && (
                                       <a
@@ -360,54 +405,54 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         title={`שלח הודעת וואטסאפ ל-${client.phone}`}
-                                        className="w-7 h-7 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/30 text-emerald-300 flex items-center justify-center transition-all"
+                                        className="w-6 h-6 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/30 text-emerald-300 flex items-center justify-center transition-all"
                                       >
-                                        <MessageSquare className="w-3.5 h-3.5" />
+                                        <MessageSquare className="w-3 h-3" />
                                       </a>
                                     )}
-                                    <span className="font-mono text-xs text-slate-300">
+                                    <span className="font-mono text-[10px] text-slate-300 truncate max-w-xs">
                                       {client.phone}
                                     </span>
                                   </>
                                 )}
                                 {!client.phone && (
-                                  <span className="text-slate-600 text-xs">אין טלפון</span>
+                                  <span className="text-slate-600 text-[10px]">אין טלפון</span>
                                 )}
                                 {client.email && (
                                   <a
                                     href={`mailto:${client.email}`}
                                     title={client.email}
-                                    className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-all mr-1"
+                                    className="w-6 h-6 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-all mr-1"
                                   >
-                                    <Mail className="w-3.5 h-3.5" />
+                                    <Mail className="w-3 h-3" />
                                   </a>
                                 )}
                               </div>
                             </td>
 
                             {/* Last Note */}
-                            <td className="py-3 px-4 max-w-xs">
+                            <td className="py-2 px-3 max-w-xs">
                               {client.lastNote ? (
                                 <div className="space-y-0.5" title={client.lastNote}>
                                   {client.lastNote.includes('👤') && (
-                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+                                    <span className="inline-flex items-center gap-1 text-[9px] font-bold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
                                       {client.lastNote.match(/👤\s*([^|\n]+)/)?.[0] || '👤 הערה חתומה'}
                                     </span>
                                   )}
-                                  <p className="text-xs text-slate-300 line-clamp-2">
+                                  <p className="text-[10px] text-slate-300 line-clamp-2">
                                     {client.lastNote.replace(/^[0-9/:\s|]+👤[^|]+\|\s*/, '')}
                                   </p>
                                 </div>
                               ) : (
-                                <span className="text-xs text-slate-600">אין הערות רשומות</span>
+                                <span className="text-[10px] text-slate-600">אין הערות רשומות</span>
                               )}
                             </td>
 
                             {/* Actions */}
-                            <td className="py-3 px-4 text-center">
+                            <td className="py-2 px-3 text-center">
                               <button
                                 onClick={() => onSelectClient(client)}
-                                className="px-2.5 py-1 rounded-lg bg-slate-800 group-hover:bg-blue-600 group-hover:text-white border border-slate-700 group-hover:border-blue-500 text-slate-300 text-xs font-medium transition-all"
+                                className="px-2 py-1 rounded-lg bg-slate-800 group-hover:bg-blue-600 group-hover:text-white border border-slate-700 group-hover:border-blue-500 text-slate-300 text-[10px] font-medium transition-all"
                               >
                                 פרופיל
                               </button>

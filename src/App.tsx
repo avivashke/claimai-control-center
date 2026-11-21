@@ -174,6 +174,22 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleUpdateClientBusinessType = async (clientId: string, newBusinessType: string) => {
+    if (!canEditCrm) return;
+    const target = clients.find(c => c.id === clientId);
+    if (!target) return;
+    const updated = { 
+      ...target, 
+      businessType: newBusinessType,
+      updatedDate: new Date().toISOString().slice(0, 10)
+    };
+    await saveClient(updated);
+    setClients(prev => prev.map(c => c.id === clientId ? updated : c));
+    if (selectedClient?.id === clientId) {
+      setSelectedClient(updated);
+    }
+  };
+
   const handleSaveClient = async (updatedClient: Client) => {
     if (!canEditCrm) return;
     await saveClient(updatedClient);
@@ -360,6 +376,7 @@ export const App: React.FC = () => {
                 clients={clients}
                 onSelectClient={setSelectedClient}
                 onUpdateClientStatus={handleUpdateClientStatus}
+                onUpdateClientBusinessType={handleUpdateClientBusinessType}
                 searchFilter={searchQuery}
                 canEdit={canEditCrm}
               />
