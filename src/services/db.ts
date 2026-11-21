@@ -7,6 +7,21 @@ import seedContactsData from '../data/seedContacts.json';
 import seedCustomTablesData from '../data/seedCustomTables.json';
 import seedUsersData from '../data/seedUsers.json';
 
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000').replace(/\/$/, '');
+const USE_LOCAL_API = import.meta.env.VITE_USE_LOCAL_API === 'true';
+
+async function apiRequest(path: string, init?: RequestInit): Promise<Response> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
+    ...init
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`API ${path} failed: ${res.status} ${text}`);
+  }
+  return res;
+}
+
 class ClaimAIDatabase extends Dexie {
   clients!: Table<Client, string>;
   productItems!: Table<ProductItem, string>;
@@ -94,6 +109,25 @@ export const checkSupabaseHealth = async (): Promise<{ isConnected: boolean; mes
 
 // Database initialization & seeding
 export const initDatabase = async (): Promise<{ clientsCount: number; productCount: number; tablesCount: number; usersCount: number }> => {
+  if (USE_LOCAL_API) {
+    try {
+      await apiRequest('/api/reset');
+      const [clients, products, tables, users] = await Promise.all([
+        apiRequest('/api/clients').then(r => r.json()),
+        apiRequest('/api/product-items').then(r => r.json()),
+        apiRequest('/api/custom-tables').then(r => r.json()),
+        apiRequest('/api/users').then(r => r.json())
+      ]);
+      return {
+        clientsCount: clients.length,
+        productCount: products.length,
+        tablesCount: tables.length,
+        usersCount: users.length
+      };
+    } catch (err) {
+      console.warn('Local API init failed, falling back to IndexedDB', err);
+    }
+  }
   try {
     const clientsCount = await db.clients.count();
     const productCount = await db.productItems.count();
@@ -143,6 +177,14 @@ export const initDatabase = async (): Promise<{ clientsCount: number; productCou
 
 // Data operations for CRM Clients
 export const getClients = async (): Promise<Client[]> => {
+  if (USE_LOCAL_API) {
+    try {
+      const res = await apiRequest('/api/clients');
+      return await res.json();
+    } catch (e) {
+      console.error('Failed to get clients from local API, falling back to IndexedDB', e);
+    }
+  }
   try {
     const list = await db.clients.toArray();
     if (list.length === 0) {
@@ -157,6 +199,14 @@ export const getClients = async (): Promise<Client[]> => {
 };
 
 export const saveClient = async (client: Client): Promise<void> => {
+  if (USE_LOCAL_API) {
+    try {
+      await apiRequest(`/api/clients/${client.id}`, { method: 'PUT', body: JSON.stringify(client) });
+      return;
+    } catch (e) {
+      console.warn('Local API saveClient failed, falling back to IndexedDB', e);
+    }
+  }
   await db.clients.put(client);
   if (supabase) {
     try {
@@ -182,10 +232,28 @@ export const saveClient = async (client: Client): Promise<void> => {
 };
 
 export const saveMultipleClients = async (clients: Client[]): Promise<void> => {
+  if (USE_LOCAL_API) {
+    try {
+      await Promise.all(clients.map(c =>
+        apiRequest(`/api/clients/${c.id}`, { method: 'PUT', body: JSON.stringify(c) })
+      ));
+      return;
+    } catch (e) {
+      console.warn('Local API saveMultipleClients failed, falling back to IndexedDB', e);
+    }
+  }
   await db.clients.bulkPut(clients);
 };
 
 export const deleteClient = async (id: string): Promise<void> => {
+  if (USE_LOCAL_API) {
+    try {
+      await apiRequest(`/api/clients/${id}`, { method: 'DELETE' });
+      return;
+    } catch (e) {
+      console.warn('Local API deleteClient failed, falling back to IndexedDB', e);
+    }
+  }
   await db.clients.delete(id);
   if (supabase) {
     try {
@@ -198,6 +266,14 @@ export const deleteClient = async (id: string): Promise<void> => {
 
 // Data operations for Product Items
 export const getProductItems = async (): Promise<ProductItem[]> => {
+  if (USE_LOCAL_API) {
+    try {
+      const res = await apiRequest('/api/product-items');
+      return await res.json();
+    } catch (e) {
+      console.error('Failed to get product items from local API, falling back to IndexedDB', e);
+    }
+  }
   try {
     const list = await db.productItems.toArray();
     if (list.length === 0) {
@@ -212,6 +288,14 @@ export const getProductItems = async (): Promise<ProductItem[]> => {
 };
 
 export const saveProductItem = async (item: ProductItem): Promise<void> => {
+  if (USE_LOCAL_API) {
+    try {
+      await apiRequest(`/api/product-items/${item.id}`, { method: 'PUT', body: JSON.stringify(item) });
+      return;
+    } catch (e) {
+      console.warn('Local API saveProductItem failed, falling back to IndexedDB', e);
+    }
+  }
   await db.productItems.put(item);
   if (supabase) {
     try {
@@ -237,6 +321,14 @@ export const saveProductItem = async (item: ProductItem): Promise<void> => {
 };
 
 export const deleteProductItem = async (id: string): Promise<void> => {
+  if (USE_LOCAL_API) {
+    try {
+      await apiRequest(`/api/product-items/${id}`, { method: 'DELETE' });
+      return;
+    } catch (e) {
+      console.warn('Local API deleteProductItem failed, falling back to IndexedDB', e);
+    }
+  }
   await db.productItems.delete(id);
   if (supabase) {
     try {
@@ -249,6 +341,14 @@ export const deleteProductItem = async (id: string): Promise<void> => {
 
 // Custom Dynamic Tables Operations
 export const getCustomTables = async (): Promise<CustomTable[]> => {
+  if (USE_LOCAL_API) {
+    try {
+      const res = await apiRequest('/api/custom-tables');
+      return await res.json();
+    } catch (e) {
+      console.error('Failed to get custom tables from local API, falling back to IndexedDB', e);
+    }
+  }
   try {
     const list = await db.customTables.toArray();
     if (list.length === 0) {
@@ -263,6 +363,14 @@ export const getCustomTables = async (): Promise<CustomTable[]> => {
 };
 
 export const saveCustomTable = async (table: CustomTable): Promise<void> => {
+  if (USE_LOCAL_API) {
+    try {
+      await apiRequest(`/api/custom-tables/${table.id}`, { method: 'PUT', body: JSON.stringify(table) });
+      return;
+    } catch (e) {
+      console.warn('Local API saveCustomTable failed, falling back to IndexedDB', e);
+    }
+  }
   await db.customTables.put(table);
   if (supabase) {
     try {
@@ -282,6 +390,14 @@ export const saveCustomTable = async (table: CustomTable): Promise<void> => {
 };
 
 export const deleteCustomTable = async (tableId: string): Promise<void> => {
+  if (USE_LOCAL_API) {
+    try {
+      await apiRequest(`/api/custom-tables/${tableId}`, { method: 'DELETE' });
+      return;
+    } catch (e) {
+      console.warn('Local API deleteCustomTable failed, falling back to IndexedDB', e);
+    }
+  }
   await db.customTables.delete(tableId);
   if (supabase) {
     try {
@@ -294,6 +410,14 @@ export const deleteCustomTable = async (tableId: string): Promise<void> => {
 
 // Users & Permissions Management Operations
 export const getAppUsers = async (): Promise<AppUser[]> => {
+  if (USE_LOCAL_API) {
+    try {
+      const res = await apiRequest('/api/users');
+      return await res.json();
+    } catch (e) {
+      console.error('Failed to get app users from local API, falling back to IndexedDB', e);
+    }
+  }
   try {
     const list = await db.users.toArray();
     if (list.length === 0) {
@@ -308,6 +432,14 @@ export const getAppUsers = async (): Promise<AppUser[]> => {
 };
 
 export const saveAppUser = async (user: AppUser): Promise<void> => {
+  if (USE_LOCAL_API) {
+    try {
+      await apiRequest(`/api/users/${user.id}`, { method: 'PUT', body: JSON.stringify(user) });
+      return;
+    } catch (e) {
+      console.warn('Local API saveAppUser failed, falling back to IndexedDB', e);
+    }
+  }
   await db.users.put(user);
   if (supabase) {
     try {
@@ -327,6 +459,14 @@ export const saveAppUser = async (user: AppUser): Promise<void> => {
 };
 
 export const deleteAppUser = async (userId: string): Promise<void> => {
+  if (USE_LOCAL_API) {
+    try {
+      await apiRequest(`/api/users/${userId}`, { method: 'DELETE' });
+      return;
+    } catch (e) {
+      console.warn('Local API deleteAppUser failed, falling back to IndexedDB', e);
+    }
+  }
   await db.users.delete(userId);
   if (supabase) {
     try {

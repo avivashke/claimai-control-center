@@ -1,0 +1,12 @@
+services:
+  claimai-sqlite:
+    build: ./server
+    container_name: claimai-sqlite
+    ports:
+      - "4000:4000"
+    volumes:
+      - claimai-sqlite-data:/app/claimai-local.sqlite
+    restart: unless-stopped
+
+volumes:
+  claimai-sqlite-data:
