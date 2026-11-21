@@ -304,13 +304,13 @@ export const ClientTable: React.FC<ClientTableProps> = ({
           <div className="flex-1 overflow-y-auto overflow-x-hidden relative min-h-full">
             <table className="w-full text-right text-[9px]">
               <thead className="bg-slate-800/95 text-[9px] text-slate-400 font-semibold border-b border-slate-800">
-                <tr>
-                  <th className="sticky top-0 z-30 bg-slate-900/95 py-1.5 px-2 min-w-[150px]">איש קשר / חברה</th>
-                  <th className="sticky top-0 z-30 bg-slate-900/95 py-1.5 px-2 min-w-[140px]">סוג עסק</th>
-                  <th className="sticky top-0 z-30 bg-slate-900/95 py-1.5 px-2 min-w-[180px]">סטטוס CRM</th>
-                  <th className="sticky top-0 z-30 bg-slate-900/95 py-1.5 px-2">פרטי התקשרות</th>
-                  <th className="sticky top-0 z-30 bg-slate-900/95 py-1.5 px-2">הערה אחרונה</th>
-                  <th className="sticky top-0 z-30 bg-slate-900/95 py-1.5 px-2 text-center w-20">פעולות</th>
+                <tr className="sticky top-0 z-40 bg-slate-900/95 shadow-sm">
+                  <th className="py-1.5 px-2 min-w-[150px]">איש קשר / חברה</th>
+                  <th className="py-1.5 px-2 min-w-[140px]">סוג עסק</th>
+                  <th className="py-1.5 px-2 min-w-[180px]">סטטוס CRM</th>
+                  <th className="py-1.5 px-2">פרטי התקשרות</th>
+                  <th className="py-1.5 px-2">הערה אחרונה</th>
+                  <th className="py-1.5 px-2 text-center w-20">פעולות</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
