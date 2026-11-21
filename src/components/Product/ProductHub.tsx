@@ -33,6 +33,24 @@ const PRIORITY_BADGES: { [key: string]: string } = {
   Low: 'bg-slate-700/40 text-slate-400 border-slate-700',
 };
 
+const STATUS_COLORS: { [key: string]: { bg: string; text: string; border: string } } = {
+  Backlog: { bg: 'bg-slate-700/30', text: 'text-slate-300', border: 'border-slate-700' },
+  Open: { bg: 'bg-blue-500/15', text: 'text-blue-300', border: 'border-blue-500/30' },
+  'In Progress': { bg: 'bg-amber-500/15', text: 'text-amber-300', border: 'border-amber-500/30' },
+  'QA / Review': { bg: 'bg-purple-500/15', text: 'text-purple-300', border: 'border-purple-500/30' },
+  Done: { bg: 'bg-emerald-500/15', text: 'text-emerald-300', border: 'border-emerald-500/30' },
+  Overdue: { bg: 'bg-rose-500/15', text: 'text-rose-300', border: 'border-rose-500/30' },
+};
+
+const ALL_STATUSES: ProductStatus[] = [
+  'Backlog',
+  'Open',
+  'In Progress',
+  'QA / Review',
+  'Done',
+  'Overdue'
+];
+
 const STATUS_OPTIONS: ProductStatus[] = [
   'Backlog',
   'Open',
@@ -93,6 +111,33 @@ export const ProductHub: React.FC<ProductHubProps> = ({
       return true;
     });
   }, [productItems, activeTab, selectedClient, selectedPriority, selectedStatus, combinedSearch]);
+
+  // Group items by status
+  const groupedItems = useMemo(() => {
+    const byStatus = new Map<string, ProductItem[]>();
+    filteredItems.forEach(p => {
+      const key = p.status || '(ללא סטטוס)';
+      if (!byStatus.has(key)) byStatus.set(key, []);
+      byStatus.get(key)!.push(p);
+    });
+
+    const ordered: { status: string; items: ProductItem[] }[] = [];
+    ALL_STATUSES.forEach(st => {
+      const items = byStatus.get(st);
+      if (items && items.length) {
+        ordered.push({ status: st, items });
+        byStatus.delete(st);
+      }
+    });
+    byStatus.forEach((items, key) => {
+      ordered.push({ status: key, items });
+    });
+    return ordered;
+  }, [filteredItems]);
+
+  const groupStyle = (status: string) => STATUS_COLORS[status] || {
+    bg: 'bg-slate-800', text: 'text-slate-300', border: 'border-slate-700'
+  };
 
   return (
     <div className="space-y-6">
@@ -221,7 +266,7 @@ export const ProductHub: React.FC<ProductHubProps> = ({
             className="bg-slate-800 border border-slate-700 rounded-lg text-xs py-1.5 px-3 text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
             <option value="all">כל הסטטוסים</option>
-            {STATUS_OPTIONS.map(st => (
+            {ALL_STATUSES.map(st => (
               <option key={st} value={st}>{st}</option>
             ))}
           </select>
@@ -230,7 +275,7 @@ export const ProductHub: React.FC<ProductHubProps> = ({
 
       {/* VIEW: KANBAN BOARD */}
       {activeTab === 'board' ? (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 min-h-[calc(100vh-450px)]">
           {['Backlog', 'Open', 'In Progress', 'Done'].map(columnStatus => {
             const columnItems = filteredItems.filter(item => {
               if (columnStatus === 'Done') return item.status === 'Done';
@@ -250,7 +295,7 @@ export const ProductHub: React.FC<ProductHubProps> = ({
                   </span>
                 </div>
 
-                <div className="space-y-3 flex-1 overflow-y-auto max-h-[600px]">
+                <div className="space-y-3 flex-1 overflow-y-auto">
                   {columnItems.map(item => (
                     <div
                       key={item.id}
@@ -281,129 +326,182 @@ export const ProductHub: React.FC<ProductHubProps> = ({
         </div>
       ) : (
         /* VIEW: TABLE */
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden shadow-xl">
-          <div className="overflow-x-auto">
-            <table className="w-full text-right text-sm">
-              <thead className="bg-slate-800/80 text-xs text-slate-400 font-semibold border-b border-slate-800">
-                <tr>
-                  <th className="py-3 px-4 w-16">מזהה</th>
-                  <th className="py-3 px-4">סוג</th>
-                  <th className="py-3 px-4">כותרת המשימה</th>
-                  <th className="py-3 px-4">לקוח / מקור</th>
-                  <th className="py-3 px-4">מודול במערכת</th>
-                  <th className="py-3 px-4">עדיפות</th>
-                  <th className="py-3 px-4">סטטוס מסירה</th>
-                  <th className="py-3 px-4">גרסה / יעד</th>
-                  <th className="py-3 px-4 text-center w-24">פעולות</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {filteredItems.length === 0 ? (
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/40 shadow-xl">
+          <div className="flex min-h-[calc(100vh-340px)]">
+            {/* Side Group Navigation */}
+            <div className="w-28 border-r border-slate-800 bg-slate-900/60 flex-none shrink-0">
+              <div className="p-1 space-y-0.5 overflow-y-auto">
+                {groupedItems.map(({ status, items: groupItems }) => (
+                  <button
+                    key={`nav-${status}`}
+                    onClick={() => {
+                      const el = document.getElementById(`group-${status.replace(/[^\w]/g, '')}`);
+                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }}
+                    className={`w-full py-1 px-1.5 rounded text-[7px] font-semibold transition-all flex flex-col items-end justify-between gap-0.5 ${
+                      (STATUS_COLORS[status]?.text || 'text-slate-300') + ' border border-slate-700/50 bg-slate-800/50'
+                    }`}
+                    title={`${status} (${groupItems.length})`}
+                  >
+                    <span className="text-right leading-tight">{status}</span>
+                    <span className="text-[7px] opacity-60">{groupItems.length}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Scrollable Table Area */}
+            <div className="flex-1 overflow-y-auto overflow-x-hidden relative min-h-full">
+              <table className="w-full text-right text-[9px]">
+                <thead className="bg-slate-800/95 text-[9px] text-slate-400 font-semibold border-b border-slate-800 sticky top-0 z-20">
                   <tr>
-                    <td colSpan={9} className="py-12 text-center text-slate-500 text-sm">
-                      לא נמצאו פריטי מוצר העונים לסינון
-                    </td>
+                    <th className="py-1.5 px-2 w-16">מזהה</th>
+                    <th className="py-1.5 px-2 min-w-[80px]">סוג</th>
+                    <th className="py-1.5 px-2 min-w-[150px]">כותרת המשימה</th>
+                    <th className="py-1.5 px-2 min-w-[140px]">לקוח / מקור</th>
+                    <th className="py-1.5 px-2 min-w-[120px]">מודול במערכת</th>
+                    <th className="py-1.5 px-2 min-w-[80px]">עדיפות</th>
+                    <th className="py-1.5 px-2 min-w-[120px]">סטטוס מסירה</th>
+                    <th className="py-1.5 px-2 min-w-[100px]">גרסה / יעד</th>
+                    <th className="py-1.5 px-2 text-center w-20">פעולות</th>
                   </tr>
-                ) : (
-                  filteredItems.map(item => (
-                    <tr
-                      key={item.id}
-                      onClick={() => onSelectTicket(item)}
-                      className="hover:bg-slate-800/40 transition-colors group cursor-pointer"
-                    >
-                      {/* ID */}
-                      <td className="py-3 px-4 font-mono text-xs font-bold text-blue-400">
-                        {item.id}
-                      </td>
-
-                      {/* Category Badge */}
-                      <td className="py-3 px-4">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold border ${
-                          item.category === 'bug'
-                            ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
-                            : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-                        }`}>
-                          {item.category === 'bug' ? <Bug className="w-3 h-3" /> : <Compass className="w-3 h-3" />}
-                          <span>{item.type}</span>
-                        </span>
-                      </td>
-
-                      {/* Title & Description */}
-                      <td className="py-3 px-4 max-w-sm">
-                        <div className="font-semibold text-white group-hover:text-blue-400 transition-colors line-clamp-1">
-                          {item.title}
-                        </div>
-                        {item.description && (
-                          <div className="text-xs text-slate-400 line-clamp-1 mt-0.5">
-                            {item.description}
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Client */}
-                      <td className="py-3 px-4">
-                        <span className="text-xs text-slate-200 font-medium flex items-center gap-1.5">
-                          <Building2 className="w-3.5 h-3.5 text-slate-500" />
-                          <span>{item.client}</span>
-                        </span>
-                      </td>
-
-                      {/* Module */}
-                      <td className="py-3 px-4">
-                        <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-slate-800 text-slate-300 border border-slate-700">
-                          {item.module || 'כללי'}
-                        </span>
-                      </td>
-
-                      {/* Priority */}
-                      <td className="py-3 px-4">
-                        <span className={`px-2 py-0.5 rounded text-[10px] border uppercase ${PRIORITY_BADGES[item.priority] || 'border-slate-700'}`}>
-                          {item.priority}
-                        </span>
-                      </td>
-
-                      {/* Status */}
-                      <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
-                        {canEdit ? (
-                          <select
-                            value={item.status}
-                            onChange={(e) => onUpdateTicketStatus(item.id, e.target.value as ProductStatus)}
-                            className="bg-slate-800 border border-slate-700 rounded-lg text-xs py-1 px-2.5 text-slate-200 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          >
-                            {STATUS_OPTIONS.map(st => (
-                              <option key={st} value={st}>{st}</option>
-                            ))}
-                          </select>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-800 text-slate-300 border border-slate-700">
-                            {item.status}
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Release / Target */}
-                      <td className="py-3 px-4 font-mono text-xs text-amber-400">
-                        {item.release || item.targetDate || 'Q1 2027'}
-                      </td>
-
-                      {/* Actions */}
-                      <td className="py-3 px-4 text-center">
-                        <button
-                          onClick={() => onSelectTicket(item)}
-                          className="px-2.5 py-1 rounded-lg bg-slate-800 group-hover:bg-blue-600 group-hover:text-white border border-slate-700 text-slate-300 text-xs font-medium transition-all"
-                        >
-                          פרטים
-                        </button>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {groupedItems.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="py-12 text-center text-slate-500 text-[10px]">
+                        לא נמצאו פריטי מוצר העונים לסינון
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    <>
+                      {groupedItems.map(({ status, items: groupItems }) => (
+                        <>
+                          {/* Group header */}
+                          <tr key={`group-${status}`} id={`group-${status.replace(/[^\w]/g, '')}`}>
+                            <td colSpan={9} className="py-2 px-3 bg-slate-800/70 text-[9px] font-bold text-slate-200 border-b border-slate-800/80 flex items-center justify-between sticky top-14 z-10 bg-slate-900/80">
+                              <div className="flex items-center gap-1.5">
+                                <span
+                                  className={`px-1.5 py-0.5 rounded border inline-flex items-center gap-1 ${groupStyle(status).bg} ${groupStyle(status).text} ${groupStyle(status).border} font-bold`}
+                                >
+                                  {status}
+                                </span>
+                                <span className="ml-1.5 text-slate-400 font-normal">({groupItems.length})</span>
+                              </div>
+                            </td>
+                          </tr>
+                          {groupItems.map(item => (
+                            <tr
+                              key={item.id}
+                              onClick={() => onSelectTicket(item)}
+                              className="hover:bg-slate-800/30 transition-colors group cursor-pointer"
+                            >
+                              {/* ID */}
+                              <td className="py-1.5 px-2 font-mono text-[8px] font-bold text-blue-400">
+                                {item.id}
+                              </td>
+
+                              {/* Category Badge */}
+                              <td className="py-1.5 px-2">
+                                <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] font-semibold border ${
+                                  item.category === 'bug'
+                                    ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+                                    : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                                }`}>
+                                  {item.category === 'bug' ? <Bug className="w-2 h-2" /> : <Compass className="w-2 h-2" />}
+                                  <span>{item.type}</span>
+                                </span>
+                              </td>
+
+                              {/* Title & Description */}
+                              <td className="py-1.5 px-2 max-w-xs">
+                                <div className="font-semibold text-white group-hover:text-blue-400 transition-colors text-[8px] leading-tight">
+                                  {item.title}
+                                </div>
+                                {item.description && (
+                                  <div className="text-[7px] text-slate-400 line-clamp-1 mt-0.5">
+                                    {item.description}
+                                  </div>
+                                )}
+                              </td>
+
+                              {/* Client */}
+                              <td className="py-1.5 px-2">
+                                <span className="text-[8px] text-slate-200 font-medium flex items-center gap-0.5">
+                                  <Building2 className="w-2.5 h-2.5 text-slate-500" />
+                                  <span className="truncate max-w-xs">{item.client}</span>
+                                </span>
+                              </td>
+
+                              {/* Module */}
+                              <td className="py-1.5 px-2">
+                                <span className="px-1 py-0.5 rounded text-[7px] font-mono bg-slate-800 text-slate-300 border border-slate-700">
+                                  {item.module || 'כללי'}
+                                </span>
+                              </td>
+
+                              {/* Priority */}
+                              <td className="py-1.5 px-2">
+                                <span className={`px-1 py-0.5 rounded text-[7px] border uppercase ${PRIORITY_BADGES[item.priority] || 'border-slate-700'}`}>
+                                  {item.priority}
+                                </span>
+                              </td>
+
+                              {/* Status */}
+                              <td className="py-1.5 px-2" onClick={(e) => e.stopPropagation()}>
+                                {canEdit ? (
+                                  <select
+                                    value={item.status}
+                                    onChange={(e) => onUpdateTicketStatus(item.id, e.target.value as ProductStatus)}
+                                    className={`bg-slate-800 border border-slate-700 rounded text-[8px] py-0.5 px-1.5 text-slate-200 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500 w-full ${styleForStatus(item.status)}`}
+                                  >
+                                    {ALL_STATUSES.map(st => (
+                                      <option key={st} value={st}>{st}</option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <span className={`px-1 py-0.5 rounded text-[8px] font-medium bg-slate-800 text-slate-300 border border-slate-700`}>
+                                    {item.status}
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Release / Target */}
+                              <td className="py-1.5 px-2 font-mono text-[8px] text-amber-400">
+                                {item.release || item.targetDate || 'Q1 2027'}
+                              </td>
+
+                              {/* Actions */}
+                              <td className="py-1.5 px-2 text-center">
+                                <button
+                                  onClick={() => onSelectTicket(item)}
+                                  className="px-1 py-0.5 rounded-lg bg-slate-800 group-hover:bg-blue-600 group-hover:text-white border border-slate-700 text-slate-300 text-[8px] font-medium transition-all"
+                                >
+                                  פרטים
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                          {/* Spacer row between groups */}
+                          <tr key={`spacer-${status}`}>
+                            <td colSpan={9} className="h-3 bg-transparent border-0 p-0"></td>
+                          </tr>
+                        </>
+                      ))}
+                    </>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
 
     </div>
   );
+};
+
+const styleForStatus = (status: ProductStatus): string => {
+  const s = STATUS_COLORS[status] || { bg: 'bg-slate-800', text: 'text-slate-300', border: 'border-slate-700' };
+  return `${s.bg} ${s.text} ${s.border}`;
 };

@@ -274,11 +274,11 @@ export const ClientTable: React.FC<ClientTableProps> = ({
       </div>
 
       {/* Main Table */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden shadow-xl">
-        <div className="flex h-[calc(100vh-320px)]">
+      <div className="rounded-2xl border border-slate-800 bg-slate-900/40 shadow-xl">
+        <div className="flex min-h-[calc(100vh-340px)]">
           {/* Side Group Navigation */}
-          <div className="w-20 border-r border-slate-800 bg-slate-900/60 flex-none shrink-0">
-            <div className="p-2 space-y-1 overflow-y-auto">
+          <div className="w-28 border-r border-slate-800 bg-slate-900/60 flex-none shrink-0">
+            <div className="p-1 space-y-0.5 overflow-y-auto">
               {groupedClients.map(({ status, clients: groupClients }) => (
                 <button
                   key={`nav-${status}`}
@@ -286,28 +286,28 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                     const el = document.getElementById(`group-${status.replace(/[^\w]/g, '')}`);
                     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                   }}
-                  className={`w-full py-1.5 px-2 rounded-lg text-[9px] font-semibold transition-all flex items-center justify-between ${
+                  className={`w-full py-1 px-1.5 rounded text-[7px] font-semibold transition-all flex flex-col items-end justify-between gap-0.5 ${
                     status === '(ללא סטטוס)'
                       ? 'bg-slate-800 text-slate-300 border border-slate-700'
                       : (STATUS_COLORS[status]?.text || 'text-slate-300') + ' border border-slate-700/50 bg-slate-800/50'
                   }`}
                   title={`${status} (${groupClients.length})`}
                 >
-                  <span className="truncate">{status === '(ללא סטטוס)' ? 'ללא סטטוס' : status.length > 10 ? status.slice(0, 8) + '…' : status}</span>
-                  <span className="text-[9px] opacity-60">{groupClients.length}</span>
+                  <span className="text-right leading-tight">{status === '(ללא סטטוס)' ? 'ללא סטטוס' : status}</span>
+                  <span className="text-[7px] opacity-60">{groupClients.length}</span>
                 </button>
               ))}
             </div>
           </div>
 
           {/* Scrollable Table Area */}
-          <div className="flex-1 overflow-y-auto overflow-x-hidden relative">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden relative min-h-full">
             <table className="w-full text-right text-[9px]">
               <thead className="bg-slate-800/95 text-[9px] text-slate-400 font-semibold border-b border-slate-800 sticky top-0 z-20">
                 <tr>
                   <th className="py-1.5 px-2 min-w-[150px]">איש קשר / חברה</th>
                   <th className="py-1.5 px-2 min-w-[140px]">סוג עסק</th>
-                  <th className="py-1.5 px-2">סטטוס CRM</th>
+                  <th className="py-1.5 px-2 min-w-[150px]">סטטוס CRM</th>
                   <th className="py-1.5 px-2">פרטי התקשרות</th>
                   <th className="py-1.5 px-2">הערה אחרונה</th>
                   <th className="py-1.5 px-2 text-center w-20">פעולות</th>
@@ -326,7 +326,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                       <>
                         {/* Group header */}
                         <tr key={`group-${status}`} id={`group-${status.replace(/[^\w]/g, '')}`}>
-                          <td colSpan={6} className="py-1.5 px-3 bg-slate-800/70 text-[9px] font-bold text-slate-200 border-b border-slate-800/80 flex items-center justify-between sticky top-14 z-10 bg-slate-900/80">
+                          <td colSpan={6} className="py-2 px-3 bg-slate-800/70 text-[9px] font-bold text-slate-200 border-b border-slate-800/80 flex items-center justify-between sticky top-14 z-10 bg-slate-900/80">
                             <div className="flex items-center gap-1.5">
                               <span
                                 className={`px-1.5 py-0.5 rounded border inline-flex items-center gap-1 ${groupStyle(status).bg} ${groupStyle(status).text} ${groupStyle(status).border} font-bold`}
@@ -382,12 +382,12 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                               </td>
 
                               {/* Status */}
-                              <td className="py-1.5 px-2" onClick={(e) => e.stopPropagation()}>
+                              <td className="py-1.5 px-2 min-w-[150px]" onClick={(e) => e.stopPropagation()}>
                                 {canEdit ? (
                                   <select
                                     value={client.status}
                                     onChange={(e) => onUpdateClientStatus(client.id, e.target.value)}
-                                    className={`text-[8px] font-semibold px-1.5 py-0.5 rounded-md border focus:outline-none transition-all cursor-pointer ${style.bg} ${style.text} ${style.border} w-full`}
+                                    className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-md border focus:outline-none transition-all cursor-pointer ${style.bg} ${style.text} ${style.border} w-full`}
                                   >
                                     {ALL_STATUSES.map(s => (
                                       <option key={s} value={s} className="bg-slate-900 text-slate-200">
@@ -396,7 +396,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                                     ))}
                                   </select>
                                 ) : (
-                                  <span className={`text-[8px] font-semibold px-2 py-0.5 rounded-md border inline-block ${style.bg} ${style.text} ${style.border}`}>
+                                  <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-md border inline-block ${style.bg} ${style.text} ${style.border}`}>
                                     {client.status}
                                   </span>
                                 )}
@@ -480,6 +480,10 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                             </tr>
                           );
                         })}
+                        {/* Spacer row between groups */}
+                        <tr key={`spacer-${status}`}>
+                          <td colSpan={6} className="h-4 bg-transparent border-0 p-0"></td>
+                        </tr>
                       </>
                     ))}
                   </>
