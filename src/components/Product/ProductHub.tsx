@@ -353,17 +353,17 @@ export const ProductHub: React.FC<ProductHubProps> = ({
             {/* Scrollable Table Area */}
             <div className="flex-1 overflow-y-auto overflow-x-hidden relative min-h-full">
               <table className="w-full text-right text-[9px]">
-                <thead className="bg-slate-800/95 text-[9px] text-slate-400 font-semibold border-b border-slate-800 sticky top-0 z-40">
+                <thead className="bg-slate-800/95 text-[9px] text-slate-400 font-semibold border-b border-slate-800">
                   <tr>
-                    <th className="py-1.5 px-2 w-16">מזהה</th>
-                    <th className="py-1.5 px-2 min-w-[80px]">סוג</th>
-                    <th className="py-1.5 px-2 min-w-[150px]">כותרת המשימה</th>
-                    <th className="py-1.5 px-2 min-w-[140px]">לקוח / מקור</th>
-                    <th className="py-1.5 px-2 min-w-[120px]">מודול במערכת</th>
-                    <th className="py-1.5 px-2 min-w-[80px]">עדיפות</th>
-                    <th className="py-1.5 px-2 min-w-[120px]">סטטוס מסירה</th>
-                    <th className="py-1.5 px-2 min-w-[100px]">גרסה / יעד</th>
-                    <th className="py-1.5 px-2 text-center w-20">פעולות</th>
+                    <th className="sticky top-0 z-30 bg-slate-900/95 py-1.5 px-2 w-16">מזהה</th>
+                    <th className="sticky top-0 z-30 bg-slate-900/95 py-1.5 px-2 min-w-[80px]">סוג</th>
+                    <th className="sticky top-0 z-30 bg-slate-900/95 py-1.5 px-2 min-w-[150px]">כותרת המשימה</th>
+                    <th className="sticky top-0 z-30 bg-slate-900/95 py-1.5 px-2 min-w-[140px]">לקוח / מקור</th>
+                    <th className="sticky top-0 z-30 bg-slate-900/95 py-1.5 px-2 min-w-[120px]">מודול במערכת</th>
+                    <th className="sticky top-0 z-30 bg-slate-900/95 py-1.5 px-2 min-w-[80px]">עדיפות</th>
+                    <th className="sticky top-0 z-30 bg-slate-900/95 py-1.5 px-2 min-w-[120px]">סטטוס מסירה</th>
+                    <th className="sticky top-0 z-30 bg-slate-900/95 py-1.5 px-2 min-w-[100px]">גרסה / יעד</th>
+                    <th className="sticky top-0 z-30 bg-slate-900/95 py-1.5 px-2 text-center w-20">פעולות</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
