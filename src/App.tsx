@@ -122,7 +122,8 @@ export const App: React.FC = () => {
 
   // Handlers for Users & Auth
   const handleLogin = async (email: string, name?: string) => {
-    const user = await loginWithGoogleEmail(email, name);
+    // Local auth already sets currentUser in localStorage via localLogin
+    const user = getCurrentUser();
     setCurrentUserState(user);
     const updatedUsers = await getAppUsers();
     setUsers(updatedUsers);

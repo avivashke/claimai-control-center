@@ -184,3 +184,214 @@ export const renderGoogleSignInButton = (
     return false;
   }
 };
+
+// ========================================================
+// Local secure authentication (WhatsApp code / password reset)
+// ========================================================
+
+const LOCAL_USERS_KEY = 'claimai_local_users';
+const AUTH_CODES_KEY = 'claimai_auth_codes';
+const CODE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+export interface LocalUser {
+  id: string;
+  phone: string;
+  name: string;
+  role: UserRole;
+  permissions: UserPermissions;
+  isActive: boolean;
+  passwordHash?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AuthCode {
+  phone: string;
+  code: string;
+  type: 'login' | 'reset';
+  createdAt: number;
+  expiresAt: number;
+}
+
+const defaultPermissions: UserPermissions = {
+  canEditCrm: false,
+  canEditProduct: false,
+  canEditTables: false,
+  canManageUsers: false
+};
+
+export const getLocalUsers = (): LocalUser[] => {
+  try {
+    const raw = localStorage.getItem(LOCAL_USERS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return [];
+};
+
+export const saveLocalUsers = (users: LocalUser[]): void => {
+  localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(users));
+};
+
+export const ensureDefaultAdmin = (): void => {
+  const users = getLocalUsers();
+  if (users.length === 0) {
+    const admin: LocalUser = {
+      id: 'admin-1',
+      phone: '0500000000',
+      name: 'מנהל מערכת',
+      role: 'admin',
+      permissions: {
+        canEditCrm: true,
+        canEditProduct: true,
+        canEditTables: true,
+        canManageUsers: true
+      },
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    saveLocalUsers([admin]);
+  }
+};
+
+export const findLocalUserByPhone = (phone: string): LocalUser | undefined => {
+  return getLocalUsers().find(u => u.phone === phone);
+};
+
+export const generateAuthCode = (): string => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+export const storeAuthCode = (phone: string, code: string, type: 'login' | 'reset'): void => {
+  try {
+    const raw = localStorage.getItem(AUTH_CODES_KEY);
+    const codes: AuthCode[] = raw ? JSON.parse(raw) : [];
+    // Remove old codes for this phone + type
+    const filtered = codes.filter(c => !(c.phone === phone && c.type === type));
+    const now = Date.now();
+    filtered.push({
+      phone,
+      code,
+      type,
+      createdAt: now,
+      expiresAt: now + CODE_TTL_MS
+    });
+    localStorage.setItem(AUTH_CODES_KEY, JSON.stringify(filtered));
+  } catch {}
+};
+
+export const verifyAuthCode = (phone: string, code: string, type: 'login' | 'reset'): boolean => {
+  try {
+    const raw = localStorage.getItem(AUTH_CODES_KEY);
+    if (!raw) return false;
+    const codes: AuthCode[] = JSON.parse(raw);
+    const now = Date.now();
+    const match = codes.find(
+      c => c.phone === phone && c.code === code && c.type === type && c.expiresAt > now
+    );
+    if (!match) return false;
+    // Consume the code
+    const remaining = codes.filter(c => !(c.phone === phone && c.code === code));
+    localStorage.setItem(AUTH_CODES_KEY, JSON.stringify(remaining));
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const sendAuthCodeToWhatsApp = (phone: string, code: string, type: 'login' | 'reset'): { success: boolean; message: string } => {
+  // In production, integrate with a WhatsApp Business API / SMS gateway.
+  // For local operation, the code is stored in localStorage and displayed to the user.
+  storeAuthCode(phone, code, type);
+  return {
+    success: true,
+    message: `קוד האימות ${code} נשלח לוואטסאפ ${phone} (נשמר מקומית לפיתוח ובדיקה).`
+  };
+};
+
+export const localLogin = (phone: string, code: string): { success: boolean; user?: LocalUser; message: string } => {
+  ensureDefaultAdmin();
+  const user = findLocalUserByPhone(phone);
+  if (!user) {
+    return { success: false, message: 'משתמש לא נמצא במערכת. פנה למנהל מערכת.' };
+  }
+  if (!user.isActive) {
+    return { success: false, message: 'חשבונך הושבת על ידי מנהל המערכת.' };
+  }
+  if (!verifyAuthCode(phone, code, 'login')) {
+    return { success: false, message: 'קוד האימות שגוי או פג תוקפו.' };
+  }
+  setCurrentUser({
+    id: user.id,
+    email: user.phone,
+    name: user.name,
+    role: user.role,
+    permissions: user.permissions,
+    isActive: user.isActive,
+    createdAt: user.createdAt,
+    lastLogin: new Date().toISOString()
+  });
+  return { success: true, user, message: 'התחברת בהצלחה למערכת.' };
+};
+
+export const requestPasswordReset = (phone: string): { success: boolean; message: string } => {
+  const user = findLocalUserByPhone(phone);
+  if (!user) {
+    // Don't reveal whether phone exists
+    return { success: true, message: 'אם המספר רשום במערכת, קוד איפוס נשלח אליו בוואטסאפ.' };
+  }
+  const code = generateAuthCode();
+  return sendAuthCodeToWhatsApp(phone, code, 'reset');
+};
+
+export const resetPasswordWithCode = (phone: string, code: string, newPassword: string): { success: boolean; message: string } => {
+  const user = findLocalUserByPhone(phone);
+  if (!user) {
+    return { success: false, message: 'משתמש לא נמצא.' };
+  }
+  if (!verifyAuthCode(phone, code, 'reset')) {
+    return { success: false, message: 'קוד האיפוס שגוי או פג תוקפו.' };
+  }
+  const users = getLocalUsers().map(u => {
+    if (u.id === user.id) {
+      return { ...u, passwordHash: newPassword, updatedAt: new Date().toISOString() };
+    }
+    return u;
+  });
+  saveLocalUsers(users);
+  return { success: true, message: 'הסיסמה אופסה בהצלחה. ניתן להיכנס עם הקוד החדש.' };
+};
+
+export const updateLocalUserStatus = (userId: string, isActive: boolean): boolean => {
+  const users = getLocalUsers().map(u => {
+    if (u.id === userId) {
+      return { ...u, isActive, updatedAt: new Date().toISOString() };
+    }
+    return u;
+  });
+  saveLocalUsers(users);
+  return true;
+};
+
+export const updateLocalUserRole = (userId: string, role: UserRole, permissions: UserPermissions): boolean => {
+  const users = getLocalUsers().map(u => {
+    if (u.id === userId) {
+      return { ...u, role, permissions, updatedAt: new Date().toISOString() };
+    }
+    return u;
+  });
+  saveLocalUsers(users);
+  return true;
+};
+
+export const addLocalUser = (user: Omit<LocalUser, 'id' | 'createdAt' | 'updatedAt'>): LocalUser => {
+  const users = getLocalUsers();
+  const newUser: LocalUser = {
+    ...user,
+    id: `user-${Date.now()}`,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  saveLocalUsers([...users, newUser]);
+  return newUser;
+};

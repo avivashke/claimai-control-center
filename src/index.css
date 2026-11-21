@@ -157,8 +157,8 @@ body {
 [data-theme="sepia"] body,
 [data-theme="sepia"] .min-h-screen,
 [data-theme="sepia"] .bg-\[\#0b0f19\] {
-  background-color: #e7d7bd !important;
-  color: #3e2f23 !important;
+  background-color: #f4ecd9 !important;
+  color: #5c3d2e !important;
 }
 
 [data-theme="sepia"] .bg-slate-900\/95,
@@ -167,7 +167,7 @@ body {
 [data-theme="sepia"] .bg-slate-900\/60,
 [data-theme="sepia"] .bg-slate-900,
 [data-theme="sepia"] .bg-slate-950 {
-  background-color: #ede0cb !important;
+  background-color: #fdf6eb !important;
 }
 
 [data-theme="sepia"] .bg-slate-800,
@@ -176,13 +176,13 @@ body {
 [data-theme="sepia"] .bg-slate-800\/60,
 [data-theme="sepia"] .bg-slate-800\/50,
 [data-theme="sepia"] .bg-slate-800\/40 {
-  background-color: #d9c6ad !important;
+  background-color: #f1e6d1 !important;
 }
 
 [data-theme="sepia"] .hover\:bg-slate-800:hover,
 [data-theme="sepia"] .hover\:bg-slate-800\/60:hover,
 [data-theme="sepia"] .hover\:bg-slate-750:hover {
-  background-color: #cbbca8 !important;
+  background-color: #e7d7bd !important;
 }
 
 [data-theme="sepia"] .border-slate-800,
@@ -190,100 +190,100 @@ body {
 [data-theme="sepia"] .border-slate-700,
 [data-theme="sepia"] .border-slate-700\/80,
 [data-theme="sepia"] .border-slate-750 {
-  border-color: #bfa98c !important;
+  border-color: #d9c3a5 !important;
 }
 
 [data-theme="sepia"] .text-white,
 [data-theme="sepia"] .text-slate-100,
 [data-theme="sepia"] .text-slate-200 {
-  color: #2f2118 !important;
+  color: #5c3d2e !important;
 }
 
 [data-theme="sepia"] .text-slate-300,
 [data-theme="sepia"] .text-slate-400 {
-  color: #5e4a38 !important;
+  color: #8b6a54 !important;
 }
 
 [data-theme="sepia"] .text-slate-500 {
-  color: #8c765e !important;
+  color: #aa8c73 !important;
 }
 
 /* Sepia Mode Inputs, Selects & Textareas */
 [data-theme="sepia"] input:not([type="checkbox"]):not([type="radio"]),
 [data-theme="sepia"] select,
 [data-theme="sepia"] textarea {
-  background-color: #f4eadb !important;
-  color: #3e2f23 !important;
-  border-color: #bfa98c !important;
+  background-color: #fffdf7 !important;
+  color: #5c3d2e !important;
+  border-color: #d9c3a5 !important;
 }
 
 [data-theme="sepia"] input::placeholder,
 [data-theme="sepia"] textarea::placeholder {
-  color: #a8927a !important;
+  color: #aa8c73 !important;
 }
 
 /* Sepia Mode Table Styling */
 [data-theme="sepia"] tr:hover td {
-  background-color: #ece1cb !important;
+  background-color: #f9f2e6 !important;
 }
 
 [data-theme="sepia"] th {
-  background-color: #d9c6ad !important;
-  color: #4a3a29 !important;
-  border-color: #dfd3c0 !important;
+  background-color: #f1e6d1 !important;
+  color: #7a4f38 !important;
+  border-color: #d9c3a5 !important;
 }
 
 [data-theme="sepia"] td {
-  border-color: #ece2d2 !important;
+  border-color: #f1e6d1 !important;
 }
 
 /* Sepia Mode Shadows & Scrollbars */
 [data-theme="sepia"] .shadow-xl,
 [data-theme="sepia"] .shadow-2xl,
 [data-theme="sepia"] .shadow-lg {
-  box-shadow: 0 10px 25px -5px rgba(62, 47, 35, 0.12), 0 8px 10px -6px rgba(62, 47, 35, 0.08) !important;
+  box-shadow: 0 10px 25px -5px rgba(92, 61, 46, 0.12), 0 8px 10px -6px rgba(92, 61, 46, 0.08) !important;
 }
 
 [data-theme="sepia"] ::-webkit-scrollbar-track {
-  background: #d9c6ad;
+  background: #f1e6d1;
 }
 [data-theme="sepia"] ::-webkit-scrollbar-thumb {
-  background: #bfa98c;
+  background: #d9c3a5;
 }
 
 /* Sepia Polished Badges and Action Buttons */
 [data-theme="sepia"] .bg-purple-500\/20 {
-  background-color: rgba(160, 90, 20, 0.16) !important;
-  color: #8d4e1a !important;
-  border-color: rgba(160, 90, 20, 0.34) !important;
+  background-color: rgba(139, 92, 60, 0.16) !important;
+  color: #9c5a3a !important;
+  border-color: rgba(139, 92, 60, 0.34) !important;
 }
 
 [data-theme="sepia"] .bg-blue-500\/20,
 [data-theme="sepia"] .bg-blue-600\/20 {
-  background-color: rgba(45, 70, 150, 0.14) !important;
-  color: #2f4a8a !important;
-  border-color: rgba(45, 70, 150, 0.34) !important;
+  background-color: rgba(92, 61, 46, 0.14) !important;
+  color: #7a4f38 !important;
+  border-color: rgba(92, 61, 46, 0.34) !important;
 }
 
-/* Sepia theme: make header/dark components visible with contrast */
+/* Sepia theme: header and dark components visible with warm contrast */
 [data-theme="sepia"] .bg-slate-900\/95,
 [data-theme="sepia"] .bg-slate-900\/60,
 [data-theme="sepia"] .bg-slate-900,
 [data-theme="sepia"] .bg-slate-950 {
-  background-color: #c9b59a !important;
+  background-color: #e8d3bd !important;
 }
 [data-theme="sepia"] .bg-slate-800,
 [data-theme="sepia"] .bg-slate-800\/60,
 [data-theme="sepia"] .bg-slate-800\/80 {
-  background-color: #b8a48c !important;
+  background-color: #d9c3a5 !important;
 }
 [data-theme="sepia"] .text-white,
 [data-theme="sepia"] .text-slate-100,
 [data-theme="sepia"] .text-slate-200 {
-  color: #2f2118 !important;
+  color: #5c3d2e !important;
 }
 [data-theme="sepia"] .text-slate-400 {
-  color: #6f5c48 !important;
+  color: #8b6a54 !important;
 }
 
 [data-theme="light"] .bg-purple-500\/20 {

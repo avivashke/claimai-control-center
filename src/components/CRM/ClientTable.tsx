@@ -279,7 +279,6 @@ export const ClientTable: React.FC<ClientTableProps> = ({
           <table className="w-full text-right text-sm">
             <thead className="bg-slate-800/90 text-xs text-slate-400 font-semibold border-b border-slate-800 sticky top-0 z-20">
               <tr>
-                <th className="py-2 px-3 w-16 sticky left-0 z-30 bg-slate-800/90 border-r border-slate-800">ID</th>
                 <th className="py-2 px-3 min-w-[170px]">איש קשר / חברה</th>
                 <th className="py-2 px-3 min-w-[170px]">סוג עסק</th>
                 <th className="py-2 px-3">סטטוס CRM</th>
@@ -291,7 +290,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
             <tbody className="divide-y divide-slate-800/60">
               {groupedClients.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-500 text-sm">
+                  <td colSpan={6} className="py-12 text-center text-slate-500 text-sm">
                     לא נמצאו רשומות העונות לסינון המבוקש
                   </td>
                 </tr>
@@ -301,7 +300,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                     <>
                       {/* Group header */}
                       <tr key={`group-${status}`}>
-                        <td colSpan={7} className="py-2 px-4 bg-slate-800/80 text-xs font-bold text-slate-200 border-b border-slate-800/80 flex items-center justify-between">
+                        <td colSpan={6} className="py-2 px-4 bg-slate-800/80 text-xs font-bold text-slate-200 border-b border-slate-800/80 flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span
                               className={`px-2 py-1 rounded-md border inline-flex items-center gap-1.5 ${groupStyle(status).bg} ${groupStyle(status).text} ${groupStyle(status).border} font-semibold`}
@@ -326,11 +325,6 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                             className="hover:bg-slate-800/40 transition-colors group cursor-pointer"
                             onClick={() => onSelectClient(client)}
                           >
-                            {/* ID - Sticky */}
-                            <td className="py-2 px-3 font-mono text-xs font-bold text-slate-400 sticky left-0 z-30 bg-slate-900/80 border-r border-slate-800">
-                              {client.id}
-                            </td>
-
                             {/* Name & Company */}
                             <td className="py-2 px-3 min-w-[170px]">
                               <div className="font-semibold text-white group-hover:text-blue-400 transition-colors text-xs">

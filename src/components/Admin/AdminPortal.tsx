@@ -20,6 +20,13 @@ import {
 } from 'lucide-react';
 import { AppUser, UserRole, UserPermissions } from '../../types';
 import { getGoogleClientId, setGoogleClientId } from '../../services/authService';
+import {
+  getLocalUsers,
+  saveLocalUsers,
+  updateLocalUserStatus,
+  updateLocalUserRole,
+  LocalUser
+} from '../../services/authService';
 
 interface AdminPortalProps {
   users: AppUser[];
@@ -598,6 +605,117 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           </div>
         </div>
       )}
+
+      {/* Local Users Management (WhatsApp Code Login) */}
+      <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Users className="w-5 h-5 text-blue-400" />
+            <h3 className="text-sm font-bold text-white">ניהול משתמשי התחברות מקומית (וואטסאפ)</h3>
+          </div>
+          <p className="text-xs text-slate-400">
+            משתמשים אלה מתחברים עם קוד אימות שנשלח לוואטסאפ. ניתן להשבית או לשנות תפקיד לכל משתמש.
+          </p>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-right">
+            <thead className="bg-slate-800/60 text-xs text-slate-400 font-semibold border-b border-slate-800">
+              <tr>
+                <th className="py-3 px-4">שם משתמש</th>
+                <th className="py-3 px-4">טלפון / וואטסאפ</th>
+                <th className="py-3 px-4">תפקיד</th>
+                <th className="py-3 px-4">סטטוס</th>
+                <th className="py-3 px-4 text-center">פעולה</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/60">
+              {(() => {
+                const localUsers = getLocalUsers();
+                if (localUsers.length === 0) {
+                  return (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-slate-500 text-sm">
+                        אין משתמשים רשומים במערכת ההתחברות המקומית.
+                      </td>
+                    </tr>
+                  );
+                }
+                return localUsers.map((u: LocalUser) => {
+                  const isAdmin = u.role === 'admin';
+                  return (
+                    <tr key={u.id} className="hover:bg-slate-800/40 transition-colors">
+                      <td className="py-3 px-4 font-medium text-white">{u.name}</td>
+                      <td className="py-3 px-4 font-mono text-xs text-slate-300">{u.phone}</td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                          isAdmin
+                            ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                            : u.role === 'editor'
+                            ? 'bg-blue-500/15 text-blue-300 border-blue-500/30'
+                            : 'bg-slate-700/40 text-slate-400 border-slate-700'
+                        }`}>
+                          {isAdmin ? 'מנהל' : u.role === 'editor' ? 'עורך' : 'צופה'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                          u.isActive ? 'text-emerald-400' : 'text-slate-500'
+                        }`}>
+                          {u.isActive ? '● פעיל' : '○ מושבת'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <button
+                          onClick={() => {
+                            const nextActive = !u.isActive;
+                            updateLocalUserStatus(u.id, nextActive);
+                          }}
+                          className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                            u.isActive
+                              ? 'bg-rose-900/30 text-rose-400 border border-rose-800/40 hover:bg-rose-900/50'
+                              : 'bg-emerald-900/30 text-emerald-400 border border-emerald-800/40 hover:bg-emerald-900/50'
+                          }`}
+                        >
+                          {u.isActive ? 'השבת' : 'הפעל'}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                });
+              })()}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="pt-3 border-t border-slate-800">
+          <label className="block text-xs text-slate-400 mb-2">
+            שנה תפקיד למשתמש נבחר (מנהל / עורך / צופה)
+          </label>
+          <select
+            onChange={(e) => {
+              const localUsers = getLocalUsers();
+              if (localUsers.length === 0) return;
+              const target = localUsers[0];
+              const role = e.target.value as UserRole;
+              const perms: UserPermissions = role === 'admin'
+                ? { canEditCrm: true, canEditProduct: true, canEditTables: true, canManageUsers: true }
+                : role === 'editor'
+                ? { canEditCrm: true, canEditProduct: true, canEditTables: true, canManageUsers: false }
+                : { canEditCrm: false, canEditProduct: false, canEditTables: false, canManageUsers: false };
+              updateLocalUserRole(target.id, role, perms);
+            }}
+            className="w-auto bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            <option value="admin">מנהל מערכת (Admin)</option>
+            <option value="editor">עורך מלא (Editor)</option>
+            <option value="viewer">צופה בלבד (Viewer)</option>
+          </select>
+          <p className="text-[10px] text-slate-500 mt-1">
+            현재 משמש לדוגמה את המשתמש הראשון ברשימה. לניהול פרטני יש לערוך כל משתמש בנפרד דרך כרטיס המשתמש למעלה.
+          </p>
+        </div>
+      </div>
 
     </div>
   );
