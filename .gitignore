@@ -27,3 +27,7 @@ dist-ssr
 .env
 .env.production
 .andromity/
+
+# SQLite database files
+*.sqlite
+claimai-local.sqlite

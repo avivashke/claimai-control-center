@@ -416,3 +416,81 @@ export const addLocalUser = (user: Omit<LocalUser, 'id' | 'createdAt' | 'updated
   saveLocalUsers([...users, newUser]);
   return newUser;
 };
+
+// ========================================================
+// Server-backed verification codes (WhatsApp / Email)
+// ========================================================
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000').replace(/\/$/, '');
+
+async function apiRequest(path: string, init?: RequestInit): Promise<Response> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
+    ...init
+  });
+  return res;
+}
+
+export interface SendCodeResult {
+  success: boolean;
+  code?: string;
+  message: string;
+}
+
+export async function sendVerificationCode(
+  identifier: string,
+  code: string,
+  type: 'login' | 'reset',
+  channel: 'whatsapp' | 'email'
+): Promise<SendCodeResult> {
+  // Try server first
+  try {
+    const res = await apiRequest(channel === 'whatsapp'
+      ? '/api/auth/send-code'
+      : '/api/auth/send-email-code',
+      { method: 'POST', body: JSON.stringify({ [channel === 'whatsapp' ? 'phone' : 'email']: identifier, code, type }) }
+    );
+    if (res.ok) {
+      const data = await res.json();
+      return { success: data.success, code: data.code, message: data.message };
+    }
+  } catch {
+    // Server unavailable, fall back to localStorage
+  }
+  // Fallback: store locally (dev mode)
+  if (channel === 'whatsapp') {
+    return sendAuthCodeToWhatsApp(identifier, code, type);
+  }
+  // Email fallback - just store the code locally
+  storeAuthCode(identifier, code, type);
+  return {
+    success: true,
+    code,
+    message: `קוד האימות נשמר מקומית (שליפת שרת לא זמינה): ${code}`
+  };
+}
+
+export async function verifyVerificationCode(
+  identifier: string,
+  code: string,
+  type: 'login' | 'reset'
+): Promise<{ success: boolean; message: string }> {
+  // Try server first
+  try {
+    const res = await apiRequest('/api/auth/verify-code', {
+      method: 'POST',
+      body: JSON.stringify({ phone: identifier, email: identifier, code, type })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { success: data.success, message: data.message };
+    }
+  } catch {
+    // Server unavailable, fall back to localStorage
+  }
+  // Fallback: localStorage verification
+  const ok = verifyAuthCode(identifier, code, type);
+  return {
+    success: ok,
+    message: ok ? 'הקוד תקף' : 'הקוד שגוי או פג תוקפו'
+  };
+}
