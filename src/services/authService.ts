@@ -363,6 +363,26 @@ export const resetPasswordWithCode = (phone: string, code: string, newPassword: 
   return { success: true, message: 'הסיסמה אופסה בהצלחה. ניתן להיכנס עם הקוד החדש.' };
 };
 
+// Admin generates a one-time reset code for a specific local user (no WhatsApp needed).
+// The admin shares the code with the user, who then enters it + new password in the login modal.
+export const generateAdminResetCode = (userId: string): { success: boolean; code: string; message: string } => {
+  ensureDefaultAdmin();
+  const user = getLocalUsers().find(u => u.id === userId);
+  if (!user) {
+    return { success: false, code: '', message: 'משתמש לא נמצא במערכת.' };
+  }
+  if (!user.isActive) {
+    return { success: false, code: '', message: 'חשבון המשתמש מושבת ולא ניתן להפיק קוד איפוס.' };
+  }
+  const code = generateAuthCode();
+  storeAuthCode(user.phone, code, 'reset');
+  return {
+    success: true,
+    code,
+    message: `קוד איפוס הופק עבור ${user.name} (${user.phone}). מסור את הקוד למשתמש כדי לאפס סיסמה.`
+  };
+};
+
 export const updateLocalUserStatus = (userId: string, isActive: boolean): boolean => {
   const users = getLocalUsers().map(u => {
     if (u.id === userId) {

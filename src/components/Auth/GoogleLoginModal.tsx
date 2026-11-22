@@ -214,6 +214,13 @@ export const GoogleLoginModal: React.FC<GoogleLoginModalProps> = ({
                 איפוס סיסמה באמצעות קוד אימות
               </button>
 
+              <button
+                onClick={() => setStep('reset')}
+                className="w-full py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-amber-300 font-medium transition-all"
+              >
+                יש לי קוד איפוס מהמנהל — הזן סיסמה חדשה
+              </button>
+
               {/* Quick team users (for development/testing) */}
               {availableUsers.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-slate-800">
@@ -285,7 +292,7 @@ export const GoogleLoginModal: React.FC<GoogleLoginModalProps> = ({
             <>
               <div className="space-y-3">
                 <p className="text-[10px] text-slate-500 mb-2">
-                  קוד איפוס נשלח ל־<span className="font-mono text-slate-200">{phone}</span>. הקוד תקף ל־10 דקות.
+                  הזן את קוד האיפוס שקיבלת עבור <span className="font-mono text-slate-200">{phone}</span>. הקוד תקף ל־10 דקות.
                 </p>
                 {resetSentCode && (
                   <div className="mb-2 flex items-center justify-between gap-2">

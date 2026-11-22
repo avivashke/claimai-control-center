@@ -25,6 +25,7 @@ import {
   saveLocalUsers,
   updateLocalUserStatus,
   updateLocalUserRole,
+  generateAdminResetCode,
   LocalUser
 } from '../../services/authService';
 
@@ -47,6 +48,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const [isSavedClientId, setIsSavedClientId] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<AppUser | null>(null);
+  const [resetCode, setResetCode] = useState<{ user: LocalUser; code: string } | null>(null);
 
   // Form state
   const [email, setEmail] = useState('');
@@ -135,6 +137,15 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
     onSaveUser(userObj);
     setIsModalOpen(false);
+  };
+
+  const handleGenerateResetCode = (user: LocalUser) => {
+    const result = generateAdminResetCode(user.id);
+    if (result.success) {
+      setResetCode({ user, code: result.code });
+    } else {
+      alert(result.message);
+    }
   };
 
   return (
@@ -679,6 +690,14 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                         >
                           {u.isActive ? 'השבת' : 'הפעל'}
                         </button>
+                        <button
+                          onClick={() => handleGenerateResetCode(u)}
+                          className="px-3 py-1 rounded-lg text-xs font-bold bg-amber-900/30 text-amber-400 border border-amber-800/40 hover:bg-amber-900/50 transition-all"
+                          title="הפק קוד איפוס סיסמה למשתמש"
+                        >
+                          <Key className="w-3 h-3" />
+                          קוד איפוס
+                        </button>
                       </td>
                     </tr>
                   );
@@ -715,6 +734,49 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
             현재 משמש לדוגמה את המשתמש הראשון ברשימה. לניהול פרטני יש לערוך כל משתמש בנפרד דרך כרטיס המשתמש למעלה.
           </p>
         </div>
+
+        {/* Generated reset code display */}
+        {resetCode && (
+          <div className="p-4 rounded-xl bg-amber-900/30 border border-amber-600/50 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-amber-300 uppercase tracking-wider">
+                קוד איפוס סיסמה הופק
+              </span>
+              <button
+                onClick={() => setResetCode(null)}
+                className="text-[9px] text-amber-400 hover:text-amber-300 underline underline-offset-2"
+              >
+                סגור
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400">משתמש:</span>
+              <span className="text-xs font-medium text-white">{resetCode.user.name}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400">טלפון:</span>
+              <span className="text-xs font-mono text-slate-300">{resetCode.user.phone}</span>
+            </div>
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <span className="text-xs text-slate-400">קוד איפוס:</span>
+              <span className="font-mono text-xl font-bold text-amber-400 bg-amber-900/50 px-3 py-1 rounded border border-amber-500/40">
+                {resetCode.code}
+              </span>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(resetCode.code);
+                  alert('הקוד הועתק ללוח');
+                }}
+                className="text-[9px] text-amber-400 hover:text-amber-300 underline underline-offset-2"
+              >
+                העתק קוד
+              </button>
+            </div>
+            <p className="text-[10px] text-slate-500">
+              מסור את הקוד למשתמש. הקוד תקף ל־10 דקות וניתן לשימוש חד־פעמי לאיפוס סיסמה במסך הכניסה.
+            </p>
+          </div>
+        )}
       </div>
 
     </div>
