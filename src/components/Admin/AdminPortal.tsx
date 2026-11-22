@@ -1,22 +1,26 @@
 import React, { useState } from 'react';
-import { 
-  ShieldCheck, 
-  UserPlus, 
-  Key, 
-  Check, 
-  X, 
-  Trash2, 
-  Edit3, 
-  Lock, 
-  Eye, 
-  CheckCircle2, 
+import {
+  ShieldCheck,
+  UserPlus,
+  Key,
+  Check,
+  X,
+  Trash2,
+  Edit3,
+  Lock,
+  Eye,
+  CheckCircle2,
   AlertTriangle,
   Globe,
   ExternalLink,
   Users,
   UserCheck,
   ShieldAlert,
-  Sparkles
+  Sparkles,
+  Smartphone,
+  RefreshCw,
+  QrCode,
+  Download
 } from 'lucide-react';
 import { AppUser, UserRole, UserPermissions } from '../../types';
 import { getGoogleClientId, setGoogleClientId } from '../../services/authService';
@@ -49,6 +53,9 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<AppUser | null>(null);
   const [resetCode, setResetCode] = useState<{ user: LocalUser; code: string } | null>(null);
+  const [whatsappQr, setWhatsappQr] = useState<string | null>(null);
+  const [whatsappReady, setWhatsappReady] = useState(false);
+  const [whatsappLoading, setWhatsappLoading] = useState(false);
 
   // Form state
   const [email, setEmail] = useState('');
@@ -67,6 +74,28 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     setIsSavedClientId(true);
     setTimeout(() => setIsSavedClientId(false), 2500);
   };
+
+  // Load WhatsApp QR code from server
+  const loadWhatsappStatus = async () => {
+    setWhatsappLoading(true);
+    try {
+      const res = await fetch('http://localhost:4000/api/whatsapp/qr');
+      const data = await res.json();
+      setWhatsappQr(data.qr || null);
+      setWhatsappReady(Boolean(data.ready));
+    } catch {
+      setWhatsappQr(null);
+      setWhatsappReady(false);
+    } finally {
+      setWhatsappLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    loadWhatsappStatus();
+    const interval = setInterval(loadWhatsappStatus, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleOpenNewUser = () => {
     setEditingUser(null);
@@ -431,6 +460,111 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
               <li>הוסף ב-Authorized JavaScript origins את כתובת ה-Netlify שלך</li>
               <li>הדבק כאן את ה-Client ID</li>
             </ol>
+          </div>
+        </div>
+      </div>
+
+      {/* WhatsApp Authentication Configuration Card */}
+      <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold">
+              <Smartphone className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white">אימות וואטסאפ שליחת קודי כניסה</h3>
+              <p className="text-xs text-slate-400">
+                קודי אימות נשלחים בוואטסאפ מהמספר <span className="font-mono text-emerald-400">+972586735953</span>
+              </p>
+            </div>
+          </div>
+          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+            whatsappReady
+              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+              : 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+          }`}>
+            {whatsappReady ? 'מחובר ומוכן לשליחה' : 'לא מחובר - סרוק QR'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-3">
+            <p className="text-xs text-slate-400">
+              כדי לאפשר שליחת קודי אימות בוואטסאפ, סרק את קוד ה-QR למטה עם אפליקציית וואטסאפ בטלפון שלך:
+            </p>
+            {whatsappLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <RefreshCw className="w-5 h-5 animate-spin text-slate-400" />
+              </div>
+            ) : whatsappQr ? (
+              <div className="flex flex-col items-center justify-center p-6 bg-slate-800 rounded-xl border border-slate-700 shadow-lg">
+                <div className="relative">
+                  <img
+                    src={`data:image/png;base64,${whatsappQr}`}
+                    alt="WhatsApp QR Code"
+                    className="w-80 h-80 mb-3 bg-white p-2 rounded-lg shadow-xl block"
+                  />
+                  <a
+                    href={`data:image/png;base64,${whatsappQr}`}
+                    download="whatsapp-qr.png"
+                    className="text-[10px] text-emerald-400 hover:text-emerald-300 underline underline-offset-2 flex items-center gap-1"
+                  >
+                    <Download className="w-3 h-3" />
+                    הורד תמונת QR
+                  </a>
+                </div>
+                <p className="text-[10px] text-slate-400 text-center max-w-xs mt-2">
+                  פתח וואטסאפ → הגדרות → מכשירים מקושרים → הקשר מכשיר → סרוק את הקוד
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center py-8 text-slate-500">
+                טוען קוד QR…
+              </div>
+            )}
+            {!whatsappReady && (
+              <button
+                onClick={loadWhatsappStatus}
+                disabled={whatsappLoading}
+                className="w-full py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-300 font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <RefreshCw className="w-3 h-3" />
+                רענן קוד QR
+              </button>
+            )}
+            {whatsappReady && (
+              <p className="text-xs text-emerald-400 text-center font-medium">
+                ✓ הוואטסאפ מחובר ומוכן לשליחת קודי אימות
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            <div className="p-4 rounded-xl bg-slate-800/50 border border-slate-700/50">
+              <p className="text-[10px] font-bold text-slate-300 uppercase tracking-wider mb-3">
+                מספר שולח
+              </p>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-xl font-bold text-emerald-400 bg-emerald-900/50 px-3 py-1 rounded border border-emerald-500/30">
+                  +972586735953
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-500 mt-2">
+                כל קודי האימות בכניסה ובאיפוס סיסמה יישלחו מהמספר הזה.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-xl bg-slate-800/50 border border-slate-700/50">
+              <p className="text-[10px] font-bold text-slate-300 uppercase tracking-wider mb-3">
+                איך זה עובד
+              </p>
+              <ol className="list-decimal list-inside space-y-1 text-[10px] text-slate-400">
+                <li>סרוק את קוד ה-QR עם וואטסאפ בטלפון</li>
+                <li>המתין להודעת "מחובר ומוכן לשליחה"</li>
+                <li>משתמשים יקבלו קוד אימות בהודעת וואטסאפ</li>
+                <li>המנהל יכול להפיק קודי איפוס סיסמה לכל משתמש</li>
+              </ol>
+            </div>
           </div>
         </div>
       </div>

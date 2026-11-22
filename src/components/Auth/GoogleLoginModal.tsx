@@ -327,16 +327,9 @@ export const GoogleLoginModal: React.FC<GoogleLoginModalProps> = ({
         <div className="flex-grow border-t border-slate-800"></div>
       </div>
 
-      <button
-        onClick={() => {
-          // Trigger Google OAuth - handled by parent via onLogin with Google email
-          showMessage('הפעל את כפתור כניסה עם Google מה-header', 'info');
-        }}
-        className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center gap-2"
-      >
-        <User className="w-4 h-4" />
-        <span>התחבר עם Google</span>
-      </button>
+      <p className="text-[10px] text-slate-500 text-center">
+        כניסה עם Google דורשת הגדרת Client ID בפורטל אדמין
+      </p>
     </div>
   );
 
@@ -483,6 +476,14 @@ export const GoogleLoginModal: React.FC<GoogleLoginModalProps> = ({
               </div>
             )}
           </div>
+
+          <button
+            onClick={handleRequestEmailCode}
+            disabled={loading}
+            className="w-full py-2.5 rounded-lg bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:hover:bg-amber-600 text-white text-xs font-bold font-mono shadow-md shadow-amber-600/30 transition-all"
+          >
+            {loading ? 'שולח…' : 'שלח קוד אימות'}
+          </button>
 
           <button
             onClick={() => selectMethod('google')}

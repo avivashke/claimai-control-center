@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const nodemailer = require('nodemailer');
 const { Client } = require('whatsapp-web.js');
-const qrcode = require('qrcode-terminal');
+const QRCode = require('qrcode');
 const { DatabaseSync } = require('node:sqlite');
 
 const app = express();
@@ -148,11 +148,19 @@ function initWhatsApp() {
     }
   });
 
-  whatsappClient.on('qr', (qr) => {
-    whatsappQr = qr;
-    console.log('\n=== WHATSAPP QR CODE ===');
-    qrcode.generate(qr, { small: true });
-    console.log('Scan this QR code with WhatsApp on your phone (+972586735953)\n');
+  whatsappClient.on('qr', async (qr) => {
+    try {
+      whatsappQr = await QRCode.toDataURL(qr, { width: 300, margin: 2 });
+      // Extract just the base64 part (remove data:image/png;base64, prefix)
+      const base64 = whatsappQr.split(',')[1];
+      whatsappQr = base64;
+    } catch (e) {
+      console.warn('Failed to generate QR data URL:', e.message);
+      whatsappQr = qr;
+    }
+    console.log('\n=== WHATSAPP QR CODE READY ===');
+    console.log('Scan this QR code with WhatsApp on your phone (+972586735953)');
+    console.log('QR code is also available at http://localhost:4000/api/whatsapp/qr\n');
   });
 
   whatsappClient.on('ready', () => {
