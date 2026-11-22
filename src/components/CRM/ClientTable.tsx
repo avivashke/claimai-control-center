@@ -274,11 +274,11 @@ export const ClientTable: React.FC<ClientTableProps> = ({
       </div>
 
       {/* Main Table */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/40 shadow-xl">
-        <div className="flex min-h-[calc(100vh-340px)]">
-          {/* Side Group Navigation */}
-          <div className="w-28 border-r border-slate-800 bg-slate-900/60 flex-none shrink-0 sticky top-4 z-30">
-            <div className="p-1 space-y-0.5 max-h-[calc(100vh-400px)] overflow-y-auto">
+      <div className="rounded-2xl border border-slate-700/70 bg-slate-900/70 shadow-2xl ring-1 ring-slate-800/40">
+        <div className="flex overflow-y-auto overflow-x-auto h-[calc(100vh-180px)] relative">
+          {/* Side Group Navigation - sticky inside the scroll container */}
+          <div className="w-28 border-r border-slate-700/60 bg-slate-900/70 shrink-0 sticky top-4 self-start z-40 min-w-0">
+            <div className="p-1 space-y-0.5">
               {groupedClients.map(({ status, clients: groupClients }) => (
                 <button
                   key={`nav-${status}`}
@@ -300,17 +300,17 @@ export const ClientTable: React.FC<ClientTableProps> = ({
             </div>
           </div>
 
-          {/* Scrollable Table Area */}
-          <div className="flex-1 overflow-y-auto overflow-x-hidden relative min-h-full">
-            <table className="w-full text-right text-[9px]">
-              <thead className="bg-slate-800/95 text-[9px] text-slate-400 font-semibold border-b border-slate-800">
-                <tr className="sticky top-0 z-40 bg-slate-900/95 shadow-sm">
-                  <th className="py-1.5 px-2 min-w-[150px]">איש קשר / חברה</th>
-                  <th className="py-1.5 px-2 min-w-[140px]">סוג עסק</th>
-                  <th className="py-1.5 px-2 min-w-[180px]">סטטוס CRM</th>
-                  <th className="py-1.5 px-2">פרטי התקשרות</th>
-                  <th className="py-1.5 px-2">הערה אחרונה</th>
-                  <th className="py-1.5 px-2 text-center w-20">פעולות</th>
+          {/* Table area - single scrolling container, sticky header cells */}
+          <div className="flex-1 min-w-0">
+            <table style={{ tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0 }} className="w-full border-separate border-spacing-0 text-right text-[9px]">
+              <thead>
+                <tr className="border-b border-slate-700">
+                  <th className="sticky top-0 z-50 bg-slate-900/95 shadow-sm py-1.5 px-2 min-w-[150px]">איש קשר / חברה</th>
+                  <th className="sticky top-0 z-50 bg-slate-900/95 shadow-sm py-1.5 px-2 min-w-[140px]">סוג עסק</th>
+                  <th className="sticky top-0 z-50 bg-slate-900/95 shadow-sm py-1.5 px-2 min-w-[180px]">סטטוס CRM</th>
+                  <th className="sticky top-0 z-50 bg-slate-900/95 shadow-sm py-1.5 px-2">פרטי התקשרות</th>
+                  <th className="sticky top-0 z-50 bg-slate-900/95 shadow-sm py-1.5 px-2">הערה אחרונה</th>
+                  <th className="sticky top-0 z-50 bg-slate-900/95 shadow-sm py-1.5 px-2 text-center w-20">פעולות</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">

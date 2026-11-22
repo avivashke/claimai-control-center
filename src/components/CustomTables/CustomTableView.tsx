@@ -221,11 +221,12 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
       </div>
 
       {/* Main Table Grid */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden shadow-xl">
-        <div className="overflow-x-auto max-h-[650px]">
-          <table className="w-full text-right text-xs">
-            <thead className="bg-slate-800/90 text-slate-300 font-bold border-b border-slate-700 sticky top-0 z-10 backdrop-blur-sm">
-              <tr>
+      <div className="rounded-2xl border border-slate-700/70 bg-slate-900/70 shadow-2xl ring-1 ring-slate-800/40 overflow-hidden">
+        <div className="overflow-y-auto max-h-[650px]">
+          {/* Header table - sticks to top on scroll */}
+          <div className="sticky top-0 z-50 bg-slate-800/90 shadow-sm border-b border-slate-700">
+            <table style={{ tableLayout: 'fixed' }} className="w-full border-collapse text-right text-xs">
+              <tr className="border-b border-slate-700">
                 <th className="py-3 px-3 w-12 text-slate-500">#</th>
                 {currentTable.columns.map((col) => (
                   <th key={col.key} className="py-3 px-3 whitespace-nowrap">
@@ -239,8 +240,12 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
                 ))}
                 <th className="py-3 px-3 w-12 text-center">פעולות</th>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            </table>
+          </div>
+          {/* Body table - scrolls vertically */}
+          <div className="overflow-x-auto">
+            <table style={{ tableLayout: 'fixed' }} className="w-full border-collapse text-right text-xs">
+              <tbody className="divide-y divide-slate-800/60">
               {filteredRows.length === 0 ? (
                 <tr>
                   <td colSpan={currentTable.columns.length + 2} className="py-12 text-center text-slate-500 text-xs">
@@ -328,6 +333,7 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
             </tbody>
           </table>
         </div>
+      </div>
       </div>
 
       {/* Add Row Modal */}

@@ -326,11 +326,11 @@ export const ProductHub: React.FC<ProductHubProps> = ({
         </div>
       ) : (
         /* VIEW: TABLE */
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/40 shadow-xl">
-          <div className="flex min-h-[calc(100vh-340px)]">
+        <div className="rounded-2xl border border-slate-700/70 bg-slate-900/70 shadow-2xl ring-1 ring-slate-800/40">
+          <div className="flex min-h-[calc(100vh-340px)] overflow-y-auto">
             {/* Side Group Navigation */}
-            <div className="w-28 border-r border-slate-800 bg-slate-900/60 flex-none shrink-0 sticky top-4 z-30">
-              <div className="p-1 space-y-0.5 max-h-[calc(100vh-400px)] overflow-y-auto">
+            <div className="w-28 border-r border-slate-700/60 bg-slate-900/70 flex-none shrink-0 sticky top-4 self-start z-40 min-w-0">
+              <div className="p-1 space-y-0.5">
                 {groupedItems.map(({ status, items: groupItems }) => (
                   <button
                     key={`nav-${status}`}
@@ -351,10 +351,11 @@ export const ProductHub: React.FC<ProductHubProps> = ({
             </div>
 
             {/* Scrollable Table Area */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden relative min-h-full">
-              <table className="w-full text-right text-[9px]">
-                <thead className="bg-slate-800/95 text-[9px] text-slate-400 font-semibold border-b border-slate-800">
-                  <tr className="sticky top-0 z-40 bg-slate-900/95 shadow-sm">
+            <div className="flex-1 min-w-0 relative">
+              {/* Header table - sticks to top on scroll */}
+              <div className="sticky top-0 z-50 bg-slate-900/[0.96] shadow-sm border-b border-slate-700">
+                <table style={{ tableLayout: 'fixed' }} className="w-full border-collapse text-right text-[9px]">
+                  <tr className="border-b border-slate-700">
                     <th className="py-1.5 px-2 w-16">מזהה</th>
                     <th className="py-1.5 px-2 min-w-[80px]">סוג</th>
                     <th className="py-1.5 px-2 min-w-[150px]">כותרת המשימה</th>
@@ -365,8 +366,12 @@ export const ProductHub: React.FC<ProductHubProps> = ({
                     <th className="py-1.5 px-2 min-w-[100px]">גרסה / יעד</th>
                     <th className="py-1.5 px-2 text-center w-20">פעולות</th>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                </table>
+              </div>
+              {/* Body table - scrolls vertically */}
+              <div className="overflow-y-auto overflow-x-auto min-h-full">
+                <table style={{ tableLayout: 'fixed' }} className="w-full border-collapse text-right text-[9px]">
+                  <tbody className="divide-y divide-slate-800/60">
                   {groupedItems.length === 0 ? (
                     <tr>
                       <td colSpan={9} className="py-12 text-center text-slate-500 text-[10px]">
@@ -495,8 +500,9 @@ export const ProductHub: React.FC<ProductHubProps> = ({
                       ))}
                     </>
                   )}
-                </tbody>
-              </table>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
