@@ -21,6 +21,7 @@ import {
   exportFullDatabaseJSON 
 } from '../services/db';
 import { testNetlifyBlobs } from '../services/blobsService';
+import { checkWorkerHealth, getWorkerUrl, isWorkerConfigured } from '../services/aiWorkerService';
 
 interface DatabaseSettingsProps {
   clientsCount: number;
@@ -43,6 +44,35 @@ export const DatabaseSettings: React.FC<DatabaseSettingsProps> = ({
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [isTestingBlobs, setIsTestingBlobs] = useState(false);
   const [blobsResult, setBlobsResult] = useState<{ success: boolean; message: string; latency?: number } | null>(null);
+  const [isTestingWorker, setIsTestingWorker] = useState(false);
+  const [workerResult, setWorkerResult] = useState<{ success: boolean; message: string; info?: any } | null>(null);
+
+  const handleTestWorker = async () => {
+    setIsTestingWorker(true);
+    setWorkerResult(null);
+    try {
+      const res = await checkWorkerHealth();
+      if (res.ok) {
+        setWorkerResult({
+          success: true,
+          message: `החיבור ל-Cloudflare Worker תקין ופעיל! (ספק AI זמין: ${res.info?.hasWorkersAI ? 'Workers AI' : res.info?.hasGemini ? 'Gemini' : 'מובנה'})`,
+          info: res.info
+        });
+      } else {
+        setWorkerResult({
+          success: false,
+          message: `בדיקת Worker נכשלה: ${res.error}`
+        });
+      }
+    } catch (err: any) {
+      setWorkerResult({
+        success: false,
+        message: `שגיאה בפנייה ל-Worker: ${err.message || err}`
+      });
+    } finally {
+      setIsTestingWorker(false);
+    }
+  };
 
   const handleTestBlobs = async () => {
     setIsTestingBlobs(true);
@@ -430,6 +460,56 @@ CREATE TABLE product_items (
             <span>תמונת מצב של כל הנתונים נשמרת באופן מאובטח ב-Store של Netlify בשם <code className="font-mono text-purple-200">claimai-data</code>.</span>
           </div>
         </div>
+      </div>
+
+      {/* Card 4: Cloudflare Worker AI */}
+      <div className="p-6 rounded-2xl bg-gradient-to-r from-purple-950/30 via-slate-900 to-slate-900 border border-purple-500/20 shadow-xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-purple-600/20 text-purple-400 border border-purple-500/30 flex items-center justify-center">
+              <Cloud className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-bold text-white">Cloudflare Worker AI — שרת בינה מלאכותית ו-Copilot</h3>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                  isWorkerConfigured()
+                    ? 'bg-purple-500/20 text-purple-300 border-purple-500/30'
+                    : 'bg-slate-800 text-slate-400 border-slate-700'
+                }`}>
+                  {isWorkerConfigured() ? 'מוגדר ב-Netlify' : 'לא מוגדר (פולבאק מקומי)'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5">
+                {isWorkerConfigured()
+                  ? `מחובר לוורקר: ${getWorkerUrl()}`
+                  : 'הגדר VITE_CLOUDFLARE_WORKER_URL ב-Netlify כדי לחבר את ה-Worker ב-Cloudflare לביצוע עיבודי AI בענן.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleTestWorker}
+              disabled={isTestingWorker}
+              className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold shadow-md shadow-purple-600/30 transition-all disabled:opacity-50 flex items-center gap-1.5"
+            >
+              <Cloud className="w-3.5 h-3.5" />
+              <span>{isTestingWorker ? 'בודק Worker...' : '⚡ בדיקת חיבור Cloudflare Worker'}</span>
+            </button>
+          </div>
+        </div>
+
+        {workerResult && (
+          <div className={`p-3 rounded-xl border text-xs font-semibold flex items-center gap-2 ${
+            workerResult.success
+              ? 'bg-purple-500/15 border-purple-500/30 text-purple-300'
+              : 'bg-amber-500/15 border-amber-500/30 text-amber-300'
+          }`}>
+            {workerResult.success ? <CheckCircle2 className="w-4 h-4 text-purple-400 shrink-0" /> : <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />}
+            <span>{workerResult.message}</span>
+          </div>
+        )}
       </div>
 
       {/* SQL Migration Script Viewer */}

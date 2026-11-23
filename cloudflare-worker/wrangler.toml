@@ -1,0 +1,20 @@
+name = "claimai-ai-worker"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Cloudflare Workers AI Binding
+[ai]
+binding = "AI"
+
+# Environment Variables (Non-sensitive)
+[vars]
+CORS_ORIGIN = "*"
+DEFAULT_MODEL = "@cf/meta/llama-3.3-70b-instruct"
+
+# Secrets to configure via dashboard or `npx wrangler secret put`:
+# - GEMINI_API_KEY (optional: if you prefer Google Gemini 1.5/2.0)
+# - OPENAI_API_KEY (optional: if you prefer OpenAI GPT-4o)
+# - WORKER_SECRET_TOKEN (optional: if you want to restrict API calls)
+# - SUPABASE_URL (optional: for direct DB access)
+# - SUPABASE_SERVICE_ROLE_KEY (optional: for direct DB access)

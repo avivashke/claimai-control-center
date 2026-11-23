@@ -25,6 +25,7 @@ import {
   AIAnalysisResult 
 } from '../../services/aiService';
 import { CustomTable, CustomTableColumn, ColumnType, Client } from '../../types';
+import { analyzeTableWithWorker, isWorkerConfigured } from '../../services/aiWorkerService';
 
 interface AITableStudioProps {
   onTableCreated: (table: CustomTable) => void;
@@ -40,7 +41,10 @@ export const AITableStudio: React.FC<AITableStudioProps> = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [rawText, setRawText] = useState('');
   const [userPrompt, setUserPrompt] = useState('');
-  const [provider, setProvider] = useState<'builtin' | 'gemini' | 'openai'>('builtin');
+  const hasCloudflareWorker = isWorkerConfigured();
+  const [provider, setProvider] = useState<'builtin' | 'worker' | 'gemini' | 'openai'>(
+    hasCloudflareWorker ? 'worker' : 'builtin'
+  );
   const [apiKey, setApiKey] = useState(localStorage.getItem('claimai_ai_api_key') || '');
   const [isProcessing, setIsProcessing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AIAnalysisResult | null>(null);
@@ -99,6 +103,22 @@ export const AITableStudio: React.FC<AITableStudioProps> = ({
 
       // Process with AI
       const result = processWithBuiltinAI(headers, rows, userPrompt, selectedFile?.name);
+
+      // If user selected Cloudflare Worker AI
+      if (provider === 'worker') {
+        try {
+          const workerSchema = await analyzeTableWithWorker(headers, rows, userPrompt);
+          if (workerSchema) {
+            result.tableName = workerSchema.tableName || result.tableName;
+            result.description = workerSchema.description || result.description;
+            if (workerSchema.columns && workerSchema.columns.length > 0) {
+              result.columns = workerSchema.columns;
+            }
+          }
+        } catch (err) {
+          console.warn('Cloudflare Worker table enrichment failed, using built-in parser result', err);
+        }
+      }
 
       // If user selected Gemini and provided an API key
       if (provider === 'gemini' && apiKey.trim()) {
@@ -262,13 +282,16 @@ export const AITableStudio: React.FC<AITableStudioProps> = ({
                   onChange={(e) => setProvider(e.target.value as any)}
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
                 >
+                  {hasCloudflareWorker && (
+                    <option value="worker">⚡ Cloudflare Worker AI (מחובר ומאומת ב-Netlify)</option>
+                  )}
                   <option value="builtin">🧠 מנוע AI מובנה (חינמי, מהיר וללא מפתח)</option>
                   <option value="gemini">✨ Google Gemini API (gemini-1.5-flash)</option>
                   <option value="openai">⚡ OpenAI API (GPT-4o-mini)</option>
                 </select>
               </div>
 
-              {provider !== 'builtin' && (
+              {provider !== 'builtin' && provider !== 'worker' && (
                 <div>
                   <label className="block text-xs text-slate-400 mb-1">
                     API Key של {provider === 'gemini' ? 'Google Gemini' : 'OpenAI'}

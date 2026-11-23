@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { Client, ProductItem, CustomTable, AppUser } from '../../types';
 import { TabType } from '../Header';
+import { askWorkerAI, isWorkerConfigured } from '../../services/aiWorkerService';
 
 export interface ChatAction {
   type: 'open_client' | 'open_ticket' | 'navigate_tab' | 'whatsapp' | 'call';
@@ -63,6 +64,8 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const hasCloudflareWorker = isWorkerConfigured();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'msg-welcome',
@@ -270,26 +273,72 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
     };
   };
 
-  const handleSendMessage = (e?: React.FormEvent) => {
+  const handleSendMessage = async (e?: React.FormEvent, customText?: string) => {
     if (e) e.preventDefault();
-    if (!inputMessage.trim()) return;
+    const textToSend = (customText || inputMessage).trim();
+    if (!textToSend || isLoading) return;
 
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
       sender: 'user',
-      text: inputMessage.trim(),
+      text: textToSend,
       timestamp: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
     };
 
     setMessages(prev => [...prev, userMsg]);
-    const currentInput = inputMessage;
     setInputMessage('');
+    setIsLoading(true);
 
-    // Trigger AI response with realistic slight delay
-    setTimeout(() => {
-      const aiResponse = processUserQuery(currentInput);
+    try {
+      // 1. Try Cloudflare Worker AI first if configured
+      if (hasCloudflareWorker) {
+        const workerResponse = await askWorkerAI(textToSend, {
+          currentUser: { name: currentUser.name, role: currentUser.role, email: currentUser.email },
+          clientsSummary: clients.map(c => ({
+            id: c.id,
+            name: c.name,
+            company: c.company,
+            status: c.status,
+            phone: c.phone,
+            requiresAttention: c.requiresAttention
+          })),
+          productSummary: productItems.map(p => ({
+            id: p.id,
+            title: p.title,
+            priority: p.priority,
+            status: p.status,
+            client: p.client,
+            category: p.category
+          }))
+        });
+
+        if (workerResponse && workerResponse.text) {
+          setMessages(prev => [
+            ...prev,
+            {
+              id: `ai-${Date.now()}`,
+              sender: 'ai',
+              text: workerResponse.text,
+              actions: workerResponse.actions,
+              timestamp: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+            }
+          ]);
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // 2. Fallback to local intelligent rule engine
+      setTimeout(() => {
+        const aiResponse = processUserQuery(textToSend);
+        setMessages(prev => [...prev, aiResponse]);
+        setIsLoading(false);
+      }, 250);
+    } catch {
+      const aiResponse = processUserQuery(textToSend);
       setMessages(prev => [...prev, aiResponse]);
-    }, 300);
+      setIsLoading(false);
+    }
   };
 
   // Action Click Handler (Navigates or opens drawers!)
@@ -346,6 +395,15 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
               <div>
                 <h3 className="text-xs font-bold text-white flex items-center gap-1.5 leading-tight">
                   <span>סייר AI חכם · ClaimAI Copilot</span>
+                  {hasCloudflareWorker ? (
+                    <span className="text-[9px] bg-purple-500/20 text-purple-300 border border-purple-500/30 px-1.5 py-0.5 rounded-full font-mono">
+                      Cloudflare AI ⚡
+                    </span>
+                  ) : (
+                    <span className="text-[9px] bg-slate-800 text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded-full">
+                      מנוע מובנה
+                    </span>
+                  )}
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
                 </h3>
                 <p className="text-[10px] text-slate-400 leading-tight">חיפוש, תובנות וניווט חכם בתוך האפליקציה</p>
@@ -416,6 +474,17 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
                     </div>
                   );
                 })}
+                {isLoading && (
+                  <div className="flex flex-col items-start space-y-1 animate-pulse">
+                    <div className="flex items-center gap-1.5 text-[10px] text-purple-400 px-1">
+                      <span>{hasCloudflareWorker ? 'Cloudflare AI מעבד...' : 'מעבד תשובה...'}</span>
+                    </div>
+                    <div className="p-3 rounded-2xl bg-slate-800/80 border border-purple-500/30 text-purple-200 text-xs flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-purple-400 animate-spin" />
+                      <span>חושב ומנתח נתונים...</span>
+                    </div>
+                  </div>
+                )}
                 <div ref={messagesEndRef} />
               </div>
 
@@ -430,23 +499,9 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
                 ].map((chip) => (
                   <button
                     key={chip}
-                    onClick={() => {
-                      setInputMessage(chip);
-                      setTimeout(() => {
-                        const userMsg: ChatMessage = {
-                          id: `user-${Date.now()}`,
-                          sender: 'user',
-                          text: chip,
-                          timestamp: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
-                        };
-                        setMessages(prev => [...prev, userMsg]);
-                        setTimeout(() => {
-                          const aiResponse = processUserQuery(chip);
-                          setMessages(prev => [...prev, aiResponse]);
-                        }, 250);
-                      }, 50);
-                    }}
-                    className="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white text-[10px] font-semibold whitespace-nowrap border border-slate-700 transition-all shrink-0"
+                    disabled={isLoading}
+                    onClick={() => handleSendMessage(undefined, chip)}
+                    className="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-750 disabled:opacity-50 text-slate-300 hover:text-white text-[10px] font-semibold whitespace-nowrap border border-slate-700 transition-all shrink-0"
                   >
                     {chip}
                   </button>

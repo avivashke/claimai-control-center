@@ -42,7 +42,20 @@
 
 ---
 
-## 3. קבצים עיקריים בפרויקט
+## 3. חיבור Cloudflare Worker AI למערכת ⚡
+
+הפרויקט כולל תיקייה מוכנה לפריסה: `cloudflare-worker/` המספקת שירותי AI מהירים וחינמיים (באמצעות Cloudflare Workers AI או מודלים חיצוניים).
+
+### משתנים להגדרה ב-Netlify:
+ב-Netlify תחת **Site configuration** ← **Environment variables**:
+1. **`VITE_CLOUDFLARE_WORKER_URL`** = הכתובת של הוורקר (לדוגמה: `https://claimai-ai-worker.xyz.workers.dev`).
+2. **`VITE_WORKER_AUTH_TOKEN`** *(אופציונלי)* = טוקן סודי לאבטחה אם הגדרת כזה בוורקר.
+
+לאחר ההגדרה, רכיב ה-**Floating AI Copilot** וסטודיו הטבלאות **AI Table Studio** ינותבו ישירות לענן של Cloudflare, ובמסך **דאטה-בייס ונטיפי** תוכל לבדוק את תקינות החיבור בלחיצת כפתור!
+
+---
+
+## 4. קבצים עיקריים בפרויקט
 
 | קובץ | ייעוד |
 |---|---|
