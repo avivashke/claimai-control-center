@@ -10,6 +10,36 @@ const ADMIN_RESET_CODES_STORAGE_KEY = 'claimai_admin_reset_codes';
 // Default fallback password when environment variable is not configured
 export const DEFAULT_FALLBACK_PASSWORD = 'ClaimAI2026!';
 
+// Read Netlify Environment Variable passwords by user email or role
+export const getNetlifyPasswordForUser = (email: string, role: UserRole): string | undefined => {
+  const env = import.meta.env;
+  const cleanEmail = email.trim().toLowerCase();
+
+  // 1. Direct personal password for Aviv (VITE_AVIV_PASSWORD or VITE_PASSWORD_AVIV)
+  if (cleanEmail === 'aviv.claimai@gmail.com' || cleanEmail === 'avivashke95@gmail.com' || cleanEmail.includes('aviv')) {
+    const avivPass = env.VITE_AVIV_PASSWORD || env.VITE_PASSWORD_AVIV;
+    if (avivPass) return avivPass;
+  }
+
+  // 2. Direct personal password for Eyal (VITE_EYAL_PASSWORD or VITE_PASSWORD_EYAL)
+  if (cleanEmail === 'eyal@claimai.com' || cleanEmail.includes('eyal')) {
+    const eyalPass = env.VITE_EYAL_PASSWORD || env.VITE_PASSWORD_EYAL;
+    if (eyalPass) return eyalPass;
+  }
+
+  // 3. Admin / role fallback password (VITE_ADMIN_PASSWORD or VITE_APP_PASSWORD)
+  if (role === 'admin') {
+    return env.VITE_ADMIN_PASSWORD || env.VITE_APP_PASSWORD;
+  }
+  if (role === 'editor') {
+    return env.VITE_EDITOR_PASSWORD || env.VITE_APP_PASSWORD;
+  }
+  if (role === 'viewer') {
+    return env.VITE_VIEWER_PASSWORD || env.VITE_APP_PASSWORD;
+  }
+  return env.VITE_APP_PASSWORD;
+};
+
 // Read Netlify Environment Variable passwords
 export const getNetlifyPasswordForRole = (role: UserRole): string | undefined => {
   const env = import.meta.env;
@@ -222,8 +252,8 @@ export const loginWithPassword = async (
   }
 
   // 2. Validate Password against:
-  // a) Netlify Environment Variable for this role
-  const netlifyPass = getNetlifyPasswordForRole(user.role);
+  // a) Netlify Environment Variable for this user or role
+  const netlifyPass = getNetlifyPasswordForUser(cleanEmail, user.role);
 
   // b) Custom user password stored in system
   const storedPasswords = getStoredPasswords();

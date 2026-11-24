@@ -108,7 +108,7 @@ export const checkSupabaseHealth = async (): Promise<{ isConnected: boolean; mes
 };
 
 // Database initialization & seeding
-export const CURRENT_DATA_VERSION = '2026-11-24-v2-main-no-cases';
+export const CURRENT_DATA_VERSION = '2026-11-24-v3-users-aviv-eyal';
 
 export const initDatabase = async (): Promise<{ clientsCount: number; productCount: number; tablesCount: number; usersCount: number }> => {
   if (USE_LOCAL_API) {
@@ -139,6 +139,8 @@ export const initDatabase = async (): Promise<{ clientsCount: number; productCou
       for (const t of seedCustomTablesData as CustomTable[]) {
         await db.customTables.put(t);
       }
+      await db.users.clear();
+      await db.users.bulkAdd(seedUsersData as AppUser[]);
       localStorage.setItem('claimai_data_version', CURRENT_DATA_VERSION);
     }
 

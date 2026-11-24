@@ -1,22 +1,6 @@
 [
   {
-    "id": "user-admin-0",
-    "email": "admin@claimai.co.il",
-    "name": "מנהל מערכת ראשי (Admin)",
-    "role": "admin",
-    "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
-    "permissions": {
-      "canEditCrm": true,
-      "canEditProduct": true,
-      "canEditTables": true,
-      "canManageUsers": true
-    },
-    "isActive": true,
-    "createdAt": "2026-11-24",
-    "lastLogin": "2026-11-24 14:00"
-  },
-  {
-    "id": "user-admin-1",
+    "id": "user-aviv",
     "email": "aviv.claimai@gmail.com",
     "name": "אביב אשכנזי (מנהל מערכת)",
     "role": "admin",
@@ -29,47 +13,19 @@
     },
     "isActive": true,
     "createdAt": "2026-11-19",
-    "lastLogin": "2026-11-19 13:40"
+    "lastLogin": "2026-11-24 15:00"
   },
   {
-    "id": "user-editor-2",
-    "email": "avivashke95@gmail.com",
-    "name": "אביב (עורך CRM ומוצר)",
-    "role": "editor",
-    "permissions": {
-      "canEditCrm": true,
-      "canEditProduct": true,
-      "canEditTables": true,
-      "canManageUsers": false
-    },
-    "isActive": true,
-    "createdAt": "2026-11-19",
-    "lastLogin": "2026-11-19 11:20"
-  },
-  {
-    "id": "user-admin-3",
+    "id": "user-eyal",
     "email": "eyal@claimai.com",
-    "name": "אייל מנכ\"ל",
+    "name": "אייל (מנכ\"ל ומנהל מערכת)",
     "role": "admin",
+    "avatarUrl": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&auto=format&fit=crop&q=80",
     "permissions": {
       "canEditCrm": true,
       "canEditProduct": true,
       "canEditTables": true,
       "canManageUsers": true
-    },
-    "isActive": true,
-    "createdAt": "2026-11-19"
-  },
-  {
-    "id": "user-viewer-4",
-    "email": "viewer@claimai.com",
-    "name": "משתמש פורטל צפייה (Viewer)",
-    "role": "viewer",
-    "permissions": {
-      "canEditCrm": false,
-      "canEditProduct": false,
-      "canEditTables": false,
-      "canManageUsers": false
     },
     "isActive": true,
     "createdAt": "2026-11-19"
