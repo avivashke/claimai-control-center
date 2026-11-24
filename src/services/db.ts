@@ -108,6 +108,8 @@ export const checkSupabaseHealth = async (): Promise<{ isConnected: boolean; mes
 };
 
 // Database initialization & seeding
+export const CURRENT_DATA_VERSION = '2026-11-24-v2-main-no-cases';
+
 export const initDatabase = async (): Promise<{ clientsCount: number; productCount: number; tablesCount: number; usersCount: number }> => {
   if (USE_LOCAL_API) {
     try {
@@ -129,6 +131,17 @@ export const initDatabase = async (): Promise<{ clientsCount: number; productCou
     }
   }
   try {
+    const currentVersion = localStorage.getItem('claimai_data_version');
+    if (currentVersion !== CURRENT_DATA_VERSION) {
+      console.log('Syncing database with new data version:', CURRENT_DATA_VERSION);
+      await db.clients.clear();
+      await db.clients.bulkAdd(seedClientsData as Client[]);
+      for (const t of seedCustomTablesData as CustomTable[]) {
+        await db.customTables.put(t);
+      }
+      localStorage.setItem('claimai_data_version', CURRENT_DATA_VERSION);
+    }
+
     const clientsCount = await db.clients.count();
     const productCount = await db.productItems.count();
     const tablesCount = await db.customTables.count();
@@ -186,6 +199,11 @@ export const getClients = async (): Promise<Client[]> => {
     }
   }
   try {
+    const currentVersion = localStorage.getItem('claimai_data_version');
+    if (currentVersion !== CURRENT_DATA_VERSION) {
+      await initDatabase();
+      return await db.clients.toArray();
+    }
     const list = await db.clients.toArray();
     if (list.length === 0) {
       await initDatabase();
@@ -354,6 +372,13 @@ export const getCustomTables = async (): Promise<CustomTable[]> => {
     if (list.length === 0) {
       await initDatabase();
       return await db.customTables.toArray();
+    }
+    // Ensure all seed custom tables (like table-no-cases) are present in IndexedDB
+    for (const st of seedCustomTablesData as CustomTable[]) {
+      if (!list.some(t => t.id === st.id)) {
+        await db.customTables.put(st);
+        list.push(st);
+      }
     }
     return list;
   } catch (e) {
