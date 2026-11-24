@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   X, 
   Building, 
@@ -8,12 +8,13 @@ import {
   Calendar, 
   Clock, 
   AlertCircle, 
-  Save, 
   Sparkles, 
   Bug, 
   ExternalLink, 
   CheckCircle, 
   CheckCircle2,
+  Check,
+  Loader2,
   User, 
   Cpu, 
   MapPin,
@@ -83,6 +84,7 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
   const [formData, setFormData] = useState<Client>({ ...client });
   const [newNote, setNewNote] = useState('');
   const [isSavedAlert, setIsSavedAlert] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving'>('saved');
 
   // Inline Ticket Creation State
   const [isAddingTicket, setIsAddingTicket] = useState(false);
@@ -94,13 +96,21 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
   const [ticketTargetDate, setTicketTargetDate] = useState('');
   const [ticketSuccessMessage, setTicketSuccessMessage] = useState('');
 
-  useEffect(() => {
-    if (client) {
-      setFormData({ ...client });
-    }
-  }, [client?.id, client?.name, client?.company, client?.status]);
-
   const authorName = currentUser?.name || currentUser?.email?.split('@')[0] || 'משתמש מערכת';
+  const prevClientIdRef = useRef(client?.id);
+  const lastSavedDataRef = useRef<Client>({ ...client });
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Sync client when switching to a different client
+  useEffect(() => {
+    if (client && client.id !== prevClientIdRef.current) {
+      prevClientIdRef.current = client.id;
+      setFormData({ ...client });
+      lastSavedDataRef.current = { ...client };
+      setNewNote('');
+      setSaveStatus('saved');
+    }
+  }, [client?.id]);
 
   const formatWhatsAppNumber = (phone?: string) => {
     if (!phone) return null;
@@ -112,31 +122,91 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
 
   const waNumber = formatWhatsAppNumber(formData.phone);
 
-  const handleSave = () => {
-    let updatedNotes = formData.lastNote || '';
-    if (newNote.trim()) {
-      const now = new Date();
-      const dateStr = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
-      const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-      const noteEntry = `${dateStr} | ${timeStr} | 👤 ${authorName} | ${newNote.trim()}`;
-      updatedNotes = updatedNotes ? `${noteEntry}\n---\n${updatedNotes}` : noteEntry;
+  // Core saving function
+  const performSave = useCallback((dataToSave: Client) => {
+    if (!canEdit) return;
+    const updated: Client = {
+      ...dataToSave,
+      name: dataToSave.name?.trim() || client.name,
+      company: dataToSave.company?.trim() ?? client.company ?? '',
+      updatedDate: new Date().toISOString().slice(0, 10),
+      updatedBy: authorName
+    };
+    lastSavedDataRef.current = updated;
+    onSaveClient(updated);
+    setSaveStatus('saved');
+    setIsSavedAlert(true);
+    setTimeout(() => setIsSavedAlert(false), 2000);
+  }, [canEdit, client.name, authorName, onSaveClient]);
+
+  // Debounced auto-save effect for form changes
+  useEffect(() => {
+    if (!canEdit) return;
+
+    const current = formData;
+    const prev = lastSavedDataRef.current;
+
+    const hasChanges = (
+      current.name !== prev.name ||
+      current.company !== prev.company ||
+      current.status !== prev.status ||
+      current.businessType !== prev.businessType ||
+      current.phone !== prev.phone ||
+      current.email !== prev.email ||
+      current.nextFollowUpDate !== prev.nextFollowUpDate ||
+      current.teamContacts !== prev.teamContacts ||
+      current.itContact !== prev.itContact ||
+      current.monthlyClaims !== prev.monthlyClaims ||
+      current.requiresAttention !== prev.requiresAttention ||
+      current.generalNotes !== prev.generalNotes
+    );
+
+    if (hasChanges) {
+      setSaveStatus('saving');
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      debounceTimerRef.current = setTimeout(() => {
+        performSave(formData);
+      }, 500);
     }
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [formData, canEdit, performSave]);
+
+  // Direct note adding function
+  const handleAddNoteDirect = (noteText?: string) => {
+    const text = (noteText !== undefined ? noteText : newNote).trim();
+    if (!text || !canEdit) return;
+
+    const now = new Date();
+    const dateStr = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
+    const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    const noteEntry = `${dateStr} | ${timeStr} | 👤 ${authorName} | ${text}`;
+    const updatedNotes = formData.lastNote ? `${noteEntry}\n---\n${formData.lastNote}` : noteEntry;
 
     const updated = {
       ...formData,
-      name: formData.name?.trim() || client.name,
-      company: formData.company?.trim() ?? client.company ?? '',
       lastNote: updatedNotes,
-      generalNotes: formData.generalNotes,
       updatedDate: new Date().toISOString().slice(0, 10),
       updatedBy: authorName
     };
 
-    onSaveClient(updated);
     setFormData(updated);
     setNewNote('');
-    setIsSavedAlert(true);
-    setTimeout(() => setIsSavedAlert(false), 2500);
+    performSave(updated);
+  };
+
+  // Safe close drawer ensuring any unsaved note gets committed
+  const handleSafeClose = () => {
+    if (newNote.trim() && canEdit) {
+      handleAddNoteDirect(newNote.trim());
+    }
+    onClose();
   };
 
   const handleCreateTicketInline = (e: React.FormEvent) => {
@@ -196,7 +266,14 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/70 backdrop-blur-sm transition-opacity">
+    <div 
+      className="fixed inset-0 z-50 flex justify-end bg-slate-950/70 backdrop-blur-sm transition-opacity"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          handleSafeClose();
+        }
+      }}
+    >
       <div className="w-full max-w-2xl bg-slate-900 border-r border-slate-800 h-full flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-left duration-200">
         
         {/* Drawer Header */}
@@ -267,21 +344,31 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
               </button>
             )}
             {canEdit ? (
-              <button
-                onClick={handleSave}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md transition-all"
+              <div 
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/90 border border-slate-700/80 text-xs shadow-sm transition-all"
+                title="כל השינויים נשמרים אוטומטית במערכת"
               >
-                <Save className="w-4 h-4" />
-                <span>שמור שינויים</span>
-              </button>
+                {saveStatus === 'saving' ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 text-blue-400 animate-spin" />
+                    <span className="text-blue-300 font-medium text-[11px]">שומר...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-emerald-300 font-medium text-[11px]">נשמר אוטומטית</span>
+                  </>
+                )}
+              </div>
             ) : (
               <span className="px-2 py-1 rounded-lg bg-slate-850 border border-slate-750 text-[11px] text-purple-300 font-medium">
                 צפייה בלבד
               </span>
             )}
             <button
-              onClick={onClose}
+              onClick={handleSafeClose}
               className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-all"
+              title="סגירת כרטיס לקוח"
             >
               <X className="w-4 h-4" />
             </button>
@@ -290,9 +377,9 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
 
         {/* Saved Alert Banner */}
         {isSavedAlert && (
-          <div className="bg-emerald-500/20 border-b border-emerald-500/30 px-4 py-2 text-emerald-300 text-xs font-semibold flex items-center gap-2">
-            <CheckCircle className="w-4 h-4" />
-            <span>הרשומה עודכנה בהצלחה בדאטה-בייס!</span>
+          <div className="bg-emerald-500/20 border-b border-emerald-500/30 px-4 py-2 text-emerald-300 text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-200">
+            <CheckCircle className="w-4 h-4 text-emerald-400" />
+            <span>כל השינויים נשמרים אוטומטית בדאטה-בייס וב-Google Sheets!</span>
           </div>
         )}
 
@@ -709,16 +796,26 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
                   placeholder={`הוסף הערה או סיכום שיחה חדש... (יישמר אוטומטית עם חתימת שמך: ${authorName})`}
                   value={newNote}
                   onChange={(e) => setNewNote(e.target.value)}
+                  onKeyDown={(e) => {
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddNoteDirect();
+                    }
+                  }}
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
-                <div className="flex justify-end">
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-[11px] text-slate-400">
+                    נשמר אוטומטית בעת סגירה או ב-<kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-[10px] text-slate-300">Ctrl+Enter</kbd>
+                  </span>
                   <button
                     type="button"
-                    onClick={handleSave}
+                    onClick={() => handleAddNoteDirect()}
                     disabled={!newNote.trim()}
-                    className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:hover:bg-blue-600 text-white text-xs font-semibold shadow-md shadow-blue-600/20 transition-all"
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:hover:bg-blue-600 text-white text-xs font-semibold shadow-md shadow-blue-600/20 transition-all"
                   >
-                    הוסף הערה חתומה ליומן
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>הוסף הערה חתומה ליומן</span>
                   </button>
                 </div>
               </div>
