@@ -68,7 +68,7 @@ export const Header: React.FC<HeaderProps> = ({
   const isAdmin = currentUser.role === 'admin' || currentUser.permissions.canManageUsers;
 
   return (
-    <header style={{ backgroundColor: '#0f172a' }} className="sticky top-0 z-40 bg-slate-900 border-b border-slate-800 shadow-xl">
+    <header style={{ backgroundColor: 'var(--bg-header, #0f172a)' }} className="sticky top-0 z-40 bg-slate-900 border-b border-slate-800 shadow-xl transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20 gap-4">
           
