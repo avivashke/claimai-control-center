@@ -310,12 +310,12 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
           
           {/* Table Name & Stats */}
           <div>
-            <div className="flex items-center gap-2.5">
-              <span className="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 border border-purple-500/30 flex items-center justify-center">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <span className="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 border border-purple-500/30 flex items-center justify-center shrink-0">
                 <TableIcon className="w-4 h-4" />
               </span>
-              <h2 className="text-lg font-black text-white">{currentTable.name}</h2>
-              <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-slate-800 text-purple-300 border border-purple-800/40">
+              <h2 className="text-lg font-black text-white whitespace-nowrap">{currentTable.name}</h2>
+              <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-slate-800 text-purple-300 border border-purple-800/40 shrink-0">
                 {currentTable.rows.length} שורות · {currentTable.columns.length} שדות
               </span>
               {duplicateCount > 0 && (

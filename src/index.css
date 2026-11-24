@@ -103,6 +103,22 @@ table thead th {
   box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
 }
 
+/* Hero Welcome Banner Multi-theme */
+.overview-hero-banner {
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.4) 0%, rgba(49, 46, 129, 0.3) 50%, #0f172a 100%);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+[data-theme="light"] .overview-hero-banner {
+  background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 50%, #ffffff 100%) !important;
+  border: 1px solid #c7d2fe !important;
+}
+
+[data-theme="sepia"] .overview-hero-banner {
+  background: linear-gradient(135deg, #f5ece0 0%, #ede3d3 50%, #fdfcf9 100%) !important;
+  border: 1px solid #decbb5 !important;
+}
+
 /* ========================================================
    LIGHT THEME (Modern Executive SaaS - Stripe / Linear)
    ======================================================== */
@@ -432,3 +448,59 @@ table thead th {
   color: #7c2d12 !important;
   border-color: #fed7aa !important;
 }
+
+/* ========================================================
+   HIGH-CONTRAST ACCENT TEXT (Fixes Pale Low-Contrast Labels)
+   ======================================================== */
+[data-theme="light"] .text-purple-400,
+[data-theme="light"] .text-purple-300,
+[data-theme="light"] .text-purple-200 {
+  color: #6d28d9 !important;
+}
+
+[data-theme="light"] .text-blue-400,
+[data-theme="light"] .text-blue-300 {
+  color: #1d4ed8 !important;
+}
+
+[data-theme="light"] .text-emerald-400,
+[data-theme="light"] .text-emerald-300 {
+  color: #047857 !important;
+}
+
+[data-theme="light"] .text-amber-400,
+[data-theme="light"] .text-amber-300 {
+  color: #b45309 !important;
+}
+
+[data-theme="light"] .text-rose-400,
+[data-theme="light"] .text-rose-300 {
+  color: #be123c !important;
+}
+
+[data-theme="sepia"] .text-purple-400,
+[data-theme="sepia"] .text-purple-300,
+[data-theme="sepia"] .text-purple-200 {
+  color: #581c87 !important;
+}
+
+[data-theme="sepia"] .text-blue-400,
+[data-theme="sepia"] .text-blue-300 {
+  color: #1e3a8a !important;
+}
+
+[data-theme="sepia"] .text-emerald-400,
+[data-theme="sepia"] .text-emerald-300 {
+  color: #14532d !important;
+}
+
+[data-theme="sepia"] .text-amber-400,
+[data-theme="sepia"] .text-amber-300 {
+  color: #78350f !important;
+}
+
+[data-theme="sepia"] .text-rose-400,
+[data-theme="sepia"] .text-rose-300 {
+  color: #9f1239 !important;
+}
+
