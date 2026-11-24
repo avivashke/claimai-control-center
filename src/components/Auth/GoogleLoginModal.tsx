@@ -216,27 +216,6 @@ export const GoogleLoginModal: React.FC<LoginModalProps> = ({
               </div>
             </div>
 
-            {/* Quick Email Selection Dropdown from registered users for convenience */}
-            {availableUsers.length > 0 && !email && (
-              <div className="space-y-1">
-                <span className="text-[10px] text-slate-500 font-medium">בחר משתמש רשום למילוי מהיר של האימייל:</span>
-                <select
-                  onChange={(e) => {
-                    if (e.target.value) setEmail(e.target.value);
-                  }}
-                  defaultValue=""
-                  className="w-full bg-slate-800 text-slate-300 border border-slate-700 rounded-lg py-1 px-2 text-[11px] focus:outline-none cursor-pointer"
-                >
-                  <option value="" disabled>-- בחר חשבון משתמש --</option>
-                  {availableUsers.map(u => (
-                    <option key={u.id} value={u.email}>
-                      {u.name} ({u.role}) — {u.email}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
             {/* Password Field */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
@@ -286,17 +265,6 @@ export const GoogleLoginModal: React.FC<LoginModalProps> = ({
                 <span>התחבר למערכת</span>
               )}
             </button>
-
-            {/* Netlify Env & Admin info hint */}
-            <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-[11px] text-slate-400 space-y-1">
-              <div className="flex items-center gap-1.5 font-bold text-slate-300">
-                <Info className="w-3.5 h-3.5 text-blue-400" />
-                <span>הגדרת סיסמאות דרך משתני Netlify:</span>
-              </div>
-              <p className="leading-relaxed">
-                ניתן לקבוע סיסמה בנטליפי דרך המשתנים: <code className="text-blue-300 font-mono">VITE_ADMIN_PASSWORD</code> לאדמין, ו-<code className="text-purple-300 font-mono">VITE_EDITOR_PASSWORD</code> לעורכים. (סיסמת ברירת מחדל ראשונית: <code className="text-slate-300 font-mono">ClaimAI2026!</code>).
-              </p>
-            </div>
 
           </form>
         )}
