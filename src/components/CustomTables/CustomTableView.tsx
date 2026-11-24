@@ -303,7 +303,7 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
       )}
 
       {/* Table Control Header Bar */}
-      <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-3">
+      <div style={{ backgroundColor: '#0f172a' }} className="p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl space-y-3">
         
         {/* Top Info and Action Buttons */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -440,7 +440,7 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
       </div>
 
       {/* Main Table Scrolling Area with Frozen Column Headers */}
-      <div className="rounded-2xl border border-slate-700/70 bg-slate-900/80 shadow-2xl overflow-hidden relative">
+      <div style={{ backgroundColor: '#0f172a' }} className="rounded-2xl border border-slate-700/70 bg-slate-900 shadow-2xl overflow-hidden relative">
         <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-270px)]">
           <table 
             style={{ 
@@ -450,15 +450,15 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
             }} 
             className="w-full text-right text-xs"
           >
-            <thead>
-              <tr className="border-b border-slate-700 bg-slate-900">
+            <thead style={{ backgroundColor: '#0f172a' }} className="bg-slate-900 sticky top-0 z-20">
+              <tr style={{ backgroundColor: '#0f172a' }} className="border-b border-slate-700 bg-slate-900">
                 {/* Index / ID Header */}
-                <th className="sticky top-0 z-20 bg-slate-900 shadow-sm py-2 px-3 w-12 text-slate-400 text-center font-mono border-b border-slate-700">
+                <th style={{ backgroundColor: '#0f172a' }} className="sticky top-0 z-20 bg-slate-900 shadow-sm py-2 px-3 w-12 text-slate-400 text-center font-mono border-b border-slate-700">
                   #
                 </th>
 
                 {/* Cross-table Match & Sync Column Header */}
-                <th className="sticky top-0 z-20 bg-slate-900 shadow-sm py-2 px-3 w-56 min-w-[220px] text-amber-400 font-bold border-l border-slate-800 border-b border-slate-700">
+                <th style={{ backgroundColor: '#0f172a' }} className="sticky top-0 z-20 bg-slate-900 shadow-sm py-2 px-3 w-56 min-w-[220px] text-amber-400 font-bold border-l border-slate-800 border-b border-slate-700">
                   <div className="flex items-center gap-1.5">
                     <GitCompare className="w-3.5 h-3.5" />
                     <span>סנכרון וכפילויות CRM</span>
@@ -470,7 +470,10 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
                   <th 
                     key={col.key}
                     onClick={() => handleToggleSort(col.key)}
-                    style={{ minWidth: col.type === 'email' || col.label.includes('חברה') ? '180px' : '150px' }}
+                    style={{ 
+                      minWidth: col.type === 'email' || col.label.includes('חברה') ? '180px' : '150px',
+                      backgroundColor: '#0f172a'
+                    }}
                     className="sticky top-0 z-20 bg-slate-900 shadow-sm py-2 px-3 whitespace-nowrap cursor-pointer hover:bg-slate-800 transition-colors group select-none border-b border-slate-700"
                   >
                     <div className="flex items-center justify-between gap-1">
@@ -488,7 +491,7 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
                 ))}
 
                 {/* Actions Header */}
-                <th className="sticky top-0 z-20 bg-slate-900 shadow-sm py-2 px-3 w-16 text-center text-slate-400 border-b border-slate-700">
+                <th style={{ backgroundColor: '#0f172a' }} className="sticky top-0 z-20 bg-slate-900 shadow-sm py-2 px-3 w-16 text-center text-slate-400 border-b border-slate-700">
                   פעולות
                 </th>
               </tr>

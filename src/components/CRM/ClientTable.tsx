@@ -264,7 +264,10 @@ export const ClientTable: React.FC<ClientTableProps> = ({
         SECONDARY MENU (Frozen & Static on scroll, below Header):
         Contains Table Tabs + Filters & Controls Bar
       */}
-      <div className="sticky top-[80px] z-30 bg-[#0b0f19]/95 backdrop-blur-md pb-2 pt-1 border-b border-slate-800/80 space-y-2.5">
+      <div 
+        style={{ backgroundColor: '#0b0f19' }}
+        className="sticky top-[138px] z-30 bg-[#0b0f19] pb-2 pt-1 border-b border-slate-800 space-y-2.5 shadow-md"
+      >
         
         {/* Table Tabs Navigation in Client Management */}
         <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 no-scrollbar">
@@ -453,14 +456,14 @@ export const ClientTable: React.FC<ClientTableProps> = ({
             {/* Table Area */}
             <div className="flex-1 min-w-0">
               <table style={{ tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0 }} className="w-full border-separate border-spacing-0 text-right text-[9px]">
-                <thead>
-                  <tr className="border-b border-slate-700">
-                    <th className="sticky top-0 z-20 bg-slate-900/95 shadow-sm py-1.5 px-2 min-w-[150px]">איש קשר / חברה</th>
-                    <th className="sticky top-0 z-20 bg-slate-900/95 shadow-sm py-1.5 px-2 min-w-[140px]">סוג עסק</th>
-                    <th className="sticky top-0 z-20 bg-slate-900/95 shadow-sm py-1.5 px-2 min-w-[180px]">סטטוס CRM</th>
-                    <th className="sticky top-0 z-20 bg-slate-900/95 shadow-sm py-1.5 px-2">פרטי התקשרות</th>
-                    <th className="sticky top-0 z-20 bg-slate-900/95 shadow-sm py-1.5 px-2">הערה אחרונה</th>
-                    <th className="sticky top-0 z-20 bg-slate-900/95 shadow-sm py-1.5 px-2 text-center w-20">פעולות</th>
+                <thead style={{ backgroundColor: '#0f172a' }} className="bg-slate-900 sticky top-0 z-20">
+                  <tr style={{ backgroundColor: '#0f172a' }} className="border-b border-slate-700 bg-slate-900">
+                    <th style={{ backgroundColor: '#0f172a' }} className="sticky top-0 z-20 bg-slate-900 shadow-sm py-1.5 px-2 min-w-[150px]">איש קשר / חברה</th>
+                    <th style={{ backgroundColor: '#0f172a' }} className="sticky top-0 z-20 bg-slate-900 shadow-sm py-1.5 px-2 min-w-[140px]">סוג עסק</th>
+                    <th style={{ backgroundColor: '#0f172a' }} className="sticky top-0 z-20 bg-slate-900 shadow-sm py-1.5 px-2 min-w-[180px]">סטטוס CRM</th>
+                    <th style={{ backgroundColor: '#0f172a' }} className="sticky top-0 z-20 bg-slate-900 shadow-sm py-1.5 px-2">פרטי התקשרות</th>
+                    <th style={{ backgroundColor: '#0f172a' }} className="sticky top-0 z-20 bg-slate-900 shadow-sm py-1.5 px-2">הערה אחרונה</th>
+                    <th style={{ backgroundColor: '#0f172a' }} className="sticky top-0 z-20 bg-slate-900 shadow-sm py-1.5 px-2 text-center w-20">פעולות</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
