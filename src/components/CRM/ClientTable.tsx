@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { 
   Search, 
   Filter, 
@@ -9,14 +9,20 @@ import {
   ChevronRight, 
   ChevronLeft, 
   ArrowUpDown,
-  Download,
-  AlertCircle,
-  ExternalLink,
-  UserCheck,
-  Plus,
-  Edit
+  Download, 
+  AlertCircle, 
+  ExternalLink, 
+  UserCheck, 
+  Plus, 
+  Edit,
+  Users,
+  Table as TableIcon,
+  Sparkles,
+  GitCompare
 } from 'lucide-react';
-import { Client } from '../../types';
+import { Client, CustomTable } from '../../types';
+import { CustomTableView } from '../CustomTables/CustomTableView';
+import { UploadTableModal } from '../CustomTables/UploadTableModal';
 
 interface ClientTableProps {
   clients: Client[];
@@ -25,6 +31,13 @@ interface ClientTableProps {
   onUpdateClientBusinessType: (clientId: string, newBusinessType: string) => void;
   searchFilter: string;
   canEdit?: boolean;
+  customTables?: CustomTable[];
+  onTableCreated?: (table: CustomTable) => void;
+  onUpdateTable?: (table: CustomTable) => void;
+  onDeleteTable?: (tableId: string) => void;
+  onUpdateClient?: (updatedClient: Client) => void;
+  onBatchUpdateClients?: (updatedClients: Client[]) => void;
+  onOpenAiStudio?: () => void;
 }
 
 const STATUS_COLORS: { [key: string]: { bg: string; text: string; border: string } } = {
@@ -58,12 +71,26 @@ export const ClientTable: React.FC<ClientTableProps> = ({
   onUpdateClientStatus,
   onUpdateClientBusinessType,
   searchFilter,
-  canEdit = true
+  canEdit = true,
+  customTables = [],
+  onTableCreated,
+  onUpdateTable,
+  onDeleteTable,
+  onUpdateClient,
+  onBatchUpdateClients,
+  onOpenAiStudio
 }) => {
+  // Tab within CRM: 'main_crm' or a customTable.id
+  const [activeSubTab, setActiveSubTab] = useState<string>('main_crm');
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+
   const [localSearch, setLocalSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedBusinessType, setSelectedBusinessType] = useState<string>('all');
   const [additionalBusinessTypes, setAdditionalBusinessTypes] = useState<string[]>([]);
+
+  // Ref to the inner table container for smooth, collision-free scrolling
+  const tableContainerRef = useRef<HTMLDivElement>(null);
 
   const combinedSearch = (searchFilter || localSearch).trim().toLowerCase();
 
@@ -71,7 +98,25 @@ export const ClientTable: React.FC<ClientTableProps> = ({
     bg: 'bg-slate-800', text: 'text-slate-300', border: 'border-slate-700'
   };
 
-  // All business types available globally (from data + user-added)
+  // Scroll to status group within the container without window jumping or header collisions
+  const scrollToStatusGroup = (status: string) => {
+    const container = tableContainerRef.current;
+    const targetId = `group-${status.replace(/[^\w]/g, '')}`;
+    const el = document.getElementById(targetId);
+    if (!container || !el) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    // 38px accounts for the sticky table column headers
+    const targetScrollTop = container.scrollTop + (elRect.top - containerRect.top) - 38;
+
+    container.scrollTo({
+      top: Math.max(0, targetScrollTop),
+      behavior: 'smooth'
+    });
+  };
+
+  // All business types available globally
   const allBusinessTypes = useMemo(() => {
     const set = new Set<string>();
     clients.forEach(c => {
@@ -81,7 +126,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
     return Array.from(set);
   }, [clients, additionalBusinessTypes]);
 
-  // Filtered clients (applied before grouping)
+  // Filtered clients
   const filteredClients = useMemo(() => {
     return clients.filter(c => {
       if (selectedStatus !== 'all' && c.status !== selectedStatus) {
@@ -103,8 +148,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
     });
   }, [clients, selectedStatus, selectedBusinessType, combinedSearch]);
 
-  // Group clients by status. Defined statuses first (in ALL_STATUSES order),
-  // then statusless / unknown statuses at the bottom.
+  // Group clients by status
   const groupedClients = useMemo(() => {
     const byStatus = new Map<string, Client[]>();
     filteredClients.forEach(c => {
@@ -121,7 +165,6 @@ export const ClientTable: React.FC<ClientTableProps> = ({
         byStatus.delete(st);
       }
     });
-    // Remaining (statusless / unknown) go last
     byStatus.forEach((items, key) => {
       ordered.push({ status: key, clients: items });
     });
@@ -175,7 +218,6 @@ export const ClientTable: React.FC<ClientTableProps> = ({
 
   const renderBusinessTypeCell = (client: Client) => {
     const currentType = client.businessType || '';
-    const isAdding = false;
 
     return (
       <select
@@ -205,299 +247,417 @@ export const ClientTable: React.FC<ClientTableProps> = ({
     );
   };
 
+  // Handle newly uploaded table: immediately select it as active tab
+  const handleUploadedTable = (newTable: CustomTable) => {
+    if (onTableCreated) {
+      onTableCreated(newTable);
+    }
+    setActiveSubTab(newTable.id);
+  };
+
+  const activeCustomTable = customTables.find(t => t.id === activeSubTab);
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4" dir="rtl">
       
-      {/* Filters and Controls Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
+      {/* 
+        SECONDARY MENU (Frozen & Static on scroll, below Header):
+        Contains Table Tabs + Filters & Controls Bar
+      */}
+      <div className="sticky top-[80px] z-30 bg-[#0b0f19]/95 backdrop-blur-md pb-2 pt-1 border-b border-slate-800/80 space-y-2.5">
         
-        {/* Left: Search & Dropdowns */}
-        <div className="flex flex-wrap items-center gap-2 flex-1">
-          <div className="relative min-w-[200px] flex-1 max-w-sm">
-            <Search className="absolute right-3 top-2.5 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="חיפוש בטבלה..."
-              value={localSearch}
-              onChange={(e) => {
-                setLocalSearch(e.target.value);
-              }}
-              className="w-full pr-9 pl-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
+        {/* Table Tabs Navigation in Client Management */}
+        <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 no-scrollbar">
+          <div className="flex items-center gap-1.5 flex-nowrap">
+            
+            {/* Main CRM Clients Table Tab */}
+            <button
+              onClick={() => setActiveSubTab('main_crm')}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                activeSubTab === 'main_crm'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 border border-blue-400/40'
+                  : 'bg-slate-800/80 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700/60'
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              <span>טבלה ראשית (לקוחות CRM)</span>
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-950/60 font-mono">
+                {clients.length}
+              </span>
+            </button>
+
+            {/* Uploaded / Custom Tables as Independent Tabs with their Defined Titles */}
+            {customTables.map(tbl => (
+              <button
+                key={tbl.id}
+                onClick={() => setActiveSubTab(tbl.id)}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                  activeSubTab === tbl.id
+                    ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30 border border-purple-400/40'
+                    : 'bg-slate-800/80 text-slate-300 hover:bg-slate-750 hover:text-white border border-slate-700/60'
+                }`}
+              >
+                <TableIcon className="w-4 h-4 text-purple-300" />
+                <span>{tbl.name}</span>
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-purple-950/60 font-mono text-purple-200">
+                  {tbl.rows.length}
+                </span>
+              </button>
+            ))}
+
           </div>
 
-          {/* Status Filter */}
-          <select
-            value={selectedStatus}
-            onChange={(e) => {
-              setSelectedStatus(e.target.value);
-            }}
-            className="bg-slate-800 border border-slate-700 rounded-lg text-xs py-2 px-3 text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          >
-            <option value="all">כל הסטטוסים ({clients.length})</option>
-            {ALL_STATUSES.map(st => (
-              <option key={st} value={st}>
-                {st} ({clients.filter(c => c.status === st).length})
-              </option>
-            ))}
-          </select>
+          {/* Upload Table & AI Studio Action Buttons */}
+          <div className="flex items-center gap-2 shrink-0">
+            {canEdit && (
+              <button
+                onClick={() => setIsUploadModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-purple-900/30 transition-all hover:scale-[1.02]"
+                title="העלה קובץ Excel / CSV שיופיע מיד בלשונית עצמאית עם כותרתו"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ העלאת טבלה חדשה</span>
+              </button>
+            )}
 
-          {/* Business Type Filter */}
-          <select
-            value={selectedBusinessType}
-            onChange={(e) => {
-              setSelectedBusinessType(e.target.value);
-            }}
-            className="bg-slate-800 border border-slate-700 rounded-lg text-xs py-2 px-3 text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          >
-            <option value="all">כל סוגי העסקים</option>
-            {allBusinessTypes.map(bt => (
-              <option key={bt} value={bt}>{bt}</option>
-            ))}
-          </select>
+            {onOpenAiStudio && (
+              <button
+                onClick={onOpenAiStudio}
+                className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 border border-purple-500/30 text-purple-300 text-xs font-semibold"
+                title="סטודיו AI לניתוח וטבלאות מתקדמות"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span>סטודיו AI</span>
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Right: Actions */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400 font-mono">
-            מציג {filteredClients.length.toLocaleString()} מתוך {clients.length.toLocaleString()}
-          </span>
-          <button
-            onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition-all"
-            title="ייצוא ל-Excel/CSV"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>ייצוא CSV</span>
-          </button>
-        </div>
-      </div>
+        {/* If Active Sub-Tab is Main CRM: Render Filters and Controls Bar */}
+        {activeSubTab === 'main_crm' && (
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 bg-slate-900/90 p-3 rounded-xl border border-slate-800 shadow-md">
+            
+            {/* Search & Dropdowns */}
+            <div className="flex flex-wrap items-center gap-2 flex-1">
+              <div className="relative min-w-[180px] flex-1 max-w-sm">
+                <Search className="absolute right-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="חיפוש בטבלה..."
+                  value={localSearch}
+                  onChange={(e) => setLocalSearch(e.target.value)}
+                  className="w-full pr-8 pl-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
 
-      {/* Main Table */}
-      <div className="rounded-2xl border border-slate-700/70 bg-slate-900/70 shadow-2xl ring-1 ring-slate-800/40">
-        <div className="flex overflow-y-auto overflow-x-auto h-[calc(100vh-180px)] relative">
-          {/* Side Group Navigation - sticky inside the scroll container */}
-          <div className="w-28 border-r border-slate-700/60 bg-slate-900/70 shrink-0 sticky top-4 self-start z-40 min-w-0">
-            <div className="p-1 space-y-0.5">
-              {groupedClients.map(({ status, clients: groupClients }) => (
-                <button
-                  key={`nav-${status}`}
-                  onClick={() => {
-                    const el = document.getElementById(`group-${status.replace(/[^\w]/g, '')}`);
-                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }}
-                  className={`w-full py-1 px-1.5 rounded text-[7px] font-semibold transition-all flex flex-col items-end justify-between gap-0.5 ${
-                    status === '(ללא סטטוס)'
-                      ? 'bg-slate-800 text-slate-300 border border-slate-700'
-                      : (STATUS_COLORS[status]?.text || 'text-slate-300') + ' border border-slate-700/50 bg-slate-800/50'
-                  }`}
-                  title={`${status} (${groupClients.length})`}
-                >
-                  <span className="text-right leading-tight">{status === '(ללא סטטוס)' ? 'ללא סטטוס' : status}</span>
-                  <span className="text-[7px] opacity-60">{groupClients.length}</span>
-                </button>
-              ))}
+              {/* Status Filter */}
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="bg-slate-800 border border-slate-700 rounded-lg text-xs py-1.5 px-2.5 text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="all">כל הסטטוסים ({clients.length})</option>
+                {ALL_STATUSES.map(st => (
+                  <option key={st} value={st}>
+                    {st} ({clients.filter(c => c.status === st).length})
+                  </option>
+                ))}
+              </select>
+
+              {/* Business Type Filter */}
+              <select
+                value={selectedBusinessType}
+                onChange={(e) => setSelectedBusinessType(e.target.value)}
+                className="bg-slate-800 border border-slate-700 rounded-lg text-xs py-1.5 px-2.5 text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="all">כל סוגי העסקים</option>
+                {allBusinessTypes.map(bt => (
+                  <option key={bt} value={bt}>{bt}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-[11px] text-slate-400 font-mono">
+                מציג {filteredClients.length.toLocaleString()} מתוך {clients.length.toLocaleString()}
+              </span>
+              <button
+                onClick={handleExportCSV}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition-all"
+                title="ייצוא ל-Excel/CSV"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>ייצוא CSV</span>
+              </button>
             </div>
           </div>
+        )}
 
-          {/* Table area - single scrolling container, sticky header cells */}
-          <div className="flex-1 min-w-0">
-            <table style={{ tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0 }} className="w-full border-separate border-spacing-0 text-right text-[9px]">
-              <thead>
-                <tr className="border-b border-slate-700">
-                  <th className="sticky top-0 z-50 bg-slate-900/95 shadow-sm py-1.5 px-2 min-w-[150px]">איש קשר / חברה</th>
-                  <th className="sticky top-0 z-50 bg-slate-900/95 shadow-sm py-1.5 px-2 min-w-[140px]">סוג עסק</th>
-                  <th className="sticky top-0 z-50 bg-slate-900/95 shadow-sm py-1.5 px-2 min-w-[180px]">סטטוס CRM</th>
-                  <th className="sticky top-0 z-50 bg-slate-900/95 shadow-sm py-1.5 px-2">פרטי התקשרות</th>
-                  <th className="sticky top-0 z-50 bg-slate-900/95 shadow-sm py-1.5 px-2">הערה אחרונה</th>
-                  <th className="sticky top-0 z-50 bg-slate-900/95 shadow-sm py-1.5 px-2 text-center w-20">פעולות</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {groupedClients.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-500 text-[10px]">
-                      לא נמצאו רשומות העונות לסינון המבוקש
-                    </td>
+      </div>
+
+      {/* 
+        IF ACTIVE SUB-TAB IS AN UPLOADED/CUSTOM TABLE:
+        Render it as an independent table with full field management, deduplication & seamless sync
+      */}
+      {activeSubTab !== 'main_crm' && activeCustomTable && (
+        <CustomTableView
+          currentTableOverride={activeCustomTable}
+          onUpdateTable={(updated) => onUpdateTable && onUpdateTable(updated)}
+          onDeleteTable={(tableId) => {
+            if (onDeleteTable) {
+              onDeleteTable(tableId);
+              setActiveSubTab('main_crm');
+            }
+          }}
+          canEdit={canEdit}
+          clients={clients}
+          onUpdateClient={onUpdateClient}
+          onBatchUpdateClients={onBatchUpdateClients}
+          onOpenAiStudio={onOpenAiStudio}
+          onOpenUploadModal={() => setIsUploadModalOpen(true)}
+        />
+      )}
+
+      {/* 
+        IF ACTIVE SUB-TAB IS MAIN CRM:
+        Render Main CRM Table with smooth, container-only group scrolling (no header collision)
+      */}
+      {activeSubTab === 'main_crm' && (
+        <div className="rounded-2xl border border-slate-700/70 bg-slate-900/70 shadow-2xl ring-1 ring-slate-800/40">
+          <div 
+            ref={tableContainerRef} 
+            className="flex overflow-y-auto overflow-x-auto h-[calc(100vh-250px)] relative scroll-smooth"
+          >
+            {/* Side Group Navigation - sticky inside the scroll container, z-20 */}
+            <div className="w-28 border-r border-slate-700/60 bg-slate-900/95 shrink-0 sticky top-0 self-start z-20 min-w-0">
+              <div className="p-1 space-y-0.5">
+                {groupedClients.map(({ status, clients: groupClients }) => (
+                  <button
+                    key={`nav-${status}`}
+                    onClick={() => scrollToStatusGroup(status)}
+                    className={`w-full py-1 px-1.5 rounded text-[7px] font-semibold transition-all flex flex-col items-end justify-between gap-0.5 ${
+                      status === '(ללא סטטוס)'
+                        ? 'bg-slate-800 text-slate-300 border border-slate-700'
+                        : (STATUS_COLORS[status]?.text || 'text-slate-300') + ' border border-slate-700/50 bg-slate-800/50'
+                    }`}
+                    title={`${status} (${groupClients.length})`}
+                  >
+                    <span className="text-right leading-tight">{status === '(ללא סטטוס)' ? 'ללא סטטוס' : status}</span>
+                    <span className="text-[7px] opacity-60">{groupClients.length}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Table Area */}
+            <div className="flex-1 min-w-0">
+              <table style={{ tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0 }} className="w-full border-separate border-spacing-0 text-right text-[9px]">
+                <thead>
+                  <tr className="border-b border-slate-700">
+                    <th className="sticky top-0 z-20 bg-slate-900/95 shadow-sm py-1.5 px-2 min-w-[150px]">איש קשר / חברה</th>
+                    <th className="sticky top-0 z-20 bg-slate-900/95 shadow-sm py-1.5 px-2 min-w-[140px]">סוג עסק</th>
+                    <th className="sticky top-0 z-20 bg-slate-900/95 shadow-sm py-1.5 px-2 min-w-[180px]">סטטוס CRM</th>
+                    <th className="sticky top-0 z-20 bg-slate-900/95 shadow-sm py-1.5 px-2">פרטי התקשרות</th>
+                    <th className="sticky top-0 z-20 bg-slate-900/95 shadow-sm py-1.5 px-2">הערה אחרונה</th>
+                    <th className="sticky top-0 z-20 bg-slate-900/95 shadow-sm py-1.5 px-2 text-center w-20">פעולות</th>
                   </tr>
-                ) : (
-                  <>
-                    {groupedClients.map(({ status, clients: groupClients }, gi) => (
-                      <>
-                        {/* Dark background band behind each group */}
-                        <tr key={`band-${status}`}>
-                          <td colSpan={6} className="h-2 bg-slate-950/40 border-0 p-0"></td>
-                        </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {groupedClients.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-slate-500 text-[10px]">
+                        לא נמצאו רשומות העונות לסינון המבוקש
+                      </td>
+                    </tr>
+                  ) : (
+                    <>
+                      {groupedClients.map(({ status, clients: groupClients }) => (
+                        <React.Fragment key={`group-frag-${status}`}>
+                          {/* Dark background band behind each group */}
+                          <tr key={`band-${status}`}>
+                            <td colSpan={6} className="h-2 bg-slate-950/40 border-0 p-0"></td>
+                          </tr>
 
-                        {/* Group header */}
-                        <tr key={`group-${status}`} id={`group-${status.replace(/[^\w]/g, '')}`}>
-                          <td colSpan={6} className="py-2.5 px-4 bg-slate-800/90 text-[9px] font-bold text-slate-100 border-b border-slate-700/60 flex items-center justify-between rounded-t-xl rounded-b-none shadow-sm">
-                            <div className="flex items-center gap-1.5">
-                              <span
-                                className={`px-2 py-0.5 rounded border inline-flex items-center gap-1 ${groupStyle(status).bg} ${groupStyle(status).text} ${groupStyle(status).border} font-bold`}
-                              >
-                                {status === '(ללא סטטוס)' ? 'ללא סטטוס' : status}
-                              </span>
-                              <span className="ml-1.5 text-slate-300 font-normal">({groupClients.length})</span>
-                            </div>
-                          </td>
-                        </tr>
-                        {groupClients.map((client) => {
-                          const style = STATUS_COLORS[client.status] || {
-                            bg: 'bg-slate-800',
-                            text: 'text-slate-300',
-                            border: 'border-slate-700'
-                          };
-                          const waNumber = formatWhatsAppNumber(client.phone);
-
-                          return (
-                            <tr 
-                              key={client.id}
-                              className="hover:bg-slate-800/30 transition-colors group cursor-pointer border-b border-slate-800/40"
-                              onClick={() => onSelectClient(client)}
-                            >
-                              {/* Name & Company */}
-                              <td className="py-1.5 px-2 min-w-[150px]">
-                                <div className="font-semibold text-white group-hover:text-blue-400 transition-colors text-[9px] leading-tight">
-                                  {client.name || 'ללא שם'}
-                                </div>
-                                {client.company && client.company !== client.name && (
-                                  <div className="text-[8px] text-slate-400 flex items-center gap-0.5 mt-0.5">
-                                    <Building className="w-2 h-2 text-slate-500" />
-                                    <span className="truncate">{client.company}</span>
-                                  </div>
-                                )}
-                                {client.requiresAttention && (
-                                  <span className="inline-flex items-center gap-0.5 text-[8px] text-rose-400 font-semibold mt-0.5">
-                                    <AlertCircle className="w-2 h-2" />
-                                    <span>דחוף</span>
-                                  </span>
-                                )}
-                              </td>
-
-                              {/* Business Type */}
-                              <td className="py-1.5 px-2 min-w-[140px]">
-                                {canEdit ? (
-                                  renderBusinessTypeCell(client)
-                                ) : (
-                                  <span className="px-1.5 py-0.5 rounded text-[8px] font-medium bg-slate-800 text-slate-300 border border-slate-700 block max-w-xs truncate" title={client.businessType || ''}>
-                                    {client.businessType || '-'}
-                                  </span>
-                                )}
-                              </td>
-
-                              {/* Status */}
-                              <td className="py-1.5 px-2 min-w-[180px]" onClick={(e) => e.stopPropagation()}>
-                                {canEdit ? (
-                                  <select
-                                    value={client.status}
-                                    onChange={(e) => onUpdateClientStatus(client.id, e.target.value)}
-                                    className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-md border focus:outline-none transition-all cursor-pointer ${style.bg} ${style.text} ${style.border} w-full`}
-                                  >
-                                    {ALL_STATUSES.map(s => (
-                                      <option key={s} value={s} className="bg-slate-900 text-slate-200 truncate">
-                                        {s}
-                                      </option>
-                                    ))}
-                                  </select>
-                                ) : (
-                                  <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-md border inline-block ${style.bg} ${style.text} ${style.border}`}>
-                                    {client.status}
-                                  </span>
-                                )}
-                                {client.subStatus && (
-                                  <div className="text-[8px] text-slate-400 mt-0.5">
-                                    {client.subStatus}
-                                  </div>
-                                )}
-                              </td>
-
-                              {/* Contact Channels */}
-                              <td className="py-1.5 px-2" onClick={(e) => e.stopPropagation()}>
-                                <div className="flex items-center gap-1">
-                                  {client.phone && (
-                                    <>
-                                      <a
-                                        href={`tel:${client.phone}`}
-                                        title={`חייג: ${client.phone}`}
-                                        className="w-5 h-5 rounded-lg bg-slate-800 hover:bg-blue-600/30 border border-slate-700 hover:border-blue-500/50 text-slate-300 hover:text-blue-300 flex items-center justify-center transition-all"
-                                      >
-                                        <Phone className="w-2.5 h-2.5" />
-                                      </a>
-                                      {waNumber && (
-                                        <a
-                                          href={`https://wa.me/${waNumber}`}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          title={`שלח הודעת וואטסאפ ל-${client.phone}`}
-                                          className="w-5 h-5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/30 text-emerald-300 flex items-center justify-center transition-all"
-                                        >
-                                          <MessageSquare className="w-2.5 h-2.5" />
-                                        </a>
-                                      )}
-                                      <span className="font-mono text-[8px] text-slate-300 truncate max-w-xs">
-                                        {client.phone}
-                                      </span>
-                                    </>
-                                  )}
-                                  {!client.phone && (
-                                    <span className="text-slate-600 text-[8px]">אין טלפון</span>
-                                  )}
-                                  {client.email && (
-                                    <a
-                                      href={`mailto:${client.email}`}
-                                      title={client.email}
-                                      className="w-5 h-5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-all mr-0.5"
-                                    >
-                                      <Mail className="w-2.5 h-2.5" />
-                                    </a>
-                                  )}
-                                </div>
-                              </td>
-
-                              {/* Last Note */}
-                              <td className="py-1.5 px-2 max-w-xs">
-                                {client.lastNote ? (
-                                  <div className="space-y-0.5" title={client.lastNote}>
-                                    {client.lastNote.includes('👤') && (
-                                      <span className="inline-flex items-center gap-0.5 text-[8px] font-bold text-blue-400 bg-blue-500/10 px-1 py-0.5 rounded border border-blue-500/20">
-                                        {client.lastNote.match(/👤\s*([^|\n]+)/)?.[0] || '👤 הערה חתומה'}
-                                      </span>
-                                    )}
-                                    <p className="text-[8px] text-slate-300 line-clamp-2">
-                                      {client.lastNote.replace(/^[0-9/:\s|]+👤[^|]+\|\s*/, '')}
-                                    </p>
-                                  </div>
-                                ) : (
-                                  <span className="text-[8px] text-slate-600">אין הערות</span>
-                                )}
-                              </td>
-
-                              {/* Actions */}
-                              <td className="py-1.5 px-2 text-center">
-                                <button
-                                  onClick={() => onSelectClient(client)}
-                                  className="px-1.5 py-0.5 rounded-lg bg-slate-800 group-hover:bg-blue-600 group-hover:text-white border border-slate-700 group-hover:border-blue-500 text-slate-300 text-[8px] font-medium transition-all"
+                          {/* Group header */}
+                          <tr key={`group-${status}`} id={`group-${status.replace(/[^\w]/g, '')}`}>
+                            <td colSpan={6} className="py-2.5 px-4 bg-slate-800/90 text-[9px] font-bold text-slate-100 border-b border-slate-700/60 flex items-center justify-between rounded-t-xl rounded-b-none shadow-sm">
+                              <div className="flex items-center gap-1.5">
+                                <span
+                                  className={`px-2 py-0.5 rounded border inline-flex items-center gap-1 ${groupStyle(status).bg} ${groupStyle(status).text} ${groupStyle(status).border} font-bold`}
                                 >
-                                  פרופיל
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                        {/* Dark background band below each group */}
-                        <tr key={`band-bottom-${status}`}>
-                          <td colSpan={6} className="h-3 bg-slate-950/30 border-0 p-0"></td>
-                        </tr>
-                      </>
-                    ))}
-                  </>
-                )}
-              </tbody>
-            </table>
+                                  {status === '(ללא סטטוס)' ? 'ללא סטטוס' : status}
+                                </span>
+                                <span className="ml-1.5 text-slate-300 font-normal">({groupClients.length})</span>
+                              </div>
+                            </td>
+                          </tr>
+
+                          {groupClients.map((client) => {
+                            const style = STATUS_COLORS[client.status] || {
+                              bg: 'bg-slate-800',
+                              text: 'text-slate-300',
+                              border: 'border-slate-700'
+                            };
+                            const waNumber = formatWhatsAppNumber(client.phone);
+
+                            return (
+                              <tr 
+                                key={client.id}
+                                className="hover:bg-slate-800/30 transition-colors group cursor-pointer border-b border-slate-800/40"
+                                onClick={() => onSelectClient(client)}
+                              >
+                                {/* Name & Company */}
+                                <td className="py-1.5 px-2 min-w-[150px]">
+                                  <div className="font-semibold text-white group-hover:text-blue-400 transition-colors text-[9px] leading-tight">
+                                    {client.name || 'ללא שם'}
+                                  </div>
+                                  {client.company && client.company !== client.name && (
+                                    <div className="text-[8px] text-slate-400 flex items-center gap-0.5 mt-0.5">
+                                      <Building className="w-2 h-2 text-slate-500" />
+                                      <span className="truncate">{client.company}</span>
+                                    </div>
+                                  )}
+                                  {client.requiresAttention && (
+                                    <span className="inline-flex items-center gap-0.5 text-[8px] text-rose-400 font-semibold mt-0.5">
+                                      <AlertCircle className="w-2 h-2" />
+                                      <span>דחוף</span>
+                                    </span>
+                                  )}
+                                </td>
+
+                                {/* Business Type */}
+                                <td className="py-1.5 px-2 min-w-[140px]">
+                                  {canEdit ? (
+                                    renderBusinessTypeCell(client)
+                                  ) : (
+                                    <span className="px-1.5 py-0.5 rounded text-[8px] font-medium bg-slate-800 text-slate-300 border border-slate-700 block max-w-xs truncate" title={client.businessType || ''}>
+                                      {client.businessType || '-'}
+                                    </span>
+                                  )}
+                                </td>
+
+                                {/* Status */}
+                                <td className="py-1.5 px-2 min-w-[180px]" onClick={(e) => e.stopPropagation()}>
+                                  {canEdit ? (
+                                    <select
+                                      value={client.status}
+                                      onChange={(e) => onUpdateClientStatus(client.id, e.target.value)}
+                                      className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-md border focus:outline-none transition-all cursor-pointer ${style.bg} ${style.text} ${style.border} w-full`}
+                                    >
+                                      {ALL_STATUSES.map(s => (
+                                        <option key={s} value={s} className="bg-slate-900 text-slate-200 truncate">
+                                          {s}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  ) : (
+                                    <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-md border inline-block ${style.bg} ${style.text} ${style.border}`}>
+                                      {client.status}
+                                    </span>
+                                  )}
+                                  {client.subStatus && (
+                                    <div className="text-[8px] text-slate-400 mt-0.5">
+                                      {client.subStatus}
+                                    </div>
+                                  )}
+                                </td>
+
+                                {/* Contact Channels */}
+                                <td className="py-1.5 px-2" onClick={(e) => e.stopPropagation()}>
+                                  <div className="flex items-center gap-1">
+                                    {client.phone && (
+                                      <>
+                                        <a
+                                          href={`tel:${client.phone}`}
+                                          title={`חייג: ${client.phone}`}
+                                          className="w-5 h-5 rounded-lg bg-slate-800 hover:bg-blue-600/30 border border-slate-700 hover:border-blue-500/50 text-slate-300 hover:text-blue-300 flex items-center justify-center transition-all"
+                                        >
+                                          <Phone className="w-2.5 h-2.5" />
+                                        </a>
+                                        {waNumber && (
+                                          <a
+                                            href={`https://wa.me/${waNumber}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            title={`שלח הודעת וואטסאפ ל-${client.phone}`}
+                                            className="w-5 h-5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/30 text-emerald-300 flex items-center justify-center transition-all"
+                                          >
+                                            <MessageSquare className="w-2.5 h-2.5" />
+                                          </a>
+                                        )}
+                                        <span className="font-mono text-[8px] text-slate-300 truncate max-w-xs">
+                                          {client.phone}
+                                        </span>
+                                      </>
+                                    )}
+                                    {!client.phone && (
+                                      <span className="text-slate-600 text-[8px]">אין טלפון</span>
+                                    )}
+                                    {client.email && (
+                                      <a
+                                        href={`mailto:${client.email}`}
+                                        title={client.email}
+                                        className="w-5 h-5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-all mr-0.5"
+                                      >
+                                        <Mail className="w-2.5 h-2.5" />
+                                      </a>
+                                    )}
+                                  </div>
+                                </td>
+
+                                {/* Last Note */}
+                                <td className="py-1.5 px-2 max-w-xs">
+                                  {client.lastNote ? (
+                                    <div className="space-y-0.5" title={client.lastNote}>
+                                      {client.lastNote.includes('👤') && (
+                                        <span className="inline-flex items-center gap-0.5 text-[8px] font-bold text-blue-400 bg-blue-500/10 px-1 py-0.5 rounded border border-blue-500/20">
+                                          {client.lastNote.match(/👤\s*([^|\n]+)/)?.[0] || '👤 הערה חתומה'}
+                                        </span>
+                                      )}
+                                      <p className="text-[8px] text-slate-300 line-clamp-2">
+                                        {client.lastNote.replace(/^[0-9/:\s|]+👤[^|]+\|\s*/, '')}
+                                      </p>
+                                    </div>
+                                  ) : (
+                                    <span className="text-[8px] text-slate-600">אין הערות</span>
+                                  )}
+                                </td>
+
+                                {/* Profile Action */}
+                                <td className="py-1.5 px-2 text-center">
+                                  <button
+                                    onClick={() => onSelectClient(client)}
+                                    className="px-1.5 py-0.5 rounded-lg bg-slate-800 group-hover:bg-blue-600 group-hover:text-white border border-slate-700 group-hover:border-blue-500 text-slate-300 text-[8px] font-medium transition-all"
+                                  >
+                                    פרופיל
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+
+                          {/* Dark background band below each group */}
+                          <tr key={`band-bottom-${status}`}>
+                            <td colSpan={6} className="h-3 bg-slate-950/30 border-0 p-0"></td>
+                          </tr>
+                        </React.Fragment>
+                      ))}
+                    </>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Upload Table Modal */}
+      <UploadTableModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        onTableCreated={handleUploadedTable}
+      />
 
     </div>
   );

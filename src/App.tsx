@@ -260,7 +260,9 @@ export const App: React.FC = () => {
     await saveCustomTable(newTable);
     setCustomTables(prev => [newTable, ...prev]);
     setSelectedCustomTableId(newTable.id);
-    setActiveTab('custom_tables');
+    if (activeTab === 'ai_studio') {
+      setActiveTab('crm');
+    }
   };
 
   const handleUpdateTable = async (updatedTable: CustomTable) => {
@@ -386,6 +388,16 @@ export const App: React.FC = () => {
                 onUpdateClientBusinessType={handleUpdateClientBusinessType}
                 searchFilter={searchQuery}
                 canEdit={canEditCrm}
+                customTables={customTables}
+                onTableCreated={handleTableCreated}
+                onUpdateTable={handleUpdateTable}
+                onDeleteTable={handleDeleteTable}
+                onUpdateClient={handleSaveClient}
+                onBatchUpdateClients={async (updatedClients) => {
+                  await saveMultipleClients(updatedClients);
+                  setClients(updatedClients);
+                }}
+                onOpenAiStudio={() => setActiveTab('ai_studio')}
               />
             )}
 
@@ -420,6 +432,12 @@ export const App: React.FC = () => {
                 onUpdateTable={handleUpdateTable}
                 onDeleteTable={handleDeleteTable}
                 canEdit={canEditTables}
+                clients={clients}
+                onUpdateClient={handleSaveClient}
+                onBatchUpdateClients={async (updatedClients) => {
+                  await saveMultipleClients(updatedClients);
+                  setClients(updatedClients);
+                }}
               />
             )}
 
