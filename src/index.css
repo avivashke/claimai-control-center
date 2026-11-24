@@ -656,8 +656,10 @@ textarea {
 [data-theme="light"] .bg-emerald-600 *,
 [data-theme="light"] .bg-rose-600,
 [data-theme="light"] .bg-rose-600 *,
-[data-theme="light"] .bg-gradient-to-r,
-[data-theme="light"] .bg-gradient-to-r *,
+[data-theme="light"] button.bg-gradient-to-r,
+[data-theme="light"] button.bg-gradient-to-r *,
+[data-theme="light"] a.bg-gradient-to-r,
+[data-theme="light"] a.bg-gradient-to-r *,
 [data-theme="sepia"] .bg-blue-600,
 [data-theme="sepia"] .bg-blue-600 *,
 [data-theme="sepia"] .bg-purple-600,
@@ -668,8 +670,10 @@ textarea {
 [data-theme="sepia"] .bg-emerald-600 *,
 [data-theme="sepia"] .bg-rose-600,
 [data-theme="sepia"] .bg-rose-600 *,
-[data-theme="sepia"] .bg-gradient-to-r,
-[data-theme="sepia"] .bg-gradient-to-r * {
+[data-theme="sepia"] button.bg-gradient-to-r,
+[data-theme="sepia"] button.bg-gradient-to-r *,
+[data-theme="sepia"] a.bg-gradient-to-r,
+[data-theme="sepia"] a.bg-gradient-to-r * {
   color: #ffffff !important;
 }
 
@@ -696,16 +700,93 @@ textarea {
 
 /* Google Sheets Featured Card Styling across themes */
 [data-theme="light"] .sheets-featured-card {
-  background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 60%, #f6fcf8 100%) !important;
+  background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 50%, #f0fdf4 100%) !important;
+  border-color: #6ee7b7 !important;
+}
+[data-theme="light"] .sheets-featured-card h3,
+[data-theme="light"] .sheets-featured-card h4,
+[data-theme="light"] .sheets-inner-card h4 {
+  color: #0f172a !important;
+}
+[data-theme="light"] .sheets-featured-card p,
+[data-theme="light"] .sheets-inner-card p,
+[data-theme="light"] .sheets-inner-card span:not(.sheets-badge) {
+  color: #334155 !important;
+}
+[data-theme="light"] .sheets-inner-card strong {
+  color: #0f172a !important;
+}
+[data-theme="light"] .sheets-inner-card a {
+  color: #059669 !important;
+}
+[data-theme="light"] .sheets-inner-card button:not(.bg-emerald-600) {
+  color: #065f46 !important;
+}
+[data-theme="light"] .sheets-inner-card input {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+[data-theme="light"] .sheets-inner-card button.bg-emerald-600\/20 {
+  background-color: #ecfdf5 !important;
+  color: #047857 !important;
   border-color: #a7f3d0 !important;
+}
+[data-theme="light"] .sheets-inner-card button.bg-blue-600\/20 {
+  background-color: #eff6ff !important;
+  color: #1d4ed8 !important;
+  border-color: #bfdbfe !important;
+}
+[data-theme="light"] .sheets-inner-card code {
+  color: #047857 !important;
+  background-color: #e2f7ed !important;
 }
 [data-theme="light"] .sheets-inner-card {
   background-color: #ffffff !important;
   border-color: #cbd8e6 !important;
 }
+
 [data-theme="sepia"] .sheets-featured-card {
-  background: linear-gradient(135deg, #f2efe4 0%, #fdfcf9 60%, #f4eee2 100%) !important;
+  background: linear-gradient(135deg, #f4efe4 0%, #fdfcf9 50%, #f5efe3 100%) !important;
+  border-color: #c9b49b !important;
+}
+[data-theme="sepia"] .sheets-featured-card h3,
+[data-theme="sepia"] .sheets-featured-card h4,
+[data-theme="sepia"] .sheets-inner-card h4 {
+  color: #2c1e14 !important;
+}
+[data-theme="sepia"] .sheets-featured-card p,
+[data-theme="sepia"] .sheets-inner-card p,
+[data-theme="sepia"] .sheets-inner-card span:not(.sheets-badge) {
+  color: #5c4434 !important;
+}
+[data-theme="sepia"] .sheets-inner-card strong {
+  color: #2c1e14 !important;
+}
+[data-theme="sepia"] .sheets-inner-card a {
+  color: #047857 !important;
+}
+[data-theme="sepia"] .sheets-inner-card button:not(.bg-emerald-600) {
+  color: #065f46 !important;
+}
+[data-theme="sepia"] .sheets-inner-card input {
+  background-color: #fdfcf9 !important;
+  color: #2c1e14 !important;
   border-color: #d7c6b1 !important;
+}
+[data-theme="sepia"] .sheets-inner-card button.bg-emerald-600\/20 {
+  background-color: #e6f4ea !important;
+  color: #065f46 !important;
+  border-color: #b7dfcb !important;
+}
+[data-theme="sepia"] .sheets-inner-card button.bg-blue-600\/20 {
+  background-color: #ece8df !important;
+  color: #1e3a8a !important;
+  border-color: #c5beae !important;
+}
+[data-theme="sepia"] .sheets-inner-card code {
+  color: #065f46 !important;
+  background-color: #ece4d4 !important;
 }
 [data-theme="sepia"] .sheets-inner-card {
   background-color: #fdfcf9 !important;

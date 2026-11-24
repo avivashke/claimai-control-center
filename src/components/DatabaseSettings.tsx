@@ -351,7 +351,7 @@ CREATE TABLE product_items (
       </div>
 
       {/* Featured Card: Google Sheets Continuous Backup & Live Sync */}
-      <div className="sheets-featured-card p-6 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-slate-900 to-slate-900 border border-emerald-500/30 shadow-xl space-y-5">
+      <div className="sheets-featured-card p-6 rounded-2xl bg-slate-900/90 border border-emerald-500/30 shadow-xl space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-xl bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
@@ -360,7 +360,7 @@ CREATE TABLE product_items (
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-white">גיבוי וסנכרון תמידי ל-Google Sheets</h3>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                <span className="sheets-badge px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                   Dual-Sheet Backup
                 </span>
               </div>
