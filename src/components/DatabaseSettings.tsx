@@ -474,11 +474,11 @@ CREATE TABLE product_items (
               <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
                 <span>חיבור Webhook לסנכרון חי אוטומטי (Google Apps Script)</span>
                 {getSheetsWebhookUrl() ? (
-                  <span className="px-2 py-0.2 rounded text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold">
+                  <span className="sheets-badge px-2 py-0.2 rounded text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold">
                     סנכרון אוטומטי מופעל
                   </span>
                 ) : (
-                  <span className="px-2 py-0.2 rounded text-[10px] bg-slate-700 text-slate-300 font-semibold">
+                  <span className="sheets-optional-badge px-2 py-0.2 rounded text-[10px] bg-slate-700 text-slate-300 font-semibold">
                     אופציונלי
                   </span>
                 )}

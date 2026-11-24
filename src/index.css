@@ -741,6 +741,11 @@ textarea {
   color: #047857 !important;
   background-color: #e2f7ed !important;
 }
+[data-theme="light"] .sheets-optional-badge {
+  background-color: #e2e8f0 !important;
+  color: #475569 !important;
+  border: 1px solid #cbd5e1 !important;
+}
 [data-theme="light"] .sheets-inner-card {
   background-color: #ffffff !important;
   border-color: #cbd8e6 !important;
@@ -787,6 +792,11 @@ textarea {
 [data-theme="sepia"] .sheets-inner-card code {
   color: #065f46 !important;
   background-color: #ece4d4 !important;
+}
+[data-theme="sepia"] .sheets-optional-badge {
+  background-color: #e5dac9 !important;
+  color: #5c4434 !important;
+  border: 1px solid #d7c6b1 !important;
 }
 [data-theme="sepia"] .sheets-inner-card {
   background-color: #fdfcf9 !important;
