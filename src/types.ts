@@ -156,6 +156,9 @@ export interface AppUser {
   avatarUrl?: string;
   permissions: UserPermissions;
   isActive: boolean;
+  password?: string;
+  resetCode?: string;
+  resetCodeExpires?: number;
   createdAt: string;
   lastLogin?: string;
   assignedClients?: string[];

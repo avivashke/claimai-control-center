@@ -451,14 +451,14 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
             className="w-full text-right text-xs"
           >
             <thead>
-              <tr className="border-b border-slate-700/80">
+              <tr className="border-b border-slate-700 bg-slate-900">
                 {/* Index / ID Header */}
-                <th className="sticky top-0 z-20 bg-slate-850 shadow-sm py-2 px-3 w-12 text-slate-400 text-center font-mono">
+                <th className="sticky top-0 z-20 bg-slate-900 shadow-sm py-2 px-3 w-12 text-slate-400 text-center font-mono border-b border-slate-700">
                   #
                 </th>
 
                 {/* Cross-table Match & Sync Column Header */}
-                <th className="sticky top-0 z-20 bg-slate-850 shadow-sm py-2 px-3 w-56 min-w-[220px] text-amber-400 font-bold border-l border-slate-800">
+                <th className="sticky top-0 z-20 bg-slate-900 shadow-sm py-2 px-3 w-56 min-w-[220px] text-amber-400 font-bold border-l border-slate-800 border-b border-slate-700">
                   <div className="flex items-center gap-1.5">
                     <GitCompare className="w-3.5 h-3.5" />
                     <span>סנכרון וכפילויות CRM</span>
@@ -471,7 +471,7 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
                     key={col.key}
                     onClick={() => handleToggleSort(col.key)}
                     style={{ minWidth: col.type === 'email' || col.label.includes('חברה') ? '180px' : '150px' }}
-                    className="sticky top-0 z-20 bg-slate-850 shadow-sm py-2 px-3 whitespace-nowrap cursor-pointer hover:bg-slate-800 transition-colors group select-none"
+                    className="sticky top-0 z-20 bg-slate-900 shadow-sm py-2 px-3 whitespace-nowrap cursor-pointer hover:bg-slate-800 transition-colors group select-none border-b border-slate-700"
                   >
                     <div className="flex items-center justify-between gap-1">
                       <span className="font-bold text-slate-200 group-hover:text-white">
@@ -488,7 +488,7 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
                 ))}
 
                 {/* Actions Header */}
-                <th className="sticky top-0 z-20 bg-slate-850 shadow-sm py-2 px-3 w-16 text-center text-slate-400">
+                <th className="sticky top-0 z-20 bg-slate-900 shadow-sm py-2 px-3 w-16 text-center text-slate-400 border-b border-slate-700">
                   פעולות
                 </th>
               </tr>

@@ -15,7 +15,8 @@ import {
   Eye,
   Moon,
   Sun,
-  Coffee
+  Coffee,
+  LogOut
 } from 'lucide-react';
 import { AppUser, AppTheme } from '../types';
 import { UserMenu } from './Auth/UserMenu';
@@ -118,7 +119,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* User Profile & Actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {!isViewer && (
               <>
                 <button
@@ -224,6 +225,16 @@ export const Header: React.FC<HeaderProps> = ({
               onOpenSwitchUser={onOpenSwitchUser}
               onLogout={onLogout}
             />
+
+            {/* Direct Logout Button for ALL users */}
+            <button
+              onClick={onLogout}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/50 text-rose-300 hover:text-white text-xs font-bold transition-all shadow-sm shrink-0"
+              title="התנתקות מהמערכת (נעילת גישה)"
+            >
+              <LogOut className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden sm:inline">התנתק</span>
+            </button>
           </div>
         </div>
 

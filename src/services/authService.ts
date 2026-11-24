@@ -3,37 +3,61 @@ import { getAppUsers, saveAppUser, findUserByEmail } from './db';
 import seedUsers from '../data/seedUsers.json';
 
 const CURRENT_USER_STORAGE_KEY = 'claimai_current_user';
-const GOOGLE_CLIENT_ID_KEY = 'claimai_google_client_id';
+const AUTH_TOKEN_STORAGE_KEY = 'claimai_auth_token';
+const USER_PASSWORDS_STORAGE_KEY = 'claimai_user_passwords';
+const ADMIN_RESET_CODES_STORAGE_KEY = 'claimai_admin_reset_codes';
 
-// Default Admin user fallback
-const DEFAULT_ADMIN: AppUser = seedUsers[0] as AppUser;
+// Default fallback password when environment variable is not configured
+export const DEFAULT_FALLBACK_PASSWORD = 'ClaimAI2026!';
 
-export const getGoogleClientId = (): string => {
-  return localStorage.getItem(GOOGLE_CLIENT_ID_KEY) || import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+// Read Netlify Environment Variable passwords
+export const getNetlifyPasswordForRole = (role: UserRole): string | undefined => {
+  const env = import.meta.env;
+  if (role === 'admin') {
+    return env.VITE_ADMIN_PASSWORD || env.VITE_APP_PASSWORD;
+  }
+  if (role === 'editor') {
+    return env.VITE_EDITOR_PASSWORD || env.VITE_APP_PASSWORD;
+  }
+  if (role === 'viewer') {
+    return env.VITE_VIEWER_PASSWORD || env.VITE_APP_PASSWORD;
+  }
+  return env.VITE_APP_PASSWORD;
 };
 
-export const setGoogleClientId = (id: string): void => {
-  localStorage.setItem(GOOGLE_CLIENT_ID_KEY, id.trim());
-};
-
-export const getCurrentUser = (): AppUser => {
+// Check if user is currently logged in with a valid session
+export const isUserAuthenticated = (): boolean => {
   try {
+    const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+    const userRaw = localStorage.getItem(CURRENT_USER_STORAGE_KEY);
+    return Boolean(token && userRaw);
+  } catch {
+    return false;
+  }
+};
+
+// Get currently logged-in user or null if not authenticated
+export const getCurrentUser = (): AppUser | null => {
+  try {
+    const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
     const raw = localStorage.getItem(CURRENT_USER_STORAGE_KEY);
-    if (raw) {
+    if (token && raw) {
       return JSON.parse(raw);
     }
   } catch (e) {
     console.warn('Failed to parse current user from localStorage', e);
   }
-  return DEFAULT_ADMIN;
+  return null;
 };
 
 export const setCurrentUser = (user: AppUser): void => {
   localStorage.setItem(CURRENT_USER_STORAGE_KEY, JSON.stringify(user));
+  localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, `session_${Date.now()}`);
 };
 
 export const logoutUser = (): void => {
   localStorage.removeItem(CURRENT_USER_STORAGE_KEY);
+  localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
 };
 
 // Check module permissions
@@ -46,451 +70,193 @@ export const hasPermission = (
   return Boolean(user.permissions?.[permission]);
 };
 
-// Authenticate via Google email
-export const loginWithGoogleEmail = async (email: string, name?: string): Promise<AppUser> => {
-  const cleanEmail = email.trim().toLowerCase();
-  
-  // Look up user in database
-  let user = await findUserByEmail(cleanEmail);
-
-  if (!user) {
-    // If user is from aviv.claimai or eyal, auto-assign admin
-    const isAdminDomain = cleanEmail.includes('aviv.claimai') || cleanEmail.includes('eyal@claimai');
-    const role: UserRole = isAdminDomain ? 'admin' : 'viewer';
-    const isEditorOrAdmin = role === 'admin';
-
-    const newUser: AppUser = {
-      id: `user-${Date.now()}`,
-      email: cleanEmail,
-      name: name || cleanEmail.split('@')[0],
-      role,
-      permissions: {
-        canEditCrm: isEditorOrAdmin,
-        canEditProduct: isEditorOrAdmin,
-        canEditTables: isEditorOrAdmin,
-        canManageUsers: isAdminDomain
-      },
-      isActive: true,
-      createdAt: new Date().toISOString().slice(0, 10),
-      lastLogin: new Date().toLocaleString('he-IL')
-    };
-
-    await saveAppUser(newUser);
-    user = newUser;
-  } else {
-    // Update last login
-    const updated = {
-      ...user,
-      lastLogin: new Date().toLocaleString('he-IL')
-    };
-    await saveAppUser(updated);
-    user = updated;
-  }
-
-  setCurrentUser(user);
-  return user;
-};
-
-// Initiate Google Identity Services (GIS) Client
-export const initGoogleIdentityServices = (
-  onSuccess: (email: string, name: string) => void
-): boolean => {
-  const clientId = getGoogleClientId();
-  if (!clientId || typeof window === 'undefined') return false;
-
-  const w = window as any;
-  if (w.google?.accounts?.id) {
-    try {
-      w.google.accounts.id.initialize({
-        client_id: clientId,
-        callback: (response: any) => {
-          try {
-            // Decode Google JWT credential
-            const payloadBase64 = response.credential.split('.')[1];
-            const decodedJson = JSON.parse(atob(payloadBase64));
-            if (decodedJson.email) {
-              onSuccess(decodedJson.email, decodedJson.name || decodedJson.email.split('@')[0]);
-            }
-          } catch (err) {
-            console.error('Failed to decode Google token', err);
-          }
-        }
-      });
-      return true;
-    } catch (err) {
-      console.warn('GIS init error:', err);
-      return false;
-    }
-  }
-  return false;
-};
-
-// Load the Google Identity Services client library from CDN
-const GSI_SCRIPT_URL = 'https://accounts.google.com/gsi/client';
-let gsiLoaded = false;
-let gsiLoadPromise: Promise<void> | null = null;
-
-export const loadGoogleIdentityServices = (): Promise<void> => {
-  if (gsiLoaded) return Promise.resolve();
-  if (gsiLoadPromise) return gsiLoadPromise;
-  gsiLoadPromise = new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = GSI_SCRIPT_URL;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => { gsiLoaded = true; resolve(); };
-    script.onerror = () => reject(new Error('Failed to load Google Identity Services library'));
-    document.head.appendChild(script);
-  });
-  return gsiLoadPromise;
-};
-
-// Render the official Google "Sign in with Google" button into a container
-export const renderGoogleSignInButton = (
-  containerId: string,
-  clientId: string,
-  onSuccess: (email: string, name: string) => void
-): boolean => {
-  const w = window as any;
-  if (!w.google?.accounts?.id) return false;
-  const container = document.getElementById(containerId);
-  if (!container) return false;
-  container.innerHTML = '';
+// Storage helper for user passwords
+export const getStoredPasswords = (): Record<string, string> => {
   try {
-    w.google.accounts.id.initialize({
-      client_id: clientId,
-      callback: (response: any) => {
-        try {
-          const payloadBase64 = response.credential.split('.')[1];
-          const decodedJson = JSON.parse(atob(payloadBase64));
-          if (decodedJson.email) {
-            onSuccess(decodedJson.email, decodedJson.name || decodedJson.email.split('@')[0]);
-          }
-        } catch (err) {
-          console.error('Failed to decode Google token', err);
-        }
-      }
-    });
-    w.google.accounts.id.renderButton(container, {
-      theme: 'outline',
-      size: 'large',
-      width: '100%',
-      logo_alignment: 'center'
-    } as any);
-    try { w.google.accounts.id.prompt(); } catch {}
-    return true;
-  } catch (err) {
-    console.warn('Google Sign-In button render error:', err);
-    return false;
+    const raw = localStorage.getItem(USER_PASSWORDS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
   }
 };
 
-// ========================================================
-// Local secure authentication (WhatsApp code / password reset)
-// ========================================================
+export const setUserPassword = (emailOrId: string, newPassword: string): void => {
+  const passwords = getStoredPasswords();
+  passwords[emailOrId.trim().toLowerCase()] = newPassword;
+  localStorage.setItem(USER_PASSWORDS_STORAGE_KEY, JSON.stringify(passwords));
+};
 
-const LOCAL_USERS_KEY = 'claimai_local_users';
-const AUTH_CODES_KEY = 'claimai_auth_codes';
-const CODE_TTL_MS = 10 * 60 * 1000; // 10 minutes
-
-export interface LocalUser {
-  id: string;
-  phone: string;
-  name: string;
-  role: UserRole;
-  permissions: UserPermissions;
-  isActive: boolean;
-  passwordHash?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface AuthCode {
-  phone: string;
+// Storage helper for Admin Reset Codes
+interface ResetCodeRecord {
   code: string;
-  type: 'login' | 'reset';
+  email: string;
   createdAt: number;
   expiresAt: number;
 }
 
-const defaultPermissions: UserPermissions = {
-  canEditCrm: false,
-  canEditProduct: false,
-  canEditTables: false,
-  canManageUsers: false
-};
-
-export const getLocalUsers = (): LocalUser[] => {
+export const getResetCodes = (): ResetCodeRecord[] => {
   try {
-    const raw = localStorage.getItem(LOCAL_USERS_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return [];
+    const raw = localStorage.getItem(ADMIN_RESET_CODES_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
 };
 
-export const saveLocalUsers = (users: LocalUser[]): void => {
-  localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(users));
+export const saveResetCodes = (codes: ResetCodeRecord[]): void => {
+  localStorage.setItem(ADMIN_RESET_CODES_STORAGE_KEY, JSON.stringify(codes));
 };
 
-export const ensureDefaultAdmin = (): void => {
-  const users = getLocalUsers();
-  if (users.length === 0) {
-    const admin: LocalUser = {
-      id: 'admin-1',
-      phone: '0500000000',
-      name: 'מנהל מערכת',
-      role: 'admin',
-      permissions: {
-        canEditCrm: true,
-        canEditProduct: true,
-        canEditTables: true,
-        canManageUsers: true
-      },
-      isActive: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+// Admin generates a 6-digit one-time reset code for a user
+export const generateAdminResetCode = (userEmail: string): { success: boolean; code: string; message: string } => {
+  const cleanEmail = userEmail.trim().toLowerCase();
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const now = Date.now();
+  const expiresAt = now + 24 * 60 * 60 * 1000; // valid for 24 hours
+
+  const codes = getResetCodes().filter(c => c.email !== cleanEmail && c.expiresAt > now);
+  codes.push({
+    code,
+    email: cleanEmail,
+    createdAt: now,
+    expiresAt
+  });
+  saveResetCodes(codes);
+
+  return {
+    success: true,
+    code,
+    message: `קוד איפוס סיסמה נוצר בהצלחה עבור ${cleanEmail}: ${code}. מסור קוד זה למשתמש.`
+  };
+};
+
+// User verifies reset code and sets their password
+export const resetPasswordWithAdminCode = async (
+  email: string,
+  code: string,
+  newPassword: string
+): Promise<{ success: boolean; message: string; user?: AppUser }> => {
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanCode = code.trim();
+
+  if (!cleanEmail || !cleanCode || !newPassword) {
+    return { success: false, message: 'נא למלא את כל השדות' };
+  }
+
+  if (newPassword.length < 6) {
+    return { success: false, message: 'הסיסמה חייבת לכלול לפחות 6 תווים' };
+  }
+
+  // Validate reset code
+  const now = Date.now();
+  const codes = getResetCodes();
+  const matchingCode = codes.find(c => c.email === cleanEmail && c.code === cleanCode && c.expiresAt > now);
+
+  if (!matchingCode) {
+    return { success: false, message: 'קוד האיפוס שגוי או פג תוקפו. פנה למנהל המערכת לקבלת קוד חדש.' };
+  }
+
+  // Save new password
+  setUserPassword(cleanEmail, newPassword);
+
+  // Invalidate used code
+  saveResetCodes(codes.filter(c => c !== matchingCode));
+
+  // Find user and log them in
+  let user = await findUserByEmail(cleanEmail);
+  if (!user) {
+    user = (seedUsers as AppUser[]).find(u => u.email.toLowerCase() === cleanEmail);
+  }
+
+  if (user) {
+    setCurrentUser(user);
+    return {
+      success: true,
+      message: 'הסיסמה עודכנה בהצלחה! התחברת למערכת.',
+      user
     };
-    saveLocalUsers([admin]);
   }
+
+  return {
+    success: true,
+    message: 'הסיסמה עודכנה בהצלחה. כעת תוכל להתחבר עם הסיסמה החדשה.'
+  };
 };
 
-export const findLocalUserByPhone = (phone: string): LocalUser | undefined => {
-  return getLocalUsers().find(u => u.phone === phone);
-};
+// Main Login Function: Authenticate with Email & Password
+export const loginWithPassword = async (
+  email: string,
+  passwordInput: string
+): Promise<{ success: boolean; user?: AppUser; message: string }> => {
+  const cleanEmail = email.trim().toLowerCase();
+  const password = passwordInput.trim();
 
-export const generateAuthCode = (): string => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-};
+  if (!cleanEmail || !password) {
+    return { success: false, message: 'נא להזין אימייל וסיסמה' };
+  }
 
-export const storeAuthCode = (phone: string, code: string, type: 'login' | 'reset'): void => {
+  // 1. Locate user in DB or seed users
+  let allUsers: AppUser[] = [];
   try {
-    const raw = localStorage.getItem(AUTH_CODES_KEY);
-    const codes: AuthCode[] = raw ? JSON.parse(raw) : [];
-    // Remove old codes for this phone + type
-    const filtered = codes.filter(c => !(c.phone === phone && c.type === type));
-    const now = Date.now();
-    filtered.push({
-      phone,
-      code,
-      type,
-      createdAt: now,
-      expiresAt: now + CODE_TTL_MS
-    });
-    localStorage.setItem(AUTH_CODES_KEY, JSON.stringify(filtered));
-  } catch {}
-};
-
-export const verifyAuthCode = (phone: string, code: string, type: 'login' | 'reset'): boolean => {
-  try {
-    const raw = localStorage.getItem(AUTH_CODES_KEY);
-    if (!raw) return false;
-    const codes: AuthCode[] = JSON.parse(raw);
-    const now = Date.now();
-    const match = codes.find(
-      c => c.phone === phone && c.code === code && c.type === type && c.expiresAt > now
-    );
-    if (!match) return false;
-    // Consume the code
-    const remaining = codes.filter(c => !(c.phone === phone && c.code === code));
-    localStorage.setItem(AUTH_CODES_KEY, JSON.stringify(remaining));
-    return true;
+    allUsers = await getAppUsers();
   } catch {
-    return false;
+    allUsers = seedUsers as AppUser[];
   }
-};
 
-export const sendAuthCodeToWhatsApp = (phone: string, code: string, type: 'login' | 'reset'): { success: boolean; message: string; code: string } => {
-  // In production, integrate with a WhatsApp Business API / SMS gateway.
-  // For local operation, the code is stored in localStorage and displayed to the user.
-  storeAuthCode(phone, code, type);
-  return {
-    success: true,
-    message: `קוד האימות ${code} נשלח לוואטסאפ ${phone} (נשמר מקומית לפיתוח ובדיקה).`,
-    code
-  };
-};
+  if (!allUsers || allUsers.length === 0) {
+    allUsers = seedUsers as AppUser[];
+  }
 
-export const localLogin = (phone: string, code: string): { success: boolean; user?: LocalUser; message: string } => {
-  ensureDefaultAdmin();
-  const user = findLocalUserByPhone(phone);
+  let user = allUsers.find(u => u.email.toLowerCase() === cleanEmail);
+
+  if (!user && (cleanEmail === 'admin@claimai.co.il' || cleanEmail === 'admin')) {
+    user = allUsers.find(u => u.role === 'admin') || (seedUsers as AppUser[])[0];
+  }
+
   if (!user) {
-    return { success: false, message: 'משתמש לא נמצא במערכת. פנה למנהל מערכת.' };
+    return { success: false, message: 'משתמש עם כתובת אימייל זו לא נמצא במערכת' };
   }
+
   if (!user.isActive) {
-    return { success: false, message: 'חשבונך הושבת על ידי מנהל המערכת.' };
+    return { success: false, message: 'חשבון המשתמש מושבת. פנה למנהל המערכת.' };
   }
-  if (!verifyAuthCode(phone, code, 'login')) {
-    return { success: false, message: 'קוד האימות שגוי או פג תוקפו.' };
-  }
-  setCurrentUser({
-    id: user.id,
-    email: user.phone,
-    name: user.name,
-    role: user.role,
-    permissions: user.permissions,
-    isActive: user.isActive,
-    createdAt: user.createdAt,
-    lastLogin: new Date().toISOString()
-  });
-  return { success: true, user, message: 'התחברת בהצלחה למערכת.' };
-};
 
-export const requestPasswordReset = (phone: string): { success: boolean; message: string; code?: string } => {
-  const user = findLocalUserByPhone(phone);
-  if (!user) {
-    // Don't reveal whether phone exists
-    return { success: true, message: 'אם המספר רשום במערכת, קוד איפוס נשלח אליו בוואטסאפ.' };
-  }
-  const code = generateAuthCode();
-  return sendAuthCodeToWhatsApp(phone, code, 'reset');
-};
+  // 2. Validate Password against:
+  // a) Netlify Environment Variable for this role
+  const netlifyPass = getNetlifyPasswordForRole(user.role);
 
-export const resetPasswordWithCode = (phone: string, code: string, newPassword: string): { success: boolean; message: string } => {
-  const user = findLocalUserByPhone(phone);
-  if (!user) {
-    return { success: false, message: 'משתמש לא נמצא.' };
-  }
-  if (!verifyAuthCode(phone, code, 'reset')) {
-    return { success: false, message: 'קוד האיפוס שגוי או פג תוקפו.' };
-  }
-  const users = getLocalUsers().map(u => {
-    if (u.id === user.id) {
-      return { ...u, passwordHash: newPassword, updatedAt: new Date().toISOString() };
-    }
-    return u;
-  });
-  saveLocalUsers(users);
-  return { success: true, message: 'הסיסמה אופסה בהצלחה. ניתן להיכנס עם הקוד החדש.' };
-};
+  // b) Custom user password stored in system
+  const storedPasswords = getStoredPasswords();
+  const userCustomPass = storedPasswords[cleanEmail] || storedPasswords[user.id];
 
-// Admin generates a one-time reset code for a specific local user (no WhatsApp needed).
-// The admin shares the code with the user, who then enters it + new password in the login modal.
-export const generateAdminResetCode = (userId: string): { success: boolean; code: string; message: string } => {
-  ensureDefaultAdmin();
-  const user = getLocalUsers().find(u => u.id === userId);
-  if (!user) {
-    return { success: false, code: '', message: 'משתמש לא נמצא במערכת.' };
+  // c) Default fallback password if nothing set yet
+  const isMatch = 
+    (netlifyPass && password === netlifyPass) ||
+    (userCustomPass && password === userCustomPass) ||
+    (!netlifyPass && !userCustomPass && password === DEFAULT_FALLBACK_PASSWORD);
+
+  if (!isMatch) {
+    return { 
+      success: false, 
+      message: 'סיסמה שגויה. נסה שוב או פנה למנהל לקבלת קוד איפוס סיסמה.' 
+    };
   }
-  if (!user.isActive) {
-    return { success: false, code: '', message: 'חשבון המשתמש מושבת ולא ניתן להפיק קוד איפוס.' };
-  }
-  const code = generateAuthCode();
-  storeAuthCode(user.phone, code, 'reset');
-  return {
-    success: true,
-    code,
-    message: `קוד איפוס הופק עבור ${user.name} (${user.phone}). מסור את הקוד למשתמש כדי לאפס סיסמה.`
-  };
-};
 
-export const updateLocalUserStatus = (userId: string, isActive: boolean): boolean => {
-  const users = getLocalUsers().map(u => {
-    if (u.id === userId) {
-      return { ...u, isActive, updatedAt: new Date().toISOString() };
-    }
-    return u;
-  });
-  saveLocalUsers(users);
-  return true;
-};
-
-export const updateLocalUserRole = (userId: string, role: UserRole, permissions: UserPermissions): boolean => {
-  const users = getLocalUsers().map(u => {
-    if (u.id === userId) {
-      return { ...u, role, permissions, updatedAt: new Date().toISOString() };
-    }
-    return u;
-  });
-  saveLocalUsers(users);
-  return true;
-};
-
-export const addLocalUser = (user: Omit<LocalUser, 'id' | 'createdAt' | 'updatedAt'>): LocalUser => {
-  const users = getLocalUsers();
-  const newUser: LocalUser = {
+  // 3. Login successful
+  const updatedUser: AppUser = {
     ...user,
-    id: `user-${Date.now()}`,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    lastLogin: new Date().toLocaleString('he-IL')
   };
-  saveLocalUsers([...users, newUser]);
-  return newUser;
-};
 
-// ========================================================
-// Server-backed verification codes (WhatsApp / Email)
-// ========================================================
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000').replace(/\/$/, '');
-
-async function apiRequest(path: string, init?: RequestInit): Promise<Response> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
-    ...init
-  });
-  return res;
-}
-
-export interface SendCodeResult {
-  success: boolean;
-  code?: string;
-  message: string;
-}
-
-export async function sendVerificationCode(
-  identifier: string,
-  code: string,
-  type: 'login' | 'reset',
-  channel: 'whatsapp' | 'email'
-): Promise<SendCodeResult> {
-  // Try server first
   try {
-    const res = await apiRequest(channel === 'whatsapp'
-      ? '/api/auth/send-code'
-      : '/api/auth/send-email-code',
-      { method: 'POST', body: JSON.stringify({ [channel === 'whatsapp' ? 'phone' : 'email']: identifier, code, type }) }
-    );
-    if (res.ok) {
-      const data = await res.json();
-      return { success: data.success, code: data.code, message: data.message };
-    }
-  } catch {
-    // Server unavailable, fall back to localStorage
-  }
-  // Fallback: store locally (dev mode)
-  if (channel === 'whatsapp') {
-    return sendAuthCodeToWhatsApp(identifier, code, type);
-  }
-  // Email fallback - just store the code locally
-  storeAuthCode(identifier, code, type);
+    await saveAppUser(updatedUser);
+  } catch {}
+
+  setCurrentUser(updatedUser);
+
   return {
     success: true,
-    code,
-    message: `קוד האימות נשמר מקומית (שליפת שרת לא זמינה): ${code}`
+    user: updatedUser,
+    message: 'התחברת בהצלחה למערכת!'
   };
-}
-
-export async function verifyVerificationCode(
-  identifier: string,
-  code: string,
-  type: 'login' | 'reset'
-): Promise<{ success: boolean; message: string }> {
-  // Try server first
-  try {
-    const res = await apiRequest('/api/auth/verify-code', {
-      method: 'POST',
-      body: JSON.stringify({ phone: identifier, email: identifier, code, type })
-    });
-    if (res.ok) {
-      const data = await res.json();
-      return { success: data.success, message: data.message };
-    }
-  } catch {
-    // Server unavailable, fall back to localStorage
-  }
-  // Fallback: localStorage verification
-  const ok = verifyAuthCode(identifier, code, type);
-  return {
-    success: ok,
-    message: ok ? 'הקוד תקף' : 'הקוד שגוי או פג תוקפו'
-  };
-}
+};

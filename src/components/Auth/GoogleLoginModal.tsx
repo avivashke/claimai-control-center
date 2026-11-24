@@ -1,42 +1,32 @@
 import React, { useState } from 'react';
 import { 
   ShieldCheck, 
-  Phone, 
   Lock, 
-  RefreshCw, 
-  AlertCircle, 
-  CheckCircle2, 
   Mail, 
-  Smartphone, 
-  Headset, 
   Key, 
-  Send,
-  ArrowLeft,
-  Check,
-  User
+  CheckCircle2, 
+  AlertCircle,
+  Eye,
+  EyeOff,
+  Sparkles,
+  Info,
+  X
 } from 'lucide-react';
 import { AppUser } from '../../types';
-import {
-  localLogin,
-  sendAuthCodeToWhatsApp,
-  requestPasswordReset,
-  resetPasswordWithCode,
-  ensureDefaultAdmin,
-  generateAuthCode,
-  sendVerificationCode,
-  verifyVerificationCode
+import { 
+  loginWithPassword, 
+  resetPasswordWithAdminCode,
+  DEFAULT_FALLBACK_PASSWORD
 } from '../../services/authService';
 
-interface GoogleLoginModalProps {
+interface LoginModalProps {
   isOpen: boolean;
   onClose?: () => void;
   onLogin: (email: string, name?: string) => void;
   availableUsers: AppUser[];
 }
 
-type AuthMethod = 'google' | 'whatsapp' | 'email' | 'admin-reset';
-
-export const GoogleLoginModal: React.FC<GoogleLoginModalProps> = ({
+export const GoogleLoginModal: React.FC<LoginModalProps> = ({
   isOpen,
   onClose,
   onLogin,
@@ -44,659 +34,387 @@ export const GoogleLoginModal: React.FC<GoogleLoginModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  ensureDefaultAdmin();
-
-  const [method, setMethod] = useState<AuthMethod>('google');
-  const [step, setStep] = useState<'identifier' | 'code' | 'reset'>('identifier');
-
-  // Form state
-  const [identifier, setIdentifier] = useState(''); // phone or email
-  const [code, setCode] = useState('');
+  const [mode, setMode] = useState<'login' | 'reset'>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  
+  // Reset code fields
+  const [resetCode, setResetCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [sentCode, setSentCode] = useState<string | null>(null);
-  const [message, setMessage] = useState({ text: '', type: 'info' as 'info' | 'success' | 'error' });
+
   const [loading, setLoading] = useState(false);
-  const [codeSent, setCodeSent] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
-  const showMessage = (text: string, type: 'info' | 'success' | 'error' = 'info') => {
-    setMessage({ text, type });
-    setTimeout(() => setMessage({ text: '', type: 'info' }), 6000);
-  };
-
-  const cleanPhone = (p: string) => p.replace(/\s/g, '');
-  const cleanEmail = (e: string) => e.trim().toLowerCase();
-
-  // ===== Method selection handlers =====
-  const selectMethod = (m: AuthMethod) => {
-    setMethod(m);
-    setStep('identifier');
-    setIdentifier('');
-    setCode('');
-    setSentCode(null);
-    setCodeSent(false);
-    setNewPassword('');
-    setConfirmPassword('');
-    setMessage({ text: '', type: 'info' });
-  };
-
-  // ===== Google OAuth =====
-  const handleGoogleLogin = (email: string, name?: string) => {
-    onLogin(email, name);
-  };
-
-  // ===== WhatsApp flow =====
-  const handleRequestWhatsAppCode = async () => {
-    const p = cleanPhone(identifier);
-    if (!p || p.length < 8) {
-      showMessage('נא להזין מספר טלפון מלא (לפחות 8 ספרות)', 'error');
-      return;
-    }
-    setLoading(true);
-    const generatedCode = generateAuthCode();
-    const result = await sendVerificationCode(p, generatedCode, 'login', 'whatsapp');
-    setSentCode(result.code || generatedCode);
-    setCodeSent(true);
-    setLoading(false);
-    if (result.success) {
-      showMessage(result.message, 'success');
-      setStep('code');
-    } else {
-      showMessage(result.message, 'error');
-    }
-  };
-
-  const handleWhatsAppCodeLogin = async (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const p = cleanPhone(identifier);
-    const c = code.trim();
-    if (!p || !c) {
-      showMessage('נא להזין טלפון וקוד אימות', 'error');
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    if (!email.trim() || !password) {
+      setErrorMessage('נא להזין אימייל וסיסמה');
       return;
     }
+
     setLoading(true);
-    const result = await verifyVerificationCode(p, c, 'login');
-    setLoading(false);
-    if (result.success) {
-      // Find or create local user
-      ensureDefaultAdmin();
-      const localUsers = (await import('../../services/authService')).getLocalUsers();
-      const user = localUsers.find((u: any) => u.phone === p);
-      if (user) {
-        (await import('../../services/authService')).setCurrentUser({
-          id: user.id,
-          email: user.phone,
-          name: user.name,
-          role: user.role,
-          permissions: user.permissions,
-          isActive: user.isActive,
-          createdAt: user.createdAt,
-          lastLogin: new Date().toISOString()
-        });
-        onLogin(user.phone, user.name);
+    try {
+      const result = await loginWithPassword(email.trim(), password);
+      if (result.success && result.user) {
+        onLogin(result.user.email, result.user.name);
       } else {
-        showMessage('משתמש לא נמצא במערכת. פנה למנהל מערכת להוספה.', 'error');
+        setErrorMessage(result.message);
       }
-    } else {
-      showMessage(result.message, 'error');
+    } catch (err: any) {
+      setErrorMessage(err.message || 'שגיאה בהתחברות למערכת');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // ===== Email flow =====
-  const handleRequestEmailCode = async () => {
-    const e = cleanEmail(identifier);
-    if (!e || !e.includes('@')) {
-      showMessage('נא להזין כתובת אימייל תקינה', 'error');
-      return;
-    }
-    setLoading(true);
-    const generatedCode = generateAuthCode();
-    const result = await sendVerificationCode(e, generatedCode, 'login', 'email');
-    setSentCode(result.code || generatedCode);
-    setCodeSent(true);
-    setLoading(false);
-    if (result.success) {
-      showMessage(result.message, 'success');
-      setStep('code');
-    } else {
-      showMessage(result.message, 'error');
-    }
-  };
-
-  const handleEmailCodeLogin = async (e: React.FormEvent) => {
+  const handleResetSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const eMail = cleanEmail(identifier);
-    const c = code.trim();
-    if (!eMail || !c) {
-      showMessage('נא להזין אימייל וקוד אימות', 'error');
-      return;
-    }
-    setLoading(true);
-    const result = await verifyVerificationCode(eMail, c, 'login');
-    setLoading(false);
-    if (result.success) {
-      // Try to find AppUser by email
-      const { findUserByEmail } = await import('../../services/db');
-      const { loginWithGoogleEmail } = await import('../../services/authService');
-      let user = await findUserByEmail(eMail);
-      if (!user) {
-        user = await loginWithGoogleEmail(eMail, eMail.split('@')[0]);
-      }
-      onLogin(user.email, user.name);
-    } else {
-      showMessage(result.message, 'error');
-    }
-  };
+    setErrorMessage('');
+    setSuccessMessage('');
 
-  // ===== Admin Reset Code flow =====
-  const handleRequestAdminReset = async () => {
-    const id = cleanPhone(identifier) || cleanEmail(identifier);
-    if (!id) {
-      showMessage('נא להזין טלפון או אימייל', 'error');
+    if (!email.trim() || !resetCode.trim() || !newPassword) {
+      setErrorMessage('נא למלא את כל השדות');
       return;
     }
-    setStep('code');
-    showMessage('הזן את קוד האיפוס שקיבלת מהמנהל ואת הסיסמה החדשה', 'info');
-  };
 
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const id = cleanPhone(identifier) || cleanEmail(identifier);
-    const c = code.trim();
-    if (newPassword !== confirmPassword || newPassword.length < 6) {
-      showMessage('נא להזין סיסמה באורך 6 תווים לפחות ולזהה בשני השדות', 'error');
+    if (newPassword.length < 6) {
+      setErrorMessage('הסיסמה חייבת לכלול לפחות 6 תווים');
       return;
     }
-    if (!id || !c) {
-      showMessage('נא להזין מזהה וקוד איפוס', 'error');
+
+    if (newPassword !== confirmPassword) {
+      setErrorMessage('הסיסמאות אינן תואמות');
       return;
     }
+
     setLoading(true);
-    // Verify the admin reset code via server
-    const result = await verifyVerificationCode(id, c, 'reset');
-    setLoading(false);
-    if (result.success) {
-      // Reset password in local users (phone-based)
-      ensureDefaultAdmin();
-      const { getLocalUsers, saveLocalUsers, findLocalUserByPhone } = await import('../../services/authService');
-      const user = findLocalUserByPhone(id);
-      if (user) {
-        const users = getLocalUsers().map((u: any) =>
-          u.id === user.id ? { ...u, passwordHash: newPassword, updatedAt: new Date().toISOString() } : u
-        );
-        saveLocalUsers(users);
-        showMessage('הסיסמה אופסה בהצלחה. ניתן להיכנס עם הסיסמה החדשה.', 'success');
-        setStep('identifier');
-        setCode('');
-        setNewPassword('');
-        setConfirmPassword('');
+    try {
+      const result = await resetPasswordWithAdminCode(email.trim(), resetCode.trim(), newPassword);
+      if (result.success) {
+        setSuccessMessage(result.message);
+        if (result.user) {
+          setTimeout(() => {
+            onLogin(result.user!.email, result.user!.name);
+          }, 1200);
+        } else {
+          setMode('login');
+          setPassword(newPassword);
+        }
       } else {
-        showMessage('משתמש לא נמצא במערכת המקומית.', 'error');
+        setErrorMessage(result.message);
       }
-    } else {
-      showMessage(result.message, 'error');
+    } catch (err: any) {
+      setErrorMessage(err.message || 'שגיאה באיפוס הסיסמה');
+    } finally {
+      setLoading(false);
     }
-  };
-
-  // ===== Render method selector =====
-  const renderMethodSelector = () => (
-    <div className="p-6 border-b border-slate-800 bg-slate-900/80">
-      <h2 className="text-xl font-extrabold text-white mb-4">התחברות למערכת ClaimAI</h2>
-      <p className="text-xs text-slate-400 mb-6">בחר שיטת הזדהות:</p>
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          onClick={() => selectMethod('google')}
-          className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border transition-all ${
-            method === 'google'
-              ? 'bg-blue-600/20 border-blue-500/50 text-blue-400 shadow-blue-600/20'
-              : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600 hover:bg-slate-750'
-          }`}
-        >
-          <User className="w-5 h-5" />
-          <span className="text-sm font-semibold">כניסה עם Google</span>
-        </button>
-        <button
-          onClick={() => selectMethod('whatsapp')}
-          className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border transition-all ${
-            method === 'whatsapp'
-              ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400 shadow-emerald-600/20'
-              : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600 hover:bg-slate-750'
-          }`}
-        >
-          <Smartphone className="w-5 h-5" />
-          <span className="text-sm font-semibold">וואטסאפ (+972586735953)</span>
-        </button>
-        <button
-          onClick={() => selectMethod('email')}
-          className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border transition-all ${
-            method === 'email'
-              ? 'bg-amber-600/20 border-amber-500/50 text-amber-400 shadow-amber-600/20'
-              : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600 hover:bg-slate-750'
-          }`}
-        >
-          <Mail className="w-5 h-5" />
-          <span className="text-sm font-semibold">אימייל עם קוד אימות</span>
-        </button>
-        <button
-          onClick={() => selectMethod('admin-reset')}
-          className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border transition-all ${
-            method === 'admin-reset'
-              ? 'bg-purple-600/20 border-purple-500/50 text-purple-400 shadow-purple-600/20'
-              : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600 hover:bg-slate-750'
-          }`}
-        >
-          <Headset className="w-5 h-5" />
-          <span className="text-sm font-semibold">קוד איפוס מהמנהל</span>
-        </button>
-      </div>
-    </div>
-  );
-
-  // ===== Google sign-in content =====
-  const renderGoogleContent = () => (
-    <div className="p-6 space-y-5">
-      <div className="text-center">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center mx-auto shadow-lg shadow-blue-500/30">
-          <Lock className="w-8 h-8 text-white" />
-        </div>
-        <h3 className="text-lg font-bold text-white mt-3">התחברות עם חשבון Google</h3>
-        <p className="text-sm text-slate-400 mt-1">התחברות ישירות דרך חשבון גוגל שלך</p>
-      </div>
-
-      {availableUsers.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-[10px] text-slate-500 font-medium mb-3">או בחר משתמש מהרשימה:</p>
-          <div className="space-y-1">
-            {availableUsers.slice(0, 6).map((u) => (
-              <button
-                key={u.id}
-                onClick={() => handleGoogleLogin(u.email, u.name)}
-                className="w-full text-left p-2.5 rounded-lg bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 text-xs text-slate-300 transition-all flex items-center justify-between"
-              >
-                <span>{u.name}</span>
-                <span className="text-[10px] font-mono text-slate-500">{u.email}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="relative flex items-center my-4">
-        <div className="flex-grow border-t border-slate-800"></div>
-        <span className="flex-shrink mx-4 text-slate-500 text-[10px]">או התחבר עם חשבון גוגל אחר</span>
-        <div className="flex-grow border-t border-slate-800"></div>
-      </div>
-
-      <p className="text-[10px] text-slate-500 text-center">
-        כניסה עם Google דורשת הגדרת Client ID בפורטל אדמין
-      </p>
-    </div>
-  );
-
-  // ===== WhatsApp content =====
-  const renderWhatsAppContent = () => {
-    if (step === 'identifier') {
-      return (
-        <div className="p-6 space-y-5">
-          <div className="text-center">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/30">
-              <Smartphone className="w-8 h-8 text-white" />
-            </div>
-            <h3 className="text-lg font-bold text-white mt-3">התחברות עם וואטסאפ</h3>
-            <p className="text-sm text-slate-400 mt-1">
-              קוד אימות יישלח מהמספר <span className="font-mono text-emerald-400">+972586735953</span>
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            <label className="block text-xs font-medium text-slate-300">
-              מספר טלפון / וואטסאפ
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="tel"
-                placeholder="05XXXXXXXX"
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                className="flex-1 bg-slate-800 border border-slate-700 rounded-lg py-2.5 px-3 text-white font-mono text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                maxLength={15}
-              />
-              <button
-                onClick={handleRequestWhatsAppCode}
-                disabled={loading}
-                className="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:hover:bg-emerald-600 text-white text-xs font-bold font-mono shadow-md shadow-emerald-600/30 transition-all"
-              >
-                {loading ? 'שולח…' : 'שלח קוד אימות'}
-              </button>
-            </div>
-            {sentCode && (
-              <div className="mt-2 flex items-center justify-between gap-2">
-                <span className="text-[10px] text-slate-400">קוד אימות (בדמו):</span>
-                <span className="font-mono text-xl font-bold text-emerald-400 bg-emerald-900/30 px-3 py-1 rounded border border-emerald-500/30">
-                  {sentCode}
-                </span>
-              </div>
-            )}
-          </div>
-
-          <button
-            onClick={() => selectMethod('google')}
-            className="w-full py-2 rounded-lg bg-transparent border border-slate-700 text-xs text-slate-400 hover:text-slate-200 hover:border-slate-500 transition-all font-medium"
-          >
-            ← בחר שיטה אחרת
-          </button>
-        </div>
-      );
-    }
-
-    // Step: code entry
-    return (
-      <div className="p-6 space-y-5">
-        <div className="text-center">
-          <h3 className="text-lg font-bold text-white mt-3">הזן קוד אימות</h3>
-          <p className="text-sm text-slate-400 mt-1">
-            הקוד נשלח ל־<span className="font-mono text-slate-200">{identifier}</span>. תקף ל־10 דקות.
-          </p>
-        </div>
-
-        <div className="space-y-3">
-          <label className="block text-xs font-medium text-slate-300">
-            קוד אימות בן 6 ספרות
-          </label>
-          <input
-            type="text"
-            placeholder="000000"
-            value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2.5 px-3 text-white font-mono text-xl font-bold tracking-widest text-center focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            maxLength={6}
-          />
-          {sentCode && (
-            <button
-              onClick={() => setCode(sentCode!)}
-              className="text-[9px] text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
-            >
-              השתמש בקוד שהוצג ({sentCode})
-            </button>
-          )}
-        </div>
-
-        <button
-          onClick={handleWhatsAppCodeLogin}
-          disabled={loading || code.length !== 6}
-          className={`w-full py-2.5 rounded-lg text-white font-bold text-sm shadow-md transition-all ${
-            loading || code.length !== 6
-              ? 'bg-slate-800/50 border border-slate-700/50 text-slate-500 cursor-not-allowed'
-              : 'bg-emerald-600 hover:bg-emerald-500 border border-emerald-500/40 shadow-emerald-600/30'
-          }`}
-        >
-          {loading ? 'מאמת…' : 'אמת קוד והיכנס'}
-        </button>
-
-        <button
-          onClick={() => setStep('identifier')}
-          className="w-full py-2 rounded-lg bg-transparent border border-slate-700 text-xs text-slate-400 hover:text-slate-200 hover:border-slate-500 transition-all font-medium"
-        >
-          ← חזור להזנת טלפון
-        </button>
-      </div>
-    );
-  };
-
-  // ===== Email content =====
-  const renderEmailContent = () => {
-    if (step === 'identifier') {
-      return (
-        <div className="p-6 space-y-5">
-          <div className="text-center">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center mx-auto shadow-lg shadow-amber-500/30">
-              <Mail className="w-8 h-8 text-white" />
-            </div>
-            <h3 className="text-lg font-bold text-white mt-3">התחברות עם אימייל</h3>
-            <p className="text-sm text-slate-400 mt-1">קוד אימות יישלח לכתובת האימייל שלך</p>
-          </div>
-
-          <div className="space-y-3">
-            <label className="block text-xs font-medium text-slate-300">
-              כתובת אימייל
-            </label>
-            <input
-              type="email"
-              placeholder="you@example.com"
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2.5 px-3 text-white font-mono text-sm focus:outline-none focus:ring-1 focus:ring-amber-500"
-            />
-            {sentCode && (
-              <div className="mt-2 flex items-center justify-between gap-2">
-                <span className="text-[10px] text-slate-400">קוד אימות (בדמו):</span>
-                <span className="font-mono text-xl font-bold text-amber-400 bg-amber-900/30 px-3 py-1 rounded border border-amber-500/30">
-                  {sentCode}
-                </span>
-              </div>
-            )}
-          </div>
-
-          <button
-            onClick={handleRequestEmailCode}
-            disabled={loading}
-            className="w-full py-2.5 rounded-lg bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:hover:bg-amber-600 text-white text-xs font-bold font-mono shadow-md shadow-amber-600/30 transition-all"
-          >
-            {loading ? 'שולח…' : 'שלח קוד אימות'}
-          </button>
-
-          <button
-            onClick={() => selectMethod('google')}
-            className="w-full py-2 rounded-lg bg-transparent border border-slate-700 text-xs text-slate-400 hover:text-slate-200 hover:border-slate-500 transition-all font-medium"
-          >
-            ← בחר שיטה אחרת
-          </button>
-        </div>
-      );
-    }
-
-    return (
-      <div className="p-6 space-y-5">
-        <div className="text-center">
-          <h3 className="text-lg font-bold text-white mt-3">הזן קוד אימות</h3>
-          <p className="text-sm text-slate-400 mt-1">
-            הקוד נשלח ל־<span className="font-mono text-slate-200">{identifier}</span>. תקף ל־10 דקות.
-          </p>
-        </div>
-
-        <div className="space-y-3">
-          <label className="block text-xs font-medium text-slate-300">
-            קוד אימות בן 6 ספרות
-          </label>
-          <input
-            type="text"
-            placeholder="000000"
-            value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-            className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2.5 px-3 text-white font-mono text-xl font-bold tracking-widest text-center focus:outline-none focus:ring-1 focus:ring-amber-500"
-            maxLength={6}
-          />
-          {sentCode && (
-            <button
-              onClick={() => setCode(sentCode!)}
-              className="text-[9px] text-amber-400 hover:text-amber-300 underline underline-offset-2"
-            >
-              השתמש בקוד שהוצג ({sentCode})
-            </button>
-          )}
-        </div>
-
-        <button
-          onClick={handleEmailCodeLogin}
-          disabled={loading || code.length !== 6}
-          className={`w-full py-2.5 rounded-lg text-white font-bold text-sm shadow-md transition-all ${
-            loading || code.length !== 6
-              ? 'bg-slate-800/50 border border-slate-700/50 text-slate-500 cursor-not-allowed'
-              : 'bg-amber-600 hover:bg-amber-500 border border-amber-500/40 shadow-amber-600/30'
-          }`}
-        >
-          {loading ? 'מאמת…' : 'אמת קוד והיכנס'}
-        </button>
-
-        <button
-          onClick={() => setStep('identifier')}
-          className="w-full py-2 rounded-lg bg-transparent border border-slate-700 text-xs text-slate-400 hover:text-slate-200 hover:border-slate-500 transition-all font-medium"
-        >
-          ← חזור להזנת אימייל
-        </button>
-      </div>
-    );
-  };
-
-  // ===== Admin Reset Code content =====
-  const renderAdminResetContent = () => {
-    if (step === 'identifier') {
-      return (
-        <div className="p-6 space-y-5">
-          <div className="text-center">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center mx-auto shadow-lg shadow-purple-500/30">
-              <Headset className="w-8 h-8 text-white" />
-            </div>
-            <h3 className="text-lg font-bold text-white mt-3">איפוס סיסמה דרך מנהל מערכת</h3>
-            <p className="text-sm text-slate-400 mt-1">
-              קבל קוד איפוס מהמנהל במערכת והזן כאן יחד עם סיסמה חדשה
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            <label className="block text-xs font-medium text-slate-300">
-              טלפון או אימייל הרשום במערכת
-            </label>
-            <input
-              type="text"
-              placeholder="05XXXXXXXX או email@domain.com"
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2.5 px-3 text-white font-mono text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
-            />
-          </div>
-
-          <button
-            onClick={handleRequestAdminReset}
-            disabled={loading}
-            className="w-full py-2.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm shadow-lg shadow-purple-600/30 transition-all"
-          >
-            {loading ? 'מעבד…' : 'הזן קוד איפוס מהמנהל'}
-          </button>
-
-          <button
-            onClick={() => selectMethod('google')}
-            className="w-full py-2 rounded-lg bg-transparent border border-slate-700 text-xs text-slate-400 hover:text-slate-200 hover:border-slate-500 transition-all font-medium"
-          >
-            ← בחר שיטה אחרת
-          </button>
-        </div>
-      );
-    }
-
-    if (step === 'code') {
-      return (
-        <div className="p-6 space-y-5">
-          <div className="text-center">
-            <h3 className="text-lg font-bold text-white mt-3">איפוס סיסמה</h3>
-          <p className="text-sm text-slate-400 mt-1">
-            הזן את קוד האיפוס שקיבלת מהמנהל ואת הסיסמה החדשה
-          </p>
-          </div>
-          <div className="space-y-3">
-            <label className="block text-xs font-medium text-slate-300">
-              קוד איפוס שקיבלת מהמנהל
-            </label>
-            <input
-              type="text"
-              placeholder="000000"
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2.5 px-3 text-white font-mono text-xl font-bold tracking-widest text-center focus:outline-none focus:ring-1 focus:ring-purple-500"
-              maxLength={6}
-            />
-          </div>
-          <div className="space-y-3">
-            <label className="block text-xs font-medium text-slate-300">
-              סיסמה חדשה
-            </label>
-            <input
-              type="password"
-              placeholder="סיסמה חדשה (מינימום 6 תווים)"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2.5 px-3 text-white font-mono text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
-            />
-            <label className="block text-xs font-medium text-slate-300 mt-2">
-              אימות סיסמה חדשה
-            </label>
-            <input
-              type="password"
-              placeholder="חזור על הסיסמה החדשה"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2.5 px-3 text-white font-mono text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
-            />
-          </div>
-
-          <button
-            onClick={handleResetPassword}
-            disabled={loading}
-            className={`w-full py-2.5 rounded-lg text-white font-bold text-sm shadow-md transition-all ${
-              loading
-                ? 'bg-slate-800/50 text-slate-500 cursor-not-allowed'
-                : 'bg-purple-600 hover:bg-purple-500 border border-purple-500/40 shadow-purple-600/30'
-            }`}
-          >
-            {loading ? 'מאפס סיסמה…' : 'אפס סיסמה'}
-          </button>
-
-          <button
-            onClick={() => setStep('identifier')}
-            className="w-full py-2 rounded-lg bg-transparent border border-slate-700 text-xs text-slate-400 hover:text-slate-200 hover:border-slate-500 transition-all font-medium"
-          >
-            ← חזור
-          </button>
-        </div>
-      );
-    }
-
-    return null;
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
-      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col">
-        {onClose && (
-          <button
-            onClick={onClose}
-            className="absolute right-4 top-4 w-7 h-7 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
-          >
-            <ShieldCheck className="w-4 h-4" />
-          </button>
-        )}
-
-        {method === 'google' ? renderMethodSelector() : null}
-
-        <div className="p-6 flex-1 overflow-y-auto">
-          {method === 'google' ? renderGoogleContent() : null}
-          {method === 'whatsapp' ? renderWhatsAppContent() : null}
-          {method === 'email' ? renderEmailContent() : null}
-          {method === 'admin-reset' ? renderAdminResetContent() : null}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in-50 duration-150" dir="rtl">
+      <div className="w-full max-w-md bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden">
+        
+        {/* Top Header Banner */}
+        <div className="relative p-6 bg-gradient-to-r from-blue-950/60 via-slate-900 to-slate-900 border-b border-slate-800 text-center space-y-2">
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="absolute left-4 top-4 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              title="סגור חלון"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center mx-auto shadow-lg shadow-blue-500/30 border border-blue-400/30">
+            <Lock className="w-6 h-6 text-white" />
+          </div>
+          <h2 className="text-xl font-black text-white tracking-tight">
+            Claim<span className="text-blue-400">AI</span> Control Center
+          </h2>
+          <p className="text-xs text-slate-400">
+            {mode === 'login' 
+              ? 'הזן אימייל וסיסמה כדי להיכנס למערכת' 
+              : 'הגדרת סיסמה עם קוד איפוס שקיבלת ממנהל המערכת'}
+          </p>
         </div>
 
-        {message.text && (
-          <div className={`px-4 py-3 rounded-xl text-xs font-semibold flex items-center gap-2 border ${
-            message.type === 'success'
-              ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
-              : message.type === 'error'
-              ? 'bg-rose-500/15 border-rose-500/30 text-rose-300'
-              : 'bg-blue-500/15 border-blue-500/30 text-blue-300'
-          }`}>
-            {message.type === 'success' ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : message.type === 'error' ? <AlertCircle className="w-4 h-4 shrink-0" /> : <Phone className="w-4 h-4 shrink-0" />}
-            <span>{message.text}</span>
+        {/* Tab Switcher */}
+        <div className="grid grid-cols-2 p-1 bg-slate-950 border-b border-slate-800 text-xs font-semibold">
+          <button
+            type="button"
+            onClick={() => {
+              setMode('login');
+              setErrorMessage('');
+              setSuccessMessage('');
+            }}
+            className={`py-2 rounded-xl transition-all ${
+              mode === 'login'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            כניסה עם סיסמה
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode('reset');
+              setErrorMessage('');
+              setSuccessMessage('');
+            }}
+            className={`py-2 rounded-xl transition-all ${
+              mode === 'reset'
+                ? 'bg-purple-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            קוד איפוס מהאדמין
+          </button>
+        </div>
+
+        {/* Feedback Messages */}
+        {errorMessage && (
+          <div className="m-4 mb-0 p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-semibold flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{errorMessage}</span>
           </div>
         )}
+
+        {successMessage && (
+          <div className="m-4 mb-0 p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>{successMessage}</span>
+          </div>
+        )}
+
+        {/* MODE 1: Login with Email & Password */}
+        {mode === 'login' && (
+          <form onSubmit={handleLoginSubmit} className="p-6 space-y-4">
+            
+            {/* Email Field */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-300">
+                כתובת אימייל
+              </label>
+              <div className="relative">
+                <Mail className="absolute right-3 top-3 w-4 h-4 text-slate-500" />
+                <input
+                  type="email"
+                  required
+                  placeholder="name@claimai.co.il"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pr-10 pl-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            {/* Quick Email Selection Dropdown from registered users for convenience */}
+            {availableUsers.length > 0 && !email && (
+              <div className="space-y-1">
+                <span className="text-[10px] text-slate-500 font-medium">בחר משתמש רשום למילוי מהיר של האימייל:</span>
+                <select
+                  onChange={(e) => {
+                    if (e.target.value) setEmail(e.target.value);
+                  }}
+                  defaultValue=""
+                  className="w-full bg-slate-800 text-slate-300 border border-slate-700 rounded-lg py-1 px-2 text-[11px] focus:outline-none cursor-pointer"
+                >
+                  <option value="" disabled>-- בחר חשבון משתמש --</option>
+                  {availableUsers.map(u => (
+                    <option key={u.id} value={u.email}>
+                      {u.name} ({u.role}) — {u.email}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Password Field */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold text-slate-300">
+                  סיסמה
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setMode('reset')}
+                  className="text-[11px] text-blue-400 hover:underline"
+                >
+                  הגדרת סיסמה עם קוד?
+                </button>
+              </div>
+              <div className="relative">
+                <Lock className="absolute right-3 top-3 w-4 h-4 text-slate-500" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  placeholder="הזן את סיסמתך..."
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pr-10 pl-10 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute left-3 top-3 text-slate-500 hover:text-slate-300"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold shadow-lg shadow-blue-600/30 transition-all disabled:opacity-50 hover:scale-[1.01]"
+            >
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>בודק נתונים...</span>
+                </>
+              ) : (
+                <span>התחבר למערכת</span>
+              )}
+            </button>
+
+            {/* Netlify Env & Admin info hint */}
+            <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-[11px] text-slate-400 space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-slate-300">
+                <Info className="w-3.5 h-3.5 text-blue-400" />
+                <span>הגדרת סיסמאות דרך משתני Netlify:</span>
+              </div>
+              <p className="leading-relaxed">
+                ניתן לקבוע סיסמה בנטליפי דרך המשתנים: <code className="text-blue-300 font-mono">VITE_ADMIN_PASSWORD</code> לאדמין, ו-<code className="text-purple-300 font-mono">VITE_EDITOR_PASSWORD</code> לעורכים. (סיסמת ברירת מחדל ראשונית: <code className="text-slate-300 font-mono">ClaimAI2026!</code>).
+              </p>
+            </div>
+
+          </form>
+        )}
+
+        {/* MODE 2: Set Password with Admin Code */}
+        {mode === 'reset' && (
+          <form onSubmit={handleResetSubmit} className="p-6 space-y-4">
+            
+            <div className="p-3 rounded-xl bg-purple-950/20 border border-purple-500/30 text-xs text-purple-200">
+              <p className="leading-relaxed">
+                מנהל המערכת יכול להפיק עבורך קוד איפוס סיסמה חד-פעמי (6 ספרות) מתוך פורטל אדמין. הזן את פרטיך כאן כדי לקבוע את סיסמתך החדשה.
+              </p>
+            </div>
+
+            {/* Email Field */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-300">
+                כתובת אימייל שלך
+              </label>
+              <div className="relative">
+                <Mail className="absolute right-3 top-3 w-4 h-4 text-slate-500" />
+                <input
+                  type="email"
+                  required
+                  placeholder="name@claimai.co.il"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pr-10 pl-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+            </div>
+
+            {/* Admin Reset Code */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-300">
+                קוד איפוס מהאדמין (6 ספרות)
+              </label>
+              <div className="relative">
+                <Key className="absolute right-3 top-3 w-4 h-4 text-slate-500" />
+                <input
+                  type="text"
+                  required
+                  maxLength={6}
+                  placeholder="למשל: 492810"
+                  value={resetCode}
+                  onChange={(e) => setResetCode(e.target.value.replace(/\D/g, ''))}
+                  className="w-full pr-10 pl-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono tracking-widest text-center text-sm font-bold"
+                />
+              </div>
+            </div>
+
+            {/* New Password */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-300">
+                סיסמה חדשה (לפחות 6 תווים)
+              </label>
+              <div className="relative">
+                <Lock className="absolute right-3 top-3 w-4 h-4 text-slate-500" />
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  placeholder="הזן סיסמה חדשה..."
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full pr-10 pl-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono"
+                />
+              </div>
+            </div>
+
+            {/* Confirm Password */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-300">
+                אימות סיסמה חדשה
+              </label>
+              <div className="relative">
+                <Lock className="absolute right-3 top-3 w-4 h-4 text-slate-500" />
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  placeholder="הזן שוב את הסיסמה..."
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full pr-10 pl-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono"
+                />
+              </div>
+            </div>
+
+            {/* Submit Reset Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-extrabold shadow-lg shadow-purple-600/30 transition-all disabled:opacity-50 hover:scale-[1.01]"
+            >
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>מאמת ומעדכן סיסמה...</span>
+                </>
+              ) : (
+                <span>קבע סיסמה והתחבר למערכת</span>
+              )}
+            </button>
+
+            <div className="text-center pt-1">
+              <button
+                type="button"
+                onClick={() => setMode('login')}
+                className="text-xs text-slate-400 hover:text-white transition-colors"
+              >
+                ← חזרה להתחברות רגילה עם סיסמה
+              </button>
+            </div>
+
+          </form>
+        )}
+
       </div>
     </div>
   );

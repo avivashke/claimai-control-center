@@ -33,7 +33,6 @@ import { testNetlifyBlobs } from './services/blobsService';
 import { 
   getCurrentUser, 
   setCurrentUser, 
-  loginWithGoogleEmail, 
   logoutUser, 
   hasPermission 
 } from './services/authService';
@@ -57,7 +56,7 @@ export const App: React.FC = () => {
   const [customTables, setCustomTables] = useState<CustomTable[]>([]);
   const [selectedCustomTableId, setSelectedCustomTableId] = useState<string>('');
   const [users, setUsers] = useState<AppUser[]>([]);
-  const [currentUser, setCurrentUserState] = useState<AppUser>(getCurrentUser());
+  const [currentUser, setCurrentUserState] = useState<AppUser | null>(getCurrentUser());
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -121,10 +120,10 @@ export const App: React.FC = () => {
   }, []);
 
   // Permissions helpers
-  const canEditCrm = currentUser.role === 'admin' || currentUser.permissions.canEditCrm;
-  const canEditProduct = currentUser.role === 'admin' || currentUser.permissions.canEditProduct;
-  const canEditTables = currentUser.role === 'admin' || currentUser.permissions.canEditTables;
-  const canManageUsers = currentUser.role === 'admin' || currentUser.permissions.canManageUsers;
+  const canEditCrm = Boolean(currentUser && (currentUser.role === 'admin' || currentUser.permissions?.canEditCrm));
+  const canEditProduct = Boolean(currentUser && (currentUser.role === 'admin' || currentUser.permissions?.canEditProduct));
+  const canEditTables = Boolean(currentUser && (currentUser.role === 'admin' || currentUser.permissions?.canEditTables));
+  const canManageUsers = Boolean(currentUser && (currentUser.role === 'admin' || currentUser.permissions?.canManageUsers));
 
   // Handlers for Users & Auth
   const handleLogin = async (email: string, name?: string) => {
@@ -143,6 +142,7 @@ export const App: React.FC = () => {
 
   const handleLogout = () => {
     logoutUser();
+    setCurrentUserState(null);
     setIsLoginModalOpen(true);
   };
 
@@ -153,7 +153,7 @@ export const App: React.FC = () => {
       if (exists) return prev.map(u => u.id === user.id ? user : u);
       return [user, ...prev];
     });
-    if (currentUser.id === user.id) {
+    if (currentUser && currentUser.id === user.id) {
       setCurrentUserState(user);
     }
   };
@@ -328,6 +328,20 @@ export const App: React.FC = () => {
   const attentionCount = useMemo(() => {
     return clients.filter(c => c.requiresAttention || c.status === 'Urgent').length;
   }, [clients]);
+
+  // Unauthenticated screen: completely locks access until valid credentials are provided
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-[#0b0f19] text-slate-100 flex flex-col items-center justify-center font-sans p-4 relative selection:bg-blue-600 selection:text-white" dir="rtl">
+        <div className="absolute inset-0 bg-gradient-to-b from-blue-950/20 via-[#0b0f19] to-[#0b0f19] pointer-events-none" />
+        <GoogleLoginModal
+          isOpen={true}
+          onLogin={handleLogin}
+          availableUsers={users}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0b0f19] text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white" dir="rtl">
