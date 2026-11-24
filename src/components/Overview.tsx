@@ -64,32 +64,32 @@ export const Overview: React.FC<OverviewProps> = ({
     <div className="space-y-6">
       
       {/* Welcome Banner */}
-      <div className="relative overflow-hidden rounded-2xl overview-hero-banner p-6 shadow-xl">
+      <div className="relative overflow-hidden rounded-2xl overview-hero-banner p-6 shadow-xl border">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold mb-2 border border-blue-400/30">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold mb-2 hero-badge">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
               מערכת חיה ומסונכרנת · ClaimAI Control Center
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
+            <h1 className="text-2xl sm:text-3xl font-extrabold hero-title tracking-tight">
               לוח שליטה אחוד ללקוחות, ביצועים ומפת מוצר
             </h1>
-            <p className="text-slate-300 text-sm mt-1 max-w-2xl">
-              מרכז בקרה אחד לניהול מאגר של <strong className="text-white">{totalClients.toLocaleString()} לקוחות ולידים</strong>, לצד ניטור ומעקב מלא אחר <strong className="text-white">{productItems.length} משימות פיתוח, תקלות ופיצ'רים</strong>.
+            <p className="text-sm mt-1 max-w-2xl hero-subtitle leading-relaxed">
+              מרכז בקרה אחד לניהול מאגר של <strong className="hero-strong">{totalClients.toLocaleString()} לקוחות ולידים</strong>, לצד ניטור ומעקב מלא אחר <strong className="hero-strong">{productItems.length} משימות פיתוח, תקלות ופיצ'רים</strong>.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={() => onNavigateToTab('myday')}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.02]"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.02] cursor-pointer"
             >
-              <CalendarClock className="w-4 h-4" />
+              <CalendarClock className="w-4 h-4 text-slate-950" />
               <span>פתח את "היום שלי"</span>
             </button>
             <button
               onClick={() => onNavigateToTab('product')}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 text-sm font-semibold transition-all"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl hero-secondary-btn text-sm font-semibold transition-all cursor-pointer"
             >
               <Bug className="w-4 h-4 text-rose-400" />
               <span>תקלות ופיתוח ({productItems.length})</span>
