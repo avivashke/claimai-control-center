@@ -499,7 +499,11 @@ export const ClientTable: React.FC<ClientTableProps> = ({
             >
               <Users className="w-4 h-4" />
               <span>טבלה ראשית (לקוחות CRM)</span>
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-950/60 font-mono">
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                activeSubTab === 'main_crm'
+                  ? 'bg-white/25 text-white'
+                  : 'bg-slate-700/50 text-slate-400'
+              }`}>
                 {clients.length}
               </span>
             </button>
@@ -517,7 +521,11 @@ export const ClientTable: React.FC<ClientTableProps> = ({
               >
                 <TableIcon className="w-4 h-4 text-purple-300" />
                 <span>{tbl.name}</span>
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-purple-950/60 font-mono text-purple-200">
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                  activeSubTab === tbl.id
+                    ? 'bg-white/25 text-white'
+                    : 'bg-slate-700/50 text-slate-400'
+                }`}>
                   {tbl.rows.length}
                 </span>
               </button>

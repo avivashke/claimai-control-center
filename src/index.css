@@ -7,14 +7,14 @@
    ======================================================== */
 :root {
   color-scheme: dark;
-  --bg-page: #0b0f19;
-  --bg-header: #0f172a;
+  --bg-page: #080c14;
+  --bg-header: #0d1527;
   --bg-card: #0f172a;
-  --bg-card-subtle: #1e293b;
+  --bg-card-subtle: #182234;
   --bg-th: #0f172a;
   --bg-hover: #1e293b;
-  --border-color: #334155;
-  --border-subtle: #1e293b;
+  --border-color: #27374f;
+  --border-subtle: #1a273b;
   --text-main: #f8fafc;
   --text-secondary: #cbd5e1;
   --text-muted: #94a3b8;
@@ -22,32 +22,32 @@
 
 [data-theme="light"] {
   color-scheme: light;
-  --bg-page: #f8fafc;
+  --bg-page: #ebf1f6; /* Modern executive slate-tinted canvas with real presence */
   --bg-header: #ffffff;
   --bg-card: #ffffff;
-  --bg-card-subtle: #f1f5f9;
-  --bg-th: #f1f5f9;
-  --bg-hover: #f8fafc;
-  --border-color: #e2e8f0;
-  --border-subtle: #f1f5f9;
-  --text-main: #0f172a;
-  --text-secondary: #334155;
-  --text-muted: #64748b;
+  --bg-card-subtle: #f4f8fc;
+  --bg-th: #f0f4f9;
+  --bg-hover: #f1f5fa;
+  --border-color: #cbd8e6; /* Crisp, tactile definition */
+  --border-subtle: #dbe4ee;
+  --text-main: #090d16;
+  --text-secondary: #2d3e50;
+  --text-muted: #5e7188;
 }
 
 [data-theme="sepia"] {
   color-scheme: light;
-  --bg-page: #f7f4ed;
+  --bg-page: #eee5d6; /* Warm sandstone parchment canvas */
   --bg-header: #fdfcf9;
   --bg-card: #fdfcf9;
-  --bg-card-subtle: #eee7dc;
-  --bg-th: #eee7dc;
-  --bg-hover: #f5ede0;
-  --border-color: #e4dbce;
-  --border-subtle: #ede5d8;
-  --text-main: #2c1e14;
-  --text-secondary: #533d2e;
-  --text-muted: #7c6553;
+  --bg-card-subtle: #f6efe4;
+  --bg-th: #f4ecdf;
+  --bg-hover: #f4ecdf;
+  --border-color: #d7c6b1; /* Warm, defined border */
+  --border-subtle: #e4d8c7;
+  --text-main: #23160d;
+  --text-secondary: #4a3628;
+  --text-muted: #735a47;
 }
 
 body {
@@ -100,13 +100,58 @@ table thead th {
 }
 
 .glow-card {
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+}
+
+/* ========================================================
+   GLOBAL 3D TACTILE DIMENSIONALITY & MICRO-INTERACTIONS
+   ======================================================== */
+/* Tactile Cards Across All Themes */
+.rounded-2xl.border,
+.rounded-xl.border {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.35), 0 6px 18px -3px rgba(0, 0, 0, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.07);
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Tactile Hover Lift for Clickable Cards */
+.cursor-pointer.rounded-2xl:hover,
+.cursor-pointer.rounded-xl:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.4), 0 12px 24px -4px rgba(0, 0, 0, 0.35), inset 0 1px 0 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Global Tactile Button Active Depression */
+button:active:not(:disabled) {
+  transform: translateY(1px) scale(0.99) !important;
+}
+
+/* Primary Action Buttons Tactile 3D Sheen */
+.bg-blue-600,
+.bg-purple-600,
+.bg-emerald-600,
+.bg-gradient-to-r {
+  box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.2), 0 4px 14px 0 rgba(37, 99, 235, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.28) !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.bg-blue-600:hover,
+.bg-purple-600:hover,
+.bg-emerald-600:hover {
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.25), 0 6px 18px 0 rgba(37, 99, 235, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.35) !important;
+}
+
+/* Recessed Inset Search & Input Controls (Dark Mode Default) */
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.4), 0 1px 0 0 rgba(255, 255, 255, 0.04);
 }
 
 /* Hero Welcome Banner Multi-theme */
 .overview-hero-banner {
   background: linear-gradient(135deg, rgba(30, 58, 138, 0.45) 0%, rgba(49, 46, 129, 0.35) 50%, #0f172a 100%) !important;
   border: 1px solid rgba(59, 130, 246, 0.3) !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.12) !important;
 }
 .hero-title {
   color: #ffffff !important;
@@ -121,20 +166,22 @@ table thead th {
   background-color: rgba(59, 130, 246, 0.2) !important;
   color: #93c5fd !important;
   border: 1px solid rgba(96, 165, 250, 0.3) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
 }
 .hero-secondary-btn {
   background-color: #1e293b !important;
   color: #f8fafc !important;
   border: 1px solid #334155 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.25), inset 0 1px 0 0 rgba(255, 255, 255, 0.08) !important;
 }
 .hero-secondary-btn:hover {
   background-color: #334155 !important;
 }
 
 [data-theme="light"] .overview-hero-banner {
-  background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 50%, #ffffff 100%) !important;
-  border: 1px solid #bfdbfe !important;
-  box-shadow: 0 4px 20px -2px rgba(59, 130, 246, 0.08) !important;
+  background: linear-gradient(135deg, #f0f7ff 0%, #fdfefe 50%, #ffffff 100%) !important;
+  border: 1px solid #b9d5f3 !important;
+  box-shadow: 0 4px 20px -2px rgba(37, 99, 235, 0.1), 0 1px 3px 0 rgba(15, 23, 42, 0.06), inset 0 1px 0 0 rgba(255, 255, 255, 1) !important;
 }
 [data-theme="light"] .hero-title {
   color: #0f172a !important;
@@ -149,21 +196,22 @@ table thead th {
   background-color: #dbeafe !important;
   color: #1d4ed8 !important;
   border: 1px solid #93c5fd !important;
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
 }
 [data-theme="light"] .hero-secondary-btn {
   background-color: #ffffff !important;
   color: #0f172a !important;
-  border: 1px solid #cbd5e1 !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  border: 1px solid #cbd8e6 !important;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.9) !important;
 }
 [data-theme="light"] .hero-secondary-btn:hover {
-  background-color: #f1f5f9 !important;
+  background-color: #f1f5fa !important;
 }
 
 [data-theme="sepia"] .overview-hero-banner {
-  background: linear-gradient(135deg, #f5ece0 0%, #faf6f0 50%, #fdfcf9 100%) !important;
-  border: 1px solid #dfd0bc !important;
-  box-shadow: 0 4px 20px -2px rgba(60, 40, 20, 0.08) !important;
+  background: linear-gradient(135deg, #f4ebe0 0%, #faf5ee 50%, #fdfcf9 100%) !important;
+  border: 1px solid #dccbb8 !important;
+  box-shadow: 0 4px 20px -2px rgba(60, 40, 20, 0.1), 0 1px 3px 0 rgba(44, 30, 20, 0.06), inset 0 1px 0 0 rgba(255, 255, 255, 1) !important;
 }
 [data-theme="sepia"] .hero-title {
   color: #2c1e14 !important;
@@ -178,15 +226,16 @@ table thead th {
   background-color: #ebdcc9 !important;
   color: #78350f !important;
   border: 1px solid #d4be9f !important;
+  box-shadow: 0 1px 2px rgba(60, 40, 20, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
 }
 [data-theme="sepia"] .hero-secondary-btn {
   background-color: #fdfcf9 !important;
   color: #2c1e14 !important;
-  border: 1px solid #decbb5 !important;
-  box-shadow: 0 1px 2px rgba(60, 40, 20, 0.05) !important;
+  border: 1px solid #d7c6b1 !important;
+  box-shadow: 0 1px 3px 0 rgba(44, 30, 20, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.9) !important;
 }
 [data-theme="sepia"] .hero-secondary-btn:hover {
-  background-color: #f4ecdf !important;
+  background-color: #f2e9dc !important;
 }
 
 /* ========================================================
@@ -195,7 +244,7 @@ table thead th {
 [data-theme="light"] body,
 [data-theme="light"] .min-h-screen,
 [data-theme="light"] .bg-\[\#0b0f19\] {
-  background-color: #f8fafc !important;
+  background-color: #ebf1f6 !important;
   color: #0f172a !important;
 }
 
@@ -219,7 +268,7 @@ table thead th {
 [data-theme="light"] .bg-slate-800\/60,
 [data-theme="light"] .bg-slate-800\/50,
 [data-theme="light"] .bg-slate-800\/40 {
-  background-color: #f1f5f9 !important;
+  background-color: #f1f5fa !important;
 }
 
 /* Hovers */
@@ -228,10 +277,10 @@ table thead th {
 [data-theme="light"] .hover\:bg-slate-800\/40:hover,
 [data-theme="light"] .hover\:bg-slate-750:hover,
 [data-theme="light"] .hover\:bg-slate-700:hover {
-  background-color: #e2e8f0 !important;
+  background-color: #e2eaf2 !important;
 }
 
-/* Borders */
+/* Crisp Structural Borders */
 [data-theme="light"] .border-slate-800,
 [data-theme="light"] .border-slate-800\/80,
 [data-theme="light"] .border-slate-800\/60,
@@ -242,7 +291,7 @@ table thead th {
 [data-theme="light"] .border-slate-700\/70,
 [data-theme="light"] .border-slate-700\/60,
 [data-theme="light"] .border-slate-750 {
-  border-color: #e2e8f0 !important;
+  border-color: #cbd8e6 !important;
 }
 
 /* Typography Hierarchy */
@@ -254,21 +303,21 @@ table thead th {
 
 [data-theme="light"] .text-slate-300,
 [data-theme="light"] .text-slate-400 {
-  color: #475569 !important;
+  color: #334155 !important;
 }
 
 [data-theme="light"] .text-slate-500 {
   color: #64748b !important;
 }
 
-/* Form Controls (Inputs, Selects, Search) */
+/* Form Controls (Inputs, Selects, Search) - Recessed 3D Inset */
 [data-theme="light"] input:not([type="checkbox"]):not([type="radio"]),
 [data-theme="light"] select,
 [data-theme="light"] textarea {
   background-color: #ffffff !important;
   color: #0f172a !important;
-  border-color: #cbd5e1 !important;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+  border-color: #cbd8e6 !important;
+  box-shadow: inset 0 2px 4px 0 rgba(15, 23, 42, 0.06), 0 1px 0 0 rgba(255, 255, 255, 0.9) !important;
 }
 
 [data-theme="light"] input::placeholder,
@@ -278,27 +327,37 @@ table thead th {
 
 /* Table Specific Styling */
 [data-theme="light"] tr:hover td {
-  background-color: #f8fafc !important;
+  background-color: #f6fafc !important;
 }
 
 [data-theme="light"] th {
-  background-color: #f1f5f9 !important;
+  background-color: #edf3f8 !important;
   color: #0f172a !important;
-  border-color: #e2e8f0 !important;
+  border-color: #cbd8e6 !important;
   font-weight: 700 !important;
 }
 
 [data-theme="light"] td {
-  border-color: #f1f5f9 !important;
+  border-color: #edf3f8 !important;
   color: #334155 !important;
 }
 
-/* Shadows */
+/* 3D Tactile Elevation Shadows (Light Mode) */
 [data-theme="light"] .shadow-xl,
 [data-theme="light"] .shadow-2xl,
 [data-theme="light"] .shadow-lg,
 [data-theme="light"] .shadow-md {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05) !important;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.08), 0 6px 18px -3px rgba(15, 23, 42, 0.07), inset 0 1px 0 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+[data-theme="light"] .rounded-2xl.border,
+[data-theme="light"] .rounded-xl.border {
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.08), 0 6px 18px -3px rgba(15, 23, 42, 0.07), inset 0 1px 0 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+[data-theme="light"] .cursor-pointer.rounded-2xl:hover,
+[data-theme="light"] .cursor-pointer.rounded-xl:hover {
+  box-shadow: 0 4px 8px 0 rgba(15, 23, 42, 0.08), 0 12px 24px -4px rgba(15, 23, 42, 0.12), inset 0 1px 0 0 rgba(255, 255, 255, 1) !important;
 }
 
 /* Rich SaaS Status Badges (Light Mode) */
@@ -360,7 +419,7 @@ table thead th {
 [data-theme="sepia"] body,
 [data-theme="sepia"] .min-h-screen,
 [data-theme="sepia"] .bg-\[\#0b0f19\] {
-  background-color: #f7f4ed !important;
+  background-color: #eee5d6 !important;
   color: #2c1e14 !important;
 }
 
@@ -384,7 +443,7 @@ table thead th {
 [data-theme="sepia"] .bg-slate-800\/60,
 [data-theme="sepia"] .bg-slate-800\/50,
 [data-theme="sepia"] .bg-slate-800\/40 {
-  background-color: #eee7dc !important;
+  background-color: #e8ded0 !important;
 }
 
 /* Hovers */
@@ -393,10 +452,10 @@ table thead th {
 [data-theme="sepia"] .hover\:bg-slate-800\/40:hover,
 [data-theme="sepia"] .hover\:bg-slate-750:hover,
 [data-theme="sepia"] .hover\:bg-slate-700:hover {
-  background-color: #e5dac9 !important;
+  background-color: #dfd3c3 !important;
 }
 
-/* Borders */
+/* Crisp Structural Borders */
 [data-theme="sepia"] .border-slate-800,
 [data-theme="sepia"] .border-slate-800\/80,
 [data-theme="sepia"] .border-slate-800\/60,
@@ -407,7 +466,7 @@ table thead th {
 [data-theme="sepia"] .border-slate-700\/70,
 [data-theme="sepia"] .border-slate-700\/60,
 [data-theme="sepia"] .border-slate-750 {
-  border-color: #e4dbce !important;
+  border-color: #d7c6b1 !important;
 }
 
 /* Typography Hierarchy */
@@ -426,14 +485,14 @@ table thead th {
   color: #7c6553 !important;
 }
 
-/* Form Controls */
+/* Form Controls - Recessed 3D Inset */
 [data-theme="sepia"] input:not([type="checkbox"]):not([type="radio"]),
 [data-theme="sepia"] select,
 [data-theme="sepia"] textarea {
   background-color: #fdfcf9 !important;
   color: #2c1e14 !important;
-  border-color: #d8cdbf !important;
-  box-shadow: 0 1px 2px 0 rgba(44, 30, 20, 0.04) !important;
+  border-color: #d7c6b1 !important;
+  box-shadow: inset 0 2px 4px 0 rgba(44, 30, 20, 0.06), 0 1px 0 0 rgba(255, 255, 255, 0.9) !important;
 }
 
 [data-theme="sepia"] input::placeholder,
@@ -443,27 +502,37 @@ table thead th {
 
 /* Table Specific Styling */
 [data-theme="sepia"] tr:hover td {
-  background-color: #f5ede0 !important;
+  background-color: #f5ece0 !important;
 }
 
 [data-theme="sepia"] th {
-  background-color: #eee7dc !important;
+  background-color: #e8ded0 !important;
   color: #2c1e14 !important;
-  border-color: #e4dbce !important;
+  border-color: #d7c6b1 !important;
   font-weight: 700 !important;
 }
 
 [data-theme="sepia"] td {
-  border-color: #ede5d8 !important;
+  border-color: #e8ded0 !important;
   color: #4a3728 !important;
 }
 
-/* Shadows */
+/* 3D Tactile Elevation Shadows (Sepia Mode) */
 [data-theme="sepia"] .shadow-xl,
 [data-theme="sepia"] .shadow-2xl,
 [data-theme="sepia"] .shadow-lg,
 [data-theme="sepia"] .shadow-md {
-  box-shadow: 0 4px 12px -2px rgba(60, 40, 20, 0.08), 0 2px 4px -2px rgba(60, 40, 20, 0.04) !important;
+  box-shadow: 0 1px 3px 0 rgba(44, 30, 20, 0.08), 0 6px 18px -3px rgba(44, 30, 20, 0.07), inset 0 1px 0 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+[data-theme="sepia"] .rounded-2xl.border,
+[data-theme="sepia"] .rounded-xl.border {
+  box-shadow: 0 1px 3px 0 rgba(44, 30, 20, 0.08), 0 6px 18px -3px rgba(44, 30, 20, 0.07), inset 0 1px 0 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+[data-theme="sepia"] .cursor-pointer.rounded-2xl:hover,
+[data-theme="sepia"] .cursor-pointer.rounded-xl:hover {
+  box-shadow: 0 4px 8px 0 rgba(44, 30, 20, 0.08), 0 12px 24px -4px rgba(44, 30, 20, 0.12), inset 0 1px 0 0 rgba(255, 255, 255, 1) !important;
 }
 
 /* Warm Editorial Badges (Sepia Mode) */
@@ -603,5 +672,27 @@ table thead th {
 [data-theme="sepia"] .bg-gradient-to-r * {
   color: #ffffff !important;
 }
+
+/* ========================================================
+   TACTILE SEGMENTED CONTROLS & SUB-TABS (All Themes)
+   ======================================================== */
+/* Active Sub-tab pills */
+.bg-blue-600\/20 {
+  box-shadow: 0 2px 6px -1px rgba(37, 99, 235, 0.25), inset 0 1px 0 0 rgba(255, 255, 255, 0.15) !important;
+}
+
+[data-theme="light"] .bg-blue-600\/20 {
+  box-shadow: 0 2px 6px -1px rgba(37, 99, 235, 0.2), inset 0 1px 0 0 rgba(255, 255, 255, 0.8) !important;
+}
+
+[data-theme="sepia"] .bg-blue-600\/20 {
+  box-shadow: 0 2px 6px -1px rgba(60, 40, 20, 0.15), inset 0 1px 0 0 rgba(255, 255, 255, 0.8) !important;
+}
+
+/* Subtle Tactile Badges */
+.rounded-full.border {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
 
 
