@@ -101,7 +101,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedBusinessType, setSelectedBusinessType] = useState<string>('all');
   const [additionalBusinessTypes, setAdditionalBusinessTypes] = useState<string[]>([]);
-  const [displayLimit, setDisplayLimit] = useState<number>(150);
+  const [expandedGroupLimits, setExpandedGroupLimits] = useState<Record<string, number>>({});
 
   // Inline editing for client name
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
@@ -405,15 +405,10 @@ export const ClientTable: React.FC<ClientTableProps> = ({
     });
   }, [clients, selectedStatus, selectedBusinessType, combinedSearch]);
 
-  // Group clients by status (with smart windowing for buttery smooth DOM performance)
-  const isLimited = filteredClients.length > displayLimit;
-  const visibleClients = useMemo(() => {
-    return isLimited ? filteredClients.slice(0, displayLimit) : filteredClients;
-  }, [filteredClients, isLimited, displayLimit]);
-
+  // Group ALL filtered clients by status (so that ALL statuses appear in navigation menu with full counts)
   const groupedClients = useMemo(() => {
     const byStatus = new Map<string, Client[]>();
-    visibleClients.forEach(c => {
+    filteredClients.forEach(c => {
       const key = c.status || '(ללא סטטוס)';
       if (!byStatus.has(key)) byStatus.set(key, []);
       byStatus.get(key)!.push(c);
@@ -431,7 +426,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
       ordered.push({ status: key, clients: items });
     });
     return ordered;
-  }, [visibleClients]);
+  }, [filteredClients]);
 
   // Export to CSV
   const handleExportCSV = () => {
@@ -801,28 +796,33 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                     </tr>
                   ) : (
                     <>
-                      {groupedClients.map(({ status, clients: groupClients }) => (
-                        <React.Fragment key={`group-frag-${status}`}>
-                          {/* Dark background band behind each group */}
-                          <tr key={`band-${status}`}>
-                            <td colSpan={6 + crmCustomColumns.length} className="h-2 bg-slate-950/40 border-0 p-0"></td>
-                          </tr>
+                      {groupedClients.map(({ status, clients: groupClients }) => {
+                        const limit = expandedGroupLimits[status] || 60;
+                        const visibleInGroup = groupClients.slice(0, limit);
+                        const hasMore = groupClients.length > limit;
 
-                          {/* Group header */}
-                          <tr key={`group-${status}`} id={`group-${status.replace(/[^\w]/g, '')}`}>
-                            <td colSpan={6 + crmCustomColumns.length} className="py-2.5 px-4 bg-slate-800/90 text-[9px] font-bold text-slate-100 border-b border-slate-700/60 flex items-center justify-between rounded-t-xl rounded-b-none shadow-sm">
-                              <div className="flex items-center gap-1.5">
-                                <span
-                                  className={`px-2 py-0.5 rounded border inline-flex items-center gap-1 ${groupStyle(status).bg} ${groupStyle(status).text} ${groupStyle(status).border} font-bold`}
-                                >
-                                  {status === '(ללא סטטוס)' ? 'ללא סטטוס' : status}
-                                </span>
-                                <span className="ml-1.5 text-slate-300 font-normal">({groupClients.length})</span>
-                              </div>
-                            </td>
-                          </tr>
+                        return (
+                          <React.Fragment key={`group-frag-${status}`}>
+                            {/* Dark background band behind each group */}
+                            <tr key={`band-${status}`}>
+                              <td colSpan={6 + crmCustomColumns.length} className="h-2 bg-slate-950/40 border-0 p-0"></td>
+                            </tr>
 
-                          {groupClients.map((client) => {
+                            {/* Group header */}
+                            <tr key={`group-${status}`} id={`group-${status.replace(/[^\w]/g, '')}`}>
+                              <td colSpan={6 + crmCustomColumns.length} className="py-2.5 px-4 bg-slate-800/90 text-[9px] font-bold text-slate-100 border-b border-slate-700/60 flex items-center justify-between rounded-t-xl rounded-b-none shadow-sm">
+                                <div className="flex items-center gap-1.5">
+                                  <span
+                                    className={`px-2 py-0.5 rounded border inline-flex items-center gap-1 ${groupStyle(status).bg} ${groupStyle(status).text} ${groupStyle(status).border} font-bold`}
+                                  >
+                                    {status === '(ללא סטטוס)' ? 'ללא סטטוס' : status}
+                                  </span>
+                                  <span className="ml-1.5 text-slate-300 font-normal">({groupClients.length})</span>
+                                </div>
+                              </td>
+                            </tr>
+
+                            {visibleInGroup.map((client) => {
                             const style = STATUS_COLORS[client.status] || {
                               bg: 'bg-slate-800',
                               text: 'text-slate-300',
@@ -1080,43 +1080,51 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                             );
                           })}
 
+                          {/* Per-group expander button if there are more than current limit */}
+                          {hasMore && (
+                            <tr key={`expand-${status}`}>
+                              <td colSpan={6 + crmCustomColumns.length} className="py-3 px-4 bg-slate-900/90 border-b border-slate-800 text-center">
+                                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 text-xs">
+                                  <span className="text-slate-400">
+                                    מוצגים <strong className="text-white font-semibold">{visibleInGroup.length}</strong> מתוך <strong className="text-white font-semibold">{groupClients.length}</strong> לקוחות בסטטוס {status}
+                                  </span>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => setExpandedGroupLimits(prev => ({ ...prev, [status]: (prev[status] || 60) + 100 }))}
+                                      className="px-3 py-1 rounded-md bg-blue-600/80 hover:bg-blue-600 text-white font-medium text-xs transition-colors shadow-sm"
+                                    >
+                                      + הצג 100 נוספים
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setExpandedGroupLimits(prev => ({ ...prev, [status]: groupClients.length }))}
+                                      className="px-3 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-medium text-xs border border-slate-700 transition-colors"
+                                    >
+                                      הצג את כל ה-{groupClients.length}
+                                    </button>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+
                           {/* Dark background band below each group */}
                           <tr key={`band-bottom-${status}`}>
                             <td colSpan={6 + crmCustomColumns.length} className="h-3 bg-slate-950/30 border-0 p-0"></td>
                           </tr>
                         </React.Fragment>
-                      ))}
+                      );
+                    })}
 
-                      {/* Smooth Incremental Loading Indicator & Expand Buttons */}
-                      {isLimited && (
-                        <tr>
-                          <td colSpan={6 + crmCustomColumns.length} className="py-4 text-center bg-slate-900/80 border-t border-slate-800">
-                            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 text-xs">
-                              <span className="text-slate-400">
-                                מוצגים <strong className="text-white font-bold">{visibleClients.length}</strong> מתוך <strong className="text-white font-bold">{filteredClients.length}</strong> לקוחות
-                              </span>
-                              <div className="flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => setDisplayLimit(prev => prev + 150)}
-                                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-all shadow-sm"
-                                >
-                                  + הצג 150 נוספים
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setDisplayLimit(filteredClients.length)}
-                                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-semibold text-xs border border-slate-700 transition-all"
-                                >
-                                  הצג את כל הלקוחות ({filteredClients.length})
-                                </button>
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </>
-                  )}
+                    {/* Overall Summary Row */}
+                    <tr>
+                      <td colSpan={6 + crmCustomColumns.length} className="py-3 px-4 bg-slate-900/60 border-t border-slate-800/80 text-center text-xs text-slate-400">
+                        סה״כ נמצאו <strong className="text-slate-200 font-bold">{filteredClients.length}</strong> לקוחות המסודרים לפי <strong className="text-slate-200 font-bold">{groupedClients.length}</strong> קבוצות סטטוס (כל הנתונים מגובים ומסונכרנים עם גוגל שיטס)
+                      </td>
+                    </tr>
+                  </>
+                )}
                 </tbody>
               </table>
             </div>
