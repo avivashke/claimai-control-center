@@ -49,9 +49,9 @@ export const MyDay: React.FC<MyDayProps> = ({
     <div className="space-y-6">
       
       {/* Header */}
-      <div className="p-6 rounded-2xl bg-gradient-to-r from-amber-950/40 via-slate-900 to-slate-900 border border-amber-500/20 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="myday-header-card p-6 rounded-2xl bg-gradient-to-r from-amber-950/40 via-slate-900 to-slate-900 border border-amber-500/20 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-semibold mb-2 border border-amber-400/30">
+          <div className="myday-pill inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-semibold mb-2 border border-amber-400/30">
             <CalendarClock className="w-3.5 h-3.5" />
             <span>מרכז עבודה יומי ממוקד · היום שלי</span>
           </div>
@@ -64,15 +64,15 @@ export const MyDay: React.FC<MyDayProps> = ({
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700 text-center min-w-[90px]">
+          <div className="myday-stat-card p-3 rounded-xl bg-slate-800/80 border border-slate-700 text-center min-w-[90px]">
             <span className="text-[10px] text-rose-300 font-bold block uppercase">דחוף</span>
             <span className="text-xl font-extrabold text-white">{urgentClients.length}</span>
           </div>
-          <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700 text-center min-w-[90px]">
+          <div className="myday-stat-card p-3 rounded-xl bg-slate-800/80 border border-slate-700 text-center min-w-[90px]">
             <span className="text-[10px] text-blue-300 font-bold block uppercase">פגישות</span>
             <span className="text-xl font-extrabold text-white">{meetingClients.length}</span>
           </div>
-          <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700 text-center min-w-[90px]">
+          <div className="myday-stat-card p-3 rounded-xl bg-slate-800/80 border border-slate-700 text-center min-w-[90px]">
             <span className="text-[10px] text-pink-300 font-bold block uppercase">חשוב</span>
             <span className="text-xl font-extrabold text-white">{importantClients.length}</span>
           </div>
