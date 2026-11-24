@@ -101,6 +101,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedBusinessType, setSelectedBusinessType] = useState<string>('all');
   const [additionalBusinessTypes, setAdditionalBusinessTypes] = useState<string[]>([]);
+  const [displayLimit, setDisplayLimit] = useState<number>(150);
 
   // Inline editing for client name
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
@@ -361,6 +362,9 @@ export const ClientTable: React.FC<ClientTableProps> = ({
 
   // Filtered clients
   const filteredClients = useMemo(() => {
+    // Split search into individual keyword tokens (supports multi-keyword searches like "סודיות באפי")
+    const keywords = combinedSearch ? combinedSearch.split(/\s+/).filter(Boolean) : [];
+
     return clients.filter(c => {
       if (selectedStatus !== 'all' && c.status !== selectedStatus) {
         return false;
@@ -368,23 +372,48 @@ export const ClientTable: React.FC<ClientTableProps> = ({
       if (selectedBusinessType !== 'all' && c.businessType !== selectedBusinessType) {
         return false;
       }
-      if (combinedSearch) {
-        const matchesName = c.name?.toLowerCase().includes(combinedSearch);
-        const matchesCompany = c.company?.toLowerCase().includes(combinedSearch);
-        const matchesPhone = c.phone?.toLowerCase().includes(combinedSearch);
-        const matchesEmail = c.email?.toLowerCase().includes(combinedSearch);
-        const matchesId = c.id?.toLowerCase().includes(combinedSearch);
-        const matchesNotes = c.lastNote?.toLowerCase().includes(combinedSearch);
-        return matchesName || matchesCompany || matchesPhone || matchesEmail || matchesId || matchesNotes;
+      if (keywords.length > 0) {
+        const customValues = c.customFields
+          ? Object.values(c.customFields).filter(v => typeof v === 'string' || typeof v === 'number').join(' ')
+          : '';
+
+        // Deep searchable text across all client attributes, especially lastNote, generalNotes and custom fields
+        const searchCorpus = [
+          c.id,
+          c.name,
+          c.company,
+          c.phone,
+          c.email,
+          c.businessType,
+          c.status,
+          c.subStatus,
+          c.lastNote,
+          c.generalNotes,
+          c.nextFollowUpDate,
+          c.teamContacts,
+          c.itContact,
+          c.location,
+          c.source,
+          c.monthlyClaims,
+          customValues
+        ].filter(Boolean).join(' ').toLowerCase();
+
+        // Every keyword must be matched in the corpus
+        return keywords.every(kw => searchCorpus.includes(kw));
       }
       return true;
     });
   }, [clients, selectedStatus, selectedBusinessType, combinedSearch]);
 
-  // Group clients by status
+  // Group clients by status (with smart windowing for buttery smooth DOM performance)
+  const isLimited = filteredClients.length > displayLimit;
+  const visibleClients = useMemo(() => {
+    return isLimited ? filteredClients.slice(0, displayLimit) : filteredClients;
+  }, [filteredClients, isLimited, displayLimit]);
+
   const groupedClients = useMemo(() => {
     const byStatus = new Map<string, Client[]>();
-    filteredClients.forEach(c => {
+    visibleClients.forEach(c => {
       const key = c.status || '(ללא סטטוס)';
       if (!byStatus.has(key)) byStatus.set(key, []);
       byStatus.get(key)!.push(c);
@@ -402,7 +431,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
       ordered.push({ status: key, clients: items });
     });
     return ordered;
-  }, [filteredClients]);
+  }, [visibleClients]);
 
   // Export to CSV
   const handleExportCSV = () => {
@@ -583,15 +612,25 @@ export const ClientTable: React.FC<ClientTableProps> = ({
             
             {/* Search & Dropdowns */}
             <div className="flex flex-wrap items-center gap-2 flex-1">
-              <div className="relative min-w-[180px] flex-1 max-w-sm">
+              <div className="relative min-w-[220px] flex-1 max-w-md">
                 <Search className="absolute right-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="חיפוש בטבלה..."
+                  placeholder="חיפוש לפי שם, חברה, טלפון, הערות ומילות מפתח..."
                   value={localSearch}
                   onChange={(e) => setLocalSearch(e.target.value)}
-                  className="w-full pr-8 pl-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full pr-8 pl-8 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all shadow-inner"
                 />
+                {localSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setLocalSearch('')}
+                    className="absolute left-2.5 top-2.5 text-slate-400 hover:text-white transition-colors"
+                    title="נקה חיפוש"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
 
               {/* Status Filter */}
@@ -956,22 +995,57 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                                   </div>
                                 </td>
 
-                                {/* Last Note */}
+                                {/* Notes & Highlights */}
                                 <td className="py-1.5 px-2 max-w-xs">
-                                  {client.lastNote ? (
-                                    <div className="space-y-0.5" title={client.lastNote}>
-                                      {client.lastNote.includes('👤') && (
-                                        <span className="inline-flex items-center gap-0.5 text-[8px] font-bold text-blue-400 bg-blue-500/10 px-1 py-0.5 rounded border border-blue-500/20">
-                                          {client.lastNote.match(/👤\s*([^|\n]+)/)?.[0] || '👤 הערה חתומה'}
-                                        </span>
-                                      )}
-                                      <p className="text-[8px] text-slate-300 line-clamp-2">
-                                        {client.lastNote.replace(/^[0-9/:\s|]+👤[^|]+\|\s*/, '')}
-                                      </p>
-                                    </div>
-                                  ) : (
-                                    <span className="text-[8px] text-slate-600">אין הערות</span>
-                                  )}
+                                  {(() => {
+                                    const hasLastNote = !!client.lastNote?.trim();
+                                    const hasGeneralNotes = !!client.generalNotes?.trim();
+                                    if (!hasLastNote && !hasGeneralNotes) {
+                                      return <span className="text-[8px] text-slate-600">אין הערות</span>;
+                                    }
+
+                                    // Check if current search keywords matched specifically inside notes
+                                    const searchTerms = combinedSearch ? combinedSearch.split(/\s+/).filter(Boolean) : [];
+                                    const notesContent = `${client.lastNote || ''} ${client.generalNotes || ''}`.toLowerCase();
+                                    const matchedInNotes = searchTerms.length > 0 && searchTerms.some(term => notesContent.includes(term));
+
+                                    return (
+                                      <div 
+                                        className="space-y-1" 
+                                        title={`${hasLastNote ? `הערה אחרונה:\n${client.lastNote}\n\n` : ''}${hasGeneralNotes ? `הערות כלליות:\n${client.generalNotes}` : ''}`}
+                                      >
+                                        {matchedInNotes && (
+                                          <span className="inline-flex items-center gap-0.5 text-[7.5px] font-bold text-amber-300 bg-amber-500/20 px-1.5 py-0.2 rounded border border-amber-500/30">
+                                            🔍 נמצא בהערות
+                                          </span>
+                                        )}
+
+                                        {hasLastNote && (
+                                          <div>
+                                            {client.lastNote!.includes('👤') && (
+                                              <span className="inline-flex items-center gap-0.5 text-[8px] font-bold text-blue-400 bg-blue-500/10 px-1 py-0.5 rounded border border-blue-500/20 mb-0.5">
+                                                {client.lastNote!.match(/👤\s*([^|\n]+)/)?.[0] || '👤 הערה חתומה'}
+                                              </span>
+                                            )}
+                                            <p className="text-[8px] text-slate-300 line-clamp-2">
+                                              {client.lastNote!.replace(/^[0-9/:\s|]+👤[^|]+\|\s*/, '')}
+                                            </p>
+                                          </div>
+                                        )}
+
+                                        {hasGeneralNotes && (!hasLastNote || matchedInNotes) && (
+                                          <div className={`${hasLastNote ? 'pt-0.5 border-t border-slate-800/60' : ''}`}>
+                                            {hasLastNote && (
+                                              <span className="text-[7.5px] font-semibold text-purple-400 block">הערות כלליות:</span>
+                                            )}
+                                            <p className="text-[8px] text-slate-400 line-clamp-2">
+                                              {client.generalNotes}
+                                            </p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
                                 </td>
 
                                 {/* Custom CRM Columns */}
@@ -1004,6 +1078,35 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                           </tr>
                         </React.Fragment>
                       ))}
+
+                      {/* Smooth Incremental Loading Indicator & Expand Buttons */}
+                      {isLimited && (
+                        <tr>
+                          <td colSpan={6 + crmCustomColumns.length} className="py-4 text-center bg-slate-900/80 border-t border-slate-800">
+                            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 text-xs">
+                              <span className="text-slate-400">
+                                מוצגים <strong className="text-white font-bold">{visibleClients.length}</strong> מתוך <strong className="text-white font-bold">{filteredClients.length}</strong> לקוחות
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setDisplayLimit(prev => prev + 150)}
+                                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-all shadow-sm"
+                                >
+                                  + הצג 150 נוספים
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setDisplayLimit(filteredClients.length)}
+                                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-semibold text-xs border border-slate-700 transition-all"
+                                >
+                                  הצג את כל הלקוחות ({filteredClients.length})
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
                     </>
                   )}
                 </tbody>

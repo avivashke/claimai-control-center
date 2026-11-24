@@ -109,13 +109,12 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
       rows = rows.filter(r => rowMatches.has(r.id));
     }
 
-    // Search query
+    // Search query with multi-keyword support
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+      const keywords = searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
       rows = rows.filter(row => {
-        return Object.values(row).some(val => 
-          String(val || '').toLowerCase().includes(q)
-        );
+        const corpus = Object.values(row).map(val => String(val || '')).join(' ').toLowerCase();
+        return keywords.every(kw => corpus.includes(kw));
       });
     }
 

@@ -93,6 +93,7 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
       name: formData.name?.trim() || client.name,
       company: formData.company?.trim() ?? client.company ?? '',
       lastNote: updatedNotes,
+      generalNotes: formData.generalNotes,
       updatedDate: new Date().toISOString().slice(0, 10),
       updatedBy: authorName
     };
@@ -525,6 +526,14 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
                 })
               ) : (
                 <p className="text-xs text-slate-500 text-center py-2">אין היסטוריית הערות עדיין</p>
+              )}
+              {formData.generalNotes && (
+                <div className="p-3 rounded-xl bg-purple-950/20 border border-purple-800/40 text-xs leading-relaxed space-y-1 shadow-sm mt-2">
+                  <div className="flex items-center justify-between text-[11px] pb-1 border-b border-purple-800/30 text-purple-300 font-semibold">
+                    <span>📝 הערות כלליות / מידע נוסף</span>
+                  </div>
+                  <p className="text-slate-300 whitespace-pre-wrap text-[11px]">{formData.generalNotes}</p>
+                </div>
               )}
             </div>
           </div>
