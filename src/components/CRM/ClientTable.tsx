@@ -66,6 +66,19 @@ const STATUS_COLORS: { [key: string]: { bg: string; text: string; border: string
   "ליד ראשוני מהמאנדיי": { bg: 'bg-purple-500/15', text: 'text-purple-300', border: 'border-purple-500/30' },
 };
 
+const STATUS_ACCENT_COLORS: { [key: string]: string } = {
+  "1'st Lead": '#a855f7',
+  "1'st Follow-Up": '#f59e0b',
+  "Follow-Up": '#f97316',
+  "Meeting Scheduled": '#3b82f6',
+  "Important": '#ec4899',
+  "Urgent": '#f43f5e',
+  "Adoption Monitoring": '#06b6d4',
+  "All-Good": '#10b981',
+  "Irrelevant": '#64748b',
+  "ליד ראשוני מהמאנדיי": '#a855f7',
+};
+
 const ALL_STATUSES = [
   "1'st Lead",
   "1'st Follow-Up",
@@ -810,14 +823,16 @@ export const ClientTable: React.FC<ClientTableProps> = ({
 
                             {/* Group header */}
                             <tr key={`group-${status}`} id={`group-${status.replace(/[^\w]/g, '')}`}>
-                              <td colSpan={6 + crmCustomColumns.length} className="py-2.5 px-4 bg-slate-800/90 text-[9px] font-bold text-slate-100 border-b border-slate-700/60 flex items-center justify-between rounded-t-xl rounded-b-none shadow-sm">
-                                <div className="flex items-center gap-1.5">
-                                  <span
-                                    className={`px-2 py-0.5 rounded border inline-flex items-center gap-1 ${groupStyle(status).bg} ${groupStyle(status).text} ${groupStyle(status).border} font-bold`}
-                                  >
-                                    {status === '(ללא סטטוס)' ? 'ללא סטטוס' : status}
-                                  </span>
-                                  <span className="ml-1.5 text-slate-300 font-normal">({groupClients.length})</span>
+                              <td colSpan={6 + crmCustomColumns.length} className="py-2.5 px-4 bg-slate-800/95 text-[10px] font-bold text-slate-100 border-b border-slate-700/80 rounded-t-xl rounded-b-none shadow-sm">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <span
+                                      className={`px-2.5 py-1 rounded-md border inline-flex items-center gap-1.5 ${groupStyle(status).bg} ${groupStyle(status).text} ${groupStyle(status).border} font-bold shadow-sm`}
+                                    >
+                                      {status === '(ללא סטטוס)' ? 'ללא סטטוס' : status}
+                                    </span>
+                                    <span className="text-slate-300 font-semibold text-xs">({groupClients.length} לקוחות)</span>
+                                  </div>
                                 </div>
                               </td>
                             </tr>
@@ -829,16 +844,18 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                               border: 'border-slate-700'
                             };
                             const waNumber = formatWhatsAppNumber(client.phone);
+                            const accentColor = STATUS_ACCENT_COLORS[client.status] || '#3b82f6';
 
                             return (
                               <tr 
                                 key={client.id}
-                                className="hover:bg-slate-800/30 transition-colors group cursor-pointer border-b border-slate-800/40"
+                                className="monday-table-row transition-all group cursor-pointer"
                                 onClick={() => onSelectClient(client)}
                               >
                                 {/* Name & Company */}
                                 <td 
-                                  className="py-1.5 px-2 min-w-[170px]"
+                                  style={{ borderRight: `4px solid ${accentColor}` }}
+                                  className="py-2 px-2.5 min-w-[170px]"
                                   onClick={(e) => {
                                     if (editingClientId === client.id) {
                                       e.stopPropagation();
@@ -889,7 +906,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                                   ) : (
                                     <div className="flex items-center justify-between group/name gap-1.5">
                                       <div 
-                                        className="font-semibold text-white group-hover:text-blue-400 transition-colors text-[9px] leading-tight truncate flex-1"
+                                        className="font-semibold text-slate-100 group-hover:text-blue-400 transition-colors text-[10px] leading-tight truncate flex-1"
                                       >
                                         {client.name || 'ללא שם'}
                                       </div>
@@ -924,23 +941,23 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                                 </td>
 
                                 {/* Business Type */}
-                                <td className="py-1.5 px-2 min-w-[140px]">
+                                <td className="py-2 px-2.5 min-w-[140px]">
                                   {canEdit ? (
                                     renderBusinessTypeCell(client)
                                   ) : (
-                                    <span className="px-1.5 py-0.5 rounded text-[8px] font-medium bg-slate-800 text-slate-300 border border-slate-700 block max-w-xs truncate" title={client.businessType || ''}>
+                                    <span className="px-1.5 py-0.5 rounded text-[8.5px] font-medium bg-slate-800 text-slate-300 border border-slate-700 block max-w-xs truncate" title={client.businessType || ''}>
                                       {client.businessType || '-'}
                                     </span>
                                   )}
                                 </td>
 
                                 {/* Status */}
-                                <td className="py-1.5 px-2 min-w-[180px]" onClick={(e) => e.stopPropagation()}>
+                                <td className="py-2 px-2.5 min-w-[180px]" onClick={(e) => e.stopPropagation()}>
                                   {canEdit ? (
                                     <select
                                       value={client.status}
                                       onChange={(e) => onUpdateClientStatus(client.id, e.target.value)}
-                                      className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-md border focus:outline-none transition-all cursor-pointer ${style.bg} ${style.text} ${style.border} w-full`}
+                                      className={`text-[9.5px] font-semibold px-2 py-0.5 rounded-md border focus:outline-none transition-all cursor-pointer shadow-sm ${style.bg} ${style.text} ${style.border} w-full`}
                                     >
                                       {ALL_STATUSES.map(s => (
                                         <option key={s} value={s} className="bg-slate-900 text-slate-200 truncate">
@@ -949,7 +966,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                                       ))}
                                     </select>
                                   ) : (
-                                    <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-md border inline-block ${style.bg} ${style.text} ${style.border}`}>
+                                    <span className={`text-[9.5px] font-semibold px-2 py-0.5 rounded-md border inline-block shadow-sm ${style.bg} ${style.text} ${style.border}`}>
                                       {client.status}
                                     </span>
                                   )}
@@ -961,7 +978,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                                 </td>
 
                                 {/* Contact Channels */}
-                                <td className="py-1.5 px-2" onClick={(e) => e.stopPropagation()}>
+                                <td className="py-2 px-2.5" onClick={(e) => e.stopPropagation()}>
                                   <div className="flex items-center gap-1">
                                     {client.phone && (
                                       <>
@@ -1004,7 +1021,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                                 </td>
 
                                 {/* Notes & Highlights */}
-                                <td className="py-1.5 px-2 max-w-xs">
+                                <td className="py-2 px-2.5 max-w-xs">
                                   {(() => {
                                     const hasLastNote = !!client.lastNote?.trim();
                                     const hasGeneralNotes = !!client.generalNotes?.trim();
@@ -1035,7 +1052,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                                                 {client.lastNote!.match(/👤\s*([^|\n]+)/)?.[0] || '👤 הערה חתומה'}
                                               </span>
                                             )}
-                                            <p className="text-[8px] text-slate-300 line-clamp-2">
+                                            <p className="text-[8.5px] text-slate-300 line-clamp-2">
                                               {client.lastNote!.replace(/^[0-9/:\s|]+👤[^|]+\|\s*/, '')}
                                             </p>
                                           </div>
@@ -1046,7 +1063,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                                             {hasLastNote && (
                                               <span className="text-[7.5px] font-semibold text-purple-400 block">הערות כלליות:</span>
                                             )}
-                                            <p className="text-[8px] text-slate-400 line-clamp-2">
+                                            <p className="text-[8.5px] text-slate-400 line-clamp-2">
                                               {client.generalNotes}
                                             </p>
                                           </div>
@@ -1060,7 +1077,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                                 {crmCustomColumns.map((col) => (
                                   <td
                                     key={col.id}
-                                    className="py-1.5 px-2 min-w-[130px]"
+                                    className="py-2 px-2.5 min-w-[130px]"
                                     onClick={(e) => e.stopPropagation()}
                                   >
                                     {renderCustomCell(client, col)}
@@ -1068,10 +1085,10 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                                 ))}
 
                                 {/* Profile Action */}
-                                <td className="py-1.5 px-2 text-center">
+                                <td className="py-2 px-2.5 text-center">
                                   <button
                                     onClick={() => onSelectClient(client)}
-                                    className="px-1.5 py-0.5 rounded-lg bg-slate-800 group-hover:bg-blue-600 group-hover:text-white border border-slate-700 group-hover:border-blue-500 text-slate-300 text-[8px] font-medium transition-all"
+                                    className="px-2 py-1 rounded-md bg-slate-800/80 group-hover:bg-blue-600 group-hover:text-white border border-slate-700/80 group-hover:border-blue-500 text-slate-300 text-[8.5px] font-semibold transition-all shadow-sm"
                                   >
                                     פרופיל
                                   </button>

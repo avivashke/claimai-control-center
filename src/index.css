@@ -7,17 +7,69 @@
    ======================================================== */
 :root {
   color-scheme: dark;
-  --bg-page: #080c14;
-  --bg-header: #0d1527;
-  --bg-card: #0f172a;
-  --bg-card-subtle: #182234;
-  --bg-th: #0f172a;
-  --bg-hover: #1e293b;
-  --border-color: #27374f;
-  --border-subtle: #1a273b;
+  --bg-page: #0a0f1d;
+  --bg-header: #0f172a;
+  --bg-card: #131c2e;
+  --bg-card-subtle: #19253b;
+  --bg-th: #111a2d;
+  --bg-hover: #22324e;
+  --border-color: #2b3d5b;
+  --border-subtle: #1c2b42;
   --text-main: #f8fafc;
   --text-secondary: #cbd5e1;
   --text-muted: #94a3b8;
+}
+
+/* ========================================================
+   MONDAY.COM 3D ELEVATED TABLE ROWS
+   ======================================================== */
+.monday-table-row {
+  background-color: #1a2538 !important; /* Noticeably lightened slate tone above deep canvas */
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.35), inset 0 1px 0 0 rgba(255, 255, 255, 0.09) !important;
+  border-bottom: 1px solid #111a28 !important;
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.16s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.16s ease !important;
+  position: relative;
+}
+
+.monday-table-row:nth-child(even) {
+  background-color: #1e2c42 !important; /* Subtle layered alternating elevation */
+}
+
+.monday-table-row:hover {
+  background-color: #273956 !important; /* Lighter, prominent 3D pop on hover */
+  transform: translateY(-1.5px) !important;
+  box-shadow: 0 6px 16px -2px rgba(0, 0, 0, 0.55), inset 0 1px 0 0 rgba(255, 255, 255, 0.22) !important;
+  z-index: 10 !important;
+}
+
+/* Light Mode Monday Rows */
+[data-theme="light"] .monday-table-row {
+  background-color: #ffffff !important;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.95) !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+[data-theme="light"] .monday-table-row:nth-child(even) {
+  background-color: #f8fafc !important;
+}
+[data-theme="light"] .monday-table-row:hover {
+  background-color: #f1f5f9 !important;
+  transform: translateY(-1.5px) !important;
+  box-shadow: 0 6px 16px -2px rgba(15, 23, 42, 0.14), inset 0 1px 0 0 #ffffff !important;
+}
+
+/* Sepia Mode Monday Rows */
+[data-theme="sepia"] .monday-table-row {
+  background-color: #fbf7f0 !important;
+  box-shadow: 0 1px 3px 0 rgba(44, 30, 20, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.95) !important;
+  border-bottom: 1px solid #e8decb !important;
+}
+[data-theme="sepia"] .monday-table-row:nth-child(even) {
+  background-color: #f4ece0 !important;
+}
+[data-theme="sepia"] .monday-table-row:hover {
+  background-color: #eee1d0 !important;
+  transform: translateY(-1.5px) !important;
+  box-shadow: 0 6px 16px -2px rgba(44, 30, 20, 0.14), inset 0 1px 0 0 #ffffff !important;
 }
 
 [data-theme="light"] {

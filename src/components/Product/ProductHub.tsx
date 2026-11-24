@@ -412,10 +412,13 @@ export const ProductHub: React.FC<ProductHubProps> = ({
                           <tr
                             key={item.id}
                             onClick={() => onSelectTicket(item)}
-                            className="hover:bg-slate-800/30 transition-colors group cursor-pointer border-b border-slate-800/40"
+                            className="monday-table-row transition-all group cursor-pointer"
                           >
                               {/* ID */}
-                              <td className="py-1.5 px-2 font-mono text-[8px] font-bold text-blue-400">
+                              <td 
+                                style={{ borderRight: `4px solid ${item.category === 'bug' ? '#f43f5e' : '#10b981'}` }}
+                                className="py-2 px-2.5 font-mono text-[8.5px] font-bold text-blue-400"
+                              >
                                 {item.id}
                               </td>
 

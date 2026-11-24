@@ -511,8 +511,8 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
                   return (
                     <tr 
                       key={row.id || idx}
-                      className={`hover:bg-slate-800/40 transition-colors group ${
-                        match ? 'bg-amber-950/10' : ''
+                      className={`monday-table-row transition-all group ${
+                        match ? 'bg-amber-950/20' : ''
                       }`}
                     >
                       {/* Index */}
