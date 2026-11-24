@@ -544,3 +544,5 @@ export const exportFullDatabaseJSON = async (): Promise<string> => {
 
   return JSON.stringify(bundle, null, 2);
 };
+
+export { downloadFullDatabaseCSV, generateFullDatabaseCSV, restoreFromInternalStaticCSV } from './csvBackupService';

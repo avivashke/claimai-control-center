@@ -20,8 +20,13 @@ import {
   resetToSeedData, 
   exportFullDatabaseJSON 
 } from '../services/db';
+import { 
+  downloadFullDatabaseCSV, 
+  restoreFromInternalStaticCSV 
+} from '../services/csvBackupService';
 import { testNetlifyBlobs } from '../services/blobsService';
 import { checkWorkerHealth, getWorkerUrl, isWorkerConfigured } from '../services/aiWorkerService';
+import { FileSpreadsheet, ShieldAlert } from 'lucide-react';
 
 interface DatabaseSettingsProps {
   clientsCount: number;
@@ -46,6 +51,31 @@ export const DatabaseSettings: React.FC<DatabaseSettingsProps> = ({
   const [blobsResult, setBlobsResult] = useState<{ success: boolean; message: string; latency?: number } | null>(null);
   const [isTestingWorker, setIsTestingWorker] = useState(false);
   const [workerResult, setWorkerResult] = useState<{ success: boolean; message: string; info?: any } | null>(null);
+  const [isRestoringCSV, setIsRestoringCSV] = useState(false);
+  const [csvRestoreResult, setCsvRestoreResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const handleRestoreFromCSV = async () => {
+    if (!confirm('האם לבצע שחזור חירום מקובצי ה-CSV הפנימיים? פעולה זו תטען את כל 1,282 הלקוחות והמשימות מתוך קובצי הגיבוי הפנימיים.')) {
+      return;
+    }
+    setIsRestoringCSV(true);
+    setCsvRestoreResult(null);
+    try {
+      const res = await restoreFromInternalStaticCSV();
+      setCsvRestoreResult({
+        success: true,
+        message: `שחזור החירום הושלם בהצלחה! נטענו ${res.clientsRestored} לקוחות ו-${res.productsRestored} משימות מתוך קובצי ה-CSV הפנימיים.`
+      });
+      onRefreshData();
+    } catch (err: any) {
+      setCsvRestoreResult({
+        success: false,
+        message: `שגיאה בשחזור מקובצי CSV: ${err.message || err}`
+      });
+    } finally {
+      setIsRestoringCSV(false);
+    }
+  };
 
   const handleTestWorker = async () => {
     setIsTestingWorker(true);
@@ -308,6 +338,14 @@ CREATE TABLE product_items (
               <span>גיבוי מלא ל-JSON</span>
             </button>
             <button
+              onClick={downloadFullDatabaseCSV}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-xs font-semibold text-slate-200 transition-all"
+              title="הורדת קובץ CSV מלא של כל הטבלאות בדאטה-בייס"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+              <span>גיבוי מלא ל-CSV</span>
+            </button>
+            <button
               onClick={handleResetData}
               disabled={isResetting}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-950/30 hover:bg-rose-900/40 border border-rose-800/40 text-xs font-semibold text-rose-300 transition-all mr-auto"
@@ -401,6 +439,85 @@ CREATE TABLE product_items (
           )}
         </div>
 
+      </div>
+
+      {/* Card: Internal CSV Backup & Emergency Failover Snapshot */}
+      <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-950/40 via-slate-900 to-slate-900 border border-blue-500/30 shadow-xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center">
+              <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-extrabold text-white">עותק גיבוי CSV פנימי קבוע והגנת נפילת דאטה-בייס</h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" />
+                  <span>שמור תמיד בקוד ובקובצי המערכת</span>
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-1">
+                עותק מלא של כל הדאטה-בייס נשמר תמיד בקובצי CSV פנימיים עם קידוד UTF-8 לעברית. במקרה של נפילת שרת, ניתוק ענן או איפוס דפדפן — הנתונים מגובים וניתנים לשחזור מיידי.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap shrink-0">
+            <button
+              onClick={downloadFullDatabaseCSV}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md shadow-blue-600/30 transition-all hover:scale-[1.02]"
+              title="הורדת קובץ CSV מרוכז של כל הדאטה-בייס"
+            >
+              <Download className="w-3.5 h-3.5 text-white" />
+              <span>הורד גיבוי מלא ל-CSV</span>
+            </button>
+
+            <button
+              onClick={handleRestoreFromCSV}
+              disabled={isRestoringCSV}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/40 text-amber-300 font-bold text-xs transition-all disabled:opacity-50"
+              title="שחזור מיידי מקובצי ה-CSV הפנימיים במקרה של נפילה"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+              <span>{isRestoringCSV ? 'משחזר נתונים...' : 'שחזור חירום מקובצי CSV'}</span>
+            </button>
+          </div>
+        </div>
+
+        {csvRestoreResult && (
+          <div className={`p-3.5 rounded-xl border text-xs font-semibold flex items-center gap-2 ${
+            csvRestoreResult.success
+              ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+              : 'bg-rose-500/15 border-rose-500/30 text-rose-300'
+          }`}>
+            {csvRestoreResult.success ? <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" /> : <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0" />}
+            <span>{csvRestoreResult.message}</span>
+          </div>
+        )}
+
+        {/* Breakdown of internal CSV files */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-1 text-center">
+          <div className="p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60">
+            <span className="text-[10px] text-slate-400 block font-mono">crm_clients.csv</span>
+            <span className="text-xs font-bold text-emerald-300">{clientsCount.toLocaleString()} לקוחות</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60">
+            <span className="text-[10px] text-slate-400 block font-mono">product_items.csv</span>
+            <span className="text-xs font-bold text-blue-300">{productCount} פניות מוצר</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60">
+            <span className="text-[10px] text-slate-400 block font-mono">contacts.csv</span>
+            <span className="text-xs font-bold text-purple-300">115 אנשי קשר</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60">
+            <span className="text-[10px] text-slate-400 block font-mono">custom_tables.csv</span>
+            <span className="text-xs font-bold text-amber-300">טבלאות סטודיו AI</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60">
+            <span className="text-[10px] text-slate-400 block font-mono">users.csv</span>
+            <span className="text-xs font-bold text-rose-300">משתמשי פורטלים</span>
+          </div>
+        </div>
       </div>
 
       {/* Card 3: Netlify Blobs Offloading Engine */}
