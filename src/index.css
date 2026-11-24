@@ -14,6 +14,27 @@ body {
   transition: background-color 0.25s ease, color 0.25s ease;
 }
 
+/* ========================================================
+   GLOBAL BULLETPROOF TABLE HEADERS (100% Solid & Opaque)
+   Ensures ALL tables (main CRM, custom tables, uploaded tables,
+   and any newly generated table) have a 100% solid, fully opaque
+   frozen header row with zero transparency and no text bleed.
+   ======================================================== */
+table thead,
+table thead tr,
+table thead th {
+  background-color: #0f172a !important;
+  color: #f1f5f9 !important;
+  opacity: 1 !important;
+}
+
+table thead th {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 20 !important;
+  box-shadow: 0 1px 0 0 #334155 !important;
+}
+
 /* Custom scrollbars */
 ::-webkit-scrollbar {
   width: 6px;

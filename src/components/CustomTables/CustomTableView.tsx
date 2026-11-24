@@ -441,7 +441,7 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
 
       {/* Main Table Scrolling Area with Frozen Column Headers */}
       <div style={{ backgroundColor: '#0f172a' }} className="rounded-2xl border border-slate-700/70 bg-slate-900 shadow-2xl overflow-hidden relative">
-        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-270px)]">
+        <div className="overflow-x-auto overflow-y-auto h-[calc(100vh-270px)] min-h-[420px] relative scroll-smooth">
           <table 
             style={{ 
               minWidth: `${Math.max(1000, 260 + currentTable.columns.length * 160)}px`, 
