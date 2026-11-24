@@ -18,11 +18,23 @@ import {
   Users,
   Table as TableIcon,
   Sparkles,
-  GitCompare
+  GitCompare,
+  Check,
+  Copy,
+  PhoneCall,
+  Columns,
+  Zap,
+  ListFilter,
+  CheckSquare,
+  Trash2,
+  Calendar,
+  Tag,
+  X
 } from 'lucide-react';
-import { Client, CustomTable } from '../../types';
+import { Client, CustomTable, CrmCustomColumn } from '../../types';
 import { CustomTableView } from '../CustomTables/CustomTableView';
 import { UploadTableModal } from '../CustomTables/UploadTableModal';
+import { CrmColumnManagerModal } from './CrmColumnManagerModal';
 
 interface ClientTableProps {
   clients: Client[];
@@ -88,6 +100,209 @@ export const ClientTable: React.FC<ClientTableProps> = ({
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedBusinessType, setSelectedBusinessType] = useState<string>('all');
   const [additionalBusinessTypes, setAdditionalBusinessTypes] = useState<string[]>([]);
+
+  // CRM Main Table Custom Columns (persistent in localStorage)
+  const [crmCustomColumns, setCrmCustomColumns] = useState<CrmCustomColumn[]>(() => {
+    try {
+      const saved = localStorage.getItem('claimai_crm_custom_columns');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error('Failed to parse crm custom columns:', e);
+    }
+    return [
+      {
+        id: 'col_quick_actions',
+        key: 'quick_actions',
+        label: 'וואטסאפ מהיר',
+        type: 'action',
+        actionType: 'whatsapp',
+        actionLabel: 'וואטסאפ'
+      },
+      {
+        id: 'col_audit_status',
+        key: 'audit_status',
+        label: 'סטטוס בדיקת חיתום',
+        type: 'dropdown',
+        options: [
+          { label: 'ממתין לבדיקה', color: 'amber' },
+          { label: 'בבדיקה', color: 'blue' },
+          { label: 'אושר להמשך', color: 'emerald' },
+          { label: 'נדחה', color: 'rose' }
+        ]
+      }
+    ];
+  });
+  const [isAddColumnModalOpen, setIsAddColumnModalOpen] = useState(false);
+  const [copiedFeedback, setCopiedFeedback] = useState<string | null>(null);
+
+  const handleAddCrmColumn = (newCol: CrmCustomColumn) => {
+    const updated = [...crmCustomColumns, newCol];
+    setCrmCustomColumns(updated);
+    try {
+      localStorage.setItem('claimai_crm_custom_columns', JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to save crm custom columns:', e);
+    }
+  };
+
+  const handleDeleteCrmColumn = (colId: string) => {
+    const updated = crmCustomColumns.filter(c => c.id !== colId);
+    setCrmCustomColumns(updated);
+    try {
+      localStorage.setItem('claimai_crm_custom_columns', JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to save crm custom columns:', e);
+    }
+  };
+
+  const handleCellCustomFieldChange = (client: Client, fieldKey: string, value: any) => {
+    if (!onUpdateClient) return;
+    const updatedClient: Client = {
+      ...client,
+      customFields: {
+        ...(client.customFields || {}),
+        [fieldKey]: value
+      }
+    };
+    onUpdateClient(updatedClient);
+  };
+
+  const handleCellAction = (client: Client, col: CrmCustomColumn) => {
+    if (col.actionType === 'whatsapp') {
+      const wa = formatWhatsAppNumber(client.phone);
+      if (wa) {
+        const msg = encodeURIComponent(`שלום ${client.name}, פנייה מחברת ClaimAI.`);
+        window.open(`https://wa.me/${wa}?text=${msg}`, '_blank');
+      } else {
+        alert('ללקוח זה לא מוגדר מספר טלפון תקין לוואטסאפ');
+      }
+    } else if (col.actionType === 'call') {
+      if (client.phone) {
+        window.location.href = `tel:${client.phone}`;
+      } else {
+        alert('אין מספר טלפון זמין לחיוג');
+      }
+    } else if (col.actionType === 'copy') {
+      const text = `לקוח: ${client.name}\nחברה: ${client.company || '-'}\nטלפון: ${client.phone || '-'}\nאימייל: ${client.email || '-'}\nסטטוס: ${client.status}`;
+      navigator.clipboard.writeText(text);
+      setCopiedFeedback(`${client.id}_${col.id}`);
+      setTimeout(() => setCopiedFeedback(null), 2000);
+    } else if (col.actionType === 'email') {
+      if (client.email) {
+        window.location.href = `mailto:${client.email}?subject=${encodeURIComponent(`פנייה עבור ${client.name}`)}`;
+      } else {
+        alert('אין כתובת אימייל זמינה');
+      }
+    }
+  };
+
+  const getOptionColorClass = (options: CrmCustomColumn['options'], val?: string) => {
+    if (!val) return 'bg-slate-800 text-slate-300 border-slate-700';
+    const opt = options?.find(o => o.label === val);
+    const color = opt?.color || 'blue';
+    switch (color) {
+      case 'emerald': return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+      case 'amber': return 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+      case 'rose': return 'bg-rose-500/20 text-rose-300 border-rose-500/40';
+      case 'purple': return 'bg-purple-500/20 text-purple-300 border-purple-500/40';
+      case 'slate': return 'bg-slate-500/20 text-slate-300 border-slate-500/40';
+      default: return 'bg-blue-500/20 text-blue-300 border-blue-500/40';
+    }
+  };
+
+  const renderCustomCell = (client: Client, col: CrmCustomColumn) => {
+    const val = client.customFields?.[col.key];
+
+    switch (col.type) {
+      case 'dropdown':
+        return (
+          <select
+            value={val || ''}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => handleCellCustomFieldChange(client, col.key, e.target.value)}
+            className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md border focus:outline-none transition-all cursor-pointer w-full truncate ${getOptionColorClass(col.options, val)}`}
+          >
+            <option value="" className="bg-slate-900 text-slate-400">בחר אפשרות...</option>
+            {col.options?.map(opt => (
+              <option key={opt.label} value={opt.label} className="bg-slate-900 text-slate-200">
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        );
+
+      case 'action':
+        return (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCellAction(client, col);
+            }}
+            className="px-2 py-0.5 rounded-md bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 border border-purple-500/30 text-[8px] font-bold transition-all flex items-center justify-center gap-1 w-full cursor-pointer shadow-sm"
+          >
+            {col.actionType === 'whatsapp' && <MessageSquare className="w-2.5 h-2.5 text-emerald-400 shrink-0" />}
+            {col.actionType === 'call' && <Phone className="w-2.5 h-2.5 text-blue-400 shrink-0" />}
+            {col.actionType === 'copy' && (copiedFeedback === `${client.id}_${col.id}` ? <Check className="w-2.5 h-2.5 text-emerald-400 shrink-0" /> : <Copy className="w-2.5 h-2.5 text-amber-400 shrink-0" />)}
+            {col.actionType === 'email' && <Mail className="w-2.5 h-2.5 text-cyan-400 shrink-0" />}
+            <span className="truncate">{copiedFeedback === `${client.id}_${col.id}` ? 'הועתק!' : (col.actionLabel || col.label)}</span>
+          </button>
+        );
+
+      case 'checkbox':
+        return (
+          <div 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleCellCustomFieldChange(client, col.key, !val);
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+            className="flex items-center justify-center cursor-pointer py-0.5 select-none"
+          >
+            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-bold border transition-all ${
+              val 
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' 
+                : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-600'
+            }`}>
+              <CheckSquare className={`w-2.5 h-2.5 ${val ? 'text-emerald-400' : 'text-slate-500'}`} />
+              <span>{val ? 'כן' : 'לא'}</span>
+            </span>
+          </div>
+        );
+
+      case 'text':
+        return (
+          <input
+            type="text"
+            value={val || ''}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => handleCellCustomFieldChange(client, col.key, e.target.value)}
+            placeholder="הזן טקסט..."
+            className="w-full text-[9px] px-1.5 py-0.5 bg-slate-800/80 border border-slate-700 rounded text-slate-200 focus:outline-none focus:border-blue-500"
+          />
+        );
+
+      case 'date':
+        return (
+          <input
+            type="date"
+            value={val || ''}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => handleCellCustomFieldChange(client, col.key, e.target.value)}
+            className="w-full text-[9px] px-1 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300 focus:outline-none"
+          />
+        );
+
+      case 'badge':
+      default:
+        return (
+          <span className="inline-block px-1.5 py-0.5 rounded text-[8px] font-bold bg-pink-500/20 text-pink-300 border border-pink-500/30 truncate max-w-full">
+            {val || '-'}
+          </span>
+        );
+    }
+  };
 
   // Ref to the inner table container for smooth, collision-free scrolling
   const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -387,12 +602,23 @@ export const ClientTable: React.FC<ClientTableProps> = ({
               </span>
               <button
                 onClick={handleExportCSV}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition-all cursor-pointer"
                 title="ייצוא ל-Excel/CSV"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>ייצוא CSV</span>
               </button>
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() => setIsAddColumnModalOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md cursor-pointer"
+                  title="הוספת עמודה חדשה עם דרופדאון, פעולות תא או צ'קבוקס"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>הוסף עמודה</span>
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -405,6 +631,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
       */}
       {activeSubTab !== 'main_crm' && activeCustomTable && (
         <CustomTableView
+          tables={customTables}
           currentTableOverride={activeCustomTable}
           onUpdateTable={(updated) => onUpdateTable && onUpdateTable(updated)}
           onDeleteTable={(tableId) => {
@@ -463,13 +690,39 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                     <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-0 z-20 bg-slate-900 shadow-sm py-1.5 px-2 min-w-[180px]">סטטוס CRM</th>
                     <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-0 z-20 bg-slate-900 shadow-sm py-1.5 px-2">פרטי התקשרות</th>
                     <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-0 z-20 bg-slate-900 shadow-sm py-1.5 px-2">הערה אחרונה</th>
+                    {crmCustomColumns.map((col) => (
+                      <th
+                        key={col.id}
+                        style={{ backgroundColor: 'var(--bg-th, #0f172a)' }}
+                        className="sticky top-0 z-20 bg-slate-900 shadow-sm py-1.5 px-2 min-w-[130px]"
+                      >
+                        <div className="flex items-center justify-between gap-1.5">
+                          <span className="truncate font-bold text-white" title={col.label}>{col.label}</span>
+                          {canEdit && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm(`האם אתה בטוח שברצונך להסיר את העמודה "${col.label}"?`)) {
+                                  handleDeleteCrmColumn(col.id);
+                                }
+                              }}
+                              className="text-slate-400 hover:text-rose-400 p-0.5 rounded transition-colors cursor-pointer"
+                              title="מחק עמודה זו"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      </th>
+                    ))}
                     <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-0 z-20 bg-slate-900 shadow-sm py-1.5 px-2 text-center w-20">פעולות</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
                   {groupedClients.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-12 text-center text-slate-500 text-[10px]">
+                      <td colSpan={6 + crmCustomColumns.length} className="py-12 text-center text-slate-500 text-[10px]">
                         לא נמצאו רשומות העונות לסינון המבוקש
                       </td>
                     </tr>
@@ -479,12 +732,12 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                         <React.Fragment key={`group-frag-${status}`}>
                           {/* Dark background band behind each group */}
                           <tr key={`band-${status}`}>
-                            <td colSpan={6} className="h-2 bg-slate-950/40 border-0 p-0"></td>
+                            <td colSpan={6 + crmCustomColumns.length} className="h-2 bg-slate-950/40 border-0 p-0"></td>
                           </tr>
 
                           {/* Group header */}
                           <tr key={`group-${status}`} id={`group-${status.replace(/[^\w]/g, '')}`}>
-                            <td colSpan={6} className="py-2.5 px-4 bg-slate-800/90 text-[9px] font-bold text-slate-100 border-b border-slate-700/60 flex items-center justify-between rounded-t-xl rounded-b-none shadow-sm">
+                            <td colSpan={6 + crmCustomColumns.length} className="py-2.5 px-4 bg-slate-800/90 text-[9px] font-bold text-slate-100 border-b border-slate-700/60 flex items-center justify-between rounded-t-xl rounded-b-none shadow-sm">
                               <div className="flex items-center gap-1.5">
                                 <span
                                   className={`px-2 py-0.5 rounded border inline-flex items-center gap-1 ${groupStyle(status).bg} ${groupStyle(status).text} ${groupStyle(status).border} font-bold`}
@@ -627,6 +880,17 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                                   )}
                                 </td>
 
+                                {/* Custom CRM Columns */}
+                                {crmCustomColumns.map((col) => (
+                                  <td
+                                    key={col.id}
+                                    className="py-1.5 px-2 min-w-[130px]"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    {renderCustomCell(client, col)}
+                                  </td>
+                                ))}
+
                                 {/* Profile Action */}
                                 <td className="py-1.5 px-2 text-center">
                                   <button
@@ -642,7 +906,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
 
                           {/* Dark background band below each group */}
                           <tr key={`band-bottom-${status}`}>
-                            <td colSpan={6} className="h-3 bg-slate-950/30 border-0 p-0"></td>
+                            <td colSpan={6 + crmCustomColumns.length} className="h-3 bg-slate-950/30 border-0 p-0"></td>
                           </tr>
                         </React.Fragment>
                       ))}
@@ -660,6 +924,15 @@ export const ClientTable: React.FC<ClientTableProps> = ({
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
         onTableCreated={handleUploadedTable}
+      />
+
+      {/* CRM Column Manager Modal */}
+      <CrmColumnManagerModal
+        isOpen={isAddColumnModalOpen}
+        onClose={() => setIsAddColumnModalOpen(false)}
+        columns={crmCustomColumns}
+        onAddColumn={handleAddCrmColumn}
+        onDeleteColumn={handleDeleteCrmColumn}
       />
 
     </div>

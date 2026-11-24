@@ -384,17 +384,18 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
             </button>
 
             {/* Delete Table */}
-            {canEdit && onDeleteTable && tables.length > 0 && (
+            {canEdit && onDeleteTable && (
               <button
                 onClick={() => {
                   if (confirm(`האם אתה בטוח שברצונך למחוק את הטבלה "${currentTable.name}"?`)) {
                     onDeleteTable(currentTable.id);
                   }
                 }}
-                className="p-1.5 rounded-xl bg-rose-950/30 hover:bg-rose-900/40 border border-rose-800/40 text-rose-300 transition-all"
+                className="px-2.5 py-1.5 rounded-xl bg-rose-950/30 hover:bg-rose-900/40 border border-rose-800/40 text-rose-300 hover:text-rose-200 transition-all text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
                 title="מחק טבלה זו"
               >
                 <Trash2 className="w-3.5 h-3.5" />
+                <span>מחק טבלה</span>
               </button>
             )}
 
@@ -728,6 +729,7 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
         onClose={() => setIsFieldManagerOpen(false)}
         table={currentTable}
         onUpdateTable={onUpdateTable}
+        onDeleteTable={onDeleteTable}
       />
 
       {/* Add Row Modal */}

@@ -47,6 +47,7 @@ export interface Client {
   contactType?: string;
   updatedBy?: string;
   updatedDate?: string;
+  customFields?: Record<string, any>;
 }
 
 export type ProductItemCategory = 'bug' | 'roadmap';
@@ -165,3 +166,28 @@ export interface AppUser {
 }
 
 export type AppTheme = 'dark' | 'light' | 'sepia';
+
+// CRM Main Table Custom Columns & Interactive Cell Actions
+export type CrmColumnType = 
+  | 'dropdown'
+  | 'action'
+  | 'checkbox'
+  | 'text'
+  | 'number'
+  | 'date'
+  | 'badge';
+
+export interface CrmColumnOption {
+  label: string;
+  color?: string; // e.g. blue, green, amber, purple, rose
+}
+
+export interface CrmCustomColumn {
+  id: string;
+  key: string;
+  label: string;
+  type: CrmColumnType;
+  options?: CrmColumnOption[];
+  actionType?: 'whatsapp' | 'call' | 'copy' | 'email' | 'link';
+  actionLabel?: string;
+}

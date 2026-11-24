@@ -23,6 +23,7 @@ interface FieldManagerModalProps {
   onClose: () => void;
   table: CustomTable;
   onUpdateTable: (updatedTable: CustomTable) => void;
+  onDeleteTable?: (tableId: string) => void;
 }
 
 const COLUMN_TYPES: { type: ColumnType; label: string; icon: React.ReactNode }[] = [
@@ -39,7 +40,8 @@ export const FieldManagerModal: React.FC<FieldManagerModalProps> = ({
   isOpen,
   onClose,
   table,
-  onUpdateTable
+  onUpdateTable,
+  onDeleteTable
 }) => {
   const [columns, setColumns] = useState<CustomTableColumn[]>(table.columns);
   const [newLabel, setNewLabel] = useState('');
@@ -346,6 +348,34 @@ export const FieldManagerModal: React.FC<FieldManagerModalProps> = ({
               })}
             </div>
           </div>
+
+          {/* Danger Zone: מחיקת הטבלה מהמערכת */}
+          {onDeleteTable && (
+            <div className="p-4 rounded-xl bg-rose-950/20 border border-rose-500/30 flex items-center justify-between gap-3 mt-4">
+              <div className="space-y-0.5">
+                <div className="font-bold text-xs text-rose-300 flex items-center gap-1.5">
+                  <Trash2 className="w-4 h-4 text-rose-400" />
+                  <span>מחיקת טבלה זו מהמערכת</span>
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  פעולה זו תמחק את הטבלה "{table.name}" לצמיתות ותסיר אותה מכל לשוניות הניהול.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm(`האם אתה בטוח לחלוטין שברצונך למחוק לצמיתות את הטבלה "${table.name}"?`)) {
+                    onDeleteTable(table.id);
+                    onClose();
+                  }
+                }}
+                className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all shadow-md shrink-0 flex items-center gap-1.5 cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>מחק טבלה לצמיתות</span>
+              </button>
+            </div>
+          )}
 
         </div>
 
