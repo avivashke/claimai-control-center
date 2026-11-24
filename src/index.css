@@ -987,6 +987,71 @@ textarea {
 }
 
 /* ========================================================
+   PRODUCT & DELIVERY Theming
+   ======================================================== */
+[data-theme="light"] .product-header-card {
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 50%, #f1f5f9 100%) !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.08), 0 6px 18px -3px rgba(15, 23, 42, 0.07), inset 0 1px 0 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+[data-theme="light"] .product-header-card h1,
+[data-theme="light"] .product-header-card h2 {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .product-header-card p {
+  color: #475569 !important;
+}
+
+[data-theme="light"] .product-pill {
+  background-color: #ecfdf5 !important;
+  color: #047857 !important;
+  border-color: #a7f3d0 !important;
+}
+
+[data-theme="light"] .product-stat-card {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+[data-theme="light"] .product-stat-card .text-white {
+  color: #0f172a !important;
+}
+
+[data-theme="sepia"] .product-header-card {
+  background: linear-gradient(135deg, #fbf7ee 0%, #fdfcf9 50%, #f7efe2 100%) !important;
+  border-color: #d7c6b1 !important;
+  box-shadow: 0 1px 3px 0 rgba(44, 30, 20, 0.08), 0 6px 18px -3px rgba(44, 30, 20, 0.07), inset 0 1px 0 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+[data-theme="sepia"] .product-header-card h1,
+[data-theme="sepia"] .product-header-card h2 {
+  color: #2c1e14 !important;
+}
+
+[data-theme="sepia"] .product-header-card p {
+  color: #533d2e !important;
+}
+
+[data-theme="sepia"] .product-pill {
+  background-color: #f0f7f2 !important;
+  color: #14532d !important;
+  border-color: #bbf7d0 !important;
+}
+
+[data-theme="sepia"] .product-stat-card {
+  background-color: #fdfcf9 !important;
+  border-color: #d7c6b1 !important;
+  box-shadow: 0 1px 3px 0 rgba(44, 30, 20, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+[data-theme="sepia"] .product-stat-card .text-white {
+  color: #2c1e14 !important;
+}
+
+/* ========================================================
    CRISP TEXT ON SATURATED ACTION BUTTONS ACROSS ALL THEMES
    ======================================================== */
 [data-theme="light"] .bg-blue-600,

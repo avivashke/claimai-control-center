@@ -143,9 +143,9 @@ export const ProductHub: React.FC<ProductHubProps> = ({
     <div className="space-y-6">
       
       {/* Top Banner / Metrics */}
-      <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="product-header-card p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold mb-2 border border-emerald-500/30">
+          <div className="product-pill inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold mb-2 border border-emerald-500/30">
             <Layers className="w-3.5 h-3.5" />
             <span>בקרה ומסירת פיתוח · Product & Delivery Control</span>
           </div>
@@ -158,15 +158,15 @@ export const ProductHub: React.FC<ProductHubProps> = ({
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700 text-center min-w-[90px]">
+          <div className="product-stat-card p-3 rounded-xl bg-slate-800/80 border border-slate-700 text-center min-w-[90px]">
             <span className="text-[10px] text-slate-400 font-bold block uppercase">סה״כ פריטים</span>
             <span className="text-xl font-extrabold text-white">{productItems.length}</span>
           </div>
-          <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700 text-center min-w-[90px]">
+          <div className="product-stat-card p-3 rounded-xl bg-slate-800/80 border border-slate-700 text-center min-w-[90px]">
             <span className="text-[10px] text-amber-400 font-bold block uppercase">תקלות (Fixes)</span>
             <span className="text-xl font-extrabold text-white">{bugCount}</span>
           </div>
-          <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700 text-center min-w-[90px]">
+          <div className="product-stat-card p-3 rounded-xl bg-slate-800/80 border border-slate-700 text-center min-w-[90px]">
             <span className="text-[10px] text-emerald-400 font-bold block uppercase">Roadmap</span>
             <span className="text-xl font-extrabold text-white">{roadmapCount}</span>
           </div>
@@ -329,8 +329,12 @@ export const ProductHub: React.FC<ProductHubProps> = ({
         <div className="rounded-2xl border border-slate-700/70 bg-slate-900/70 shadow-2xl ring-1 ring-slate-800/40">
           <div className="flex min-h-[calc(100vh-340px)] overflow-y-auto">
             {/* Side Group Navigation */}
-            <div className="w-28 border-r border-slate-700/60 bg-slate-900/70 flex-none shrink-0 sticky top-4 self-start z-40 min-w-0">
-              <div className="p-1 space-y-0.5">
+            <div className="w-40 sm:w-44 border-r border-slate-700/60 bg-slate-900/95 flex-none shrink-0 sticky top-4 self-start z-40 min-w-0 shadow-lg">
+              <div className="px-2.5 py-2 border-b border-slate-700/60 flex items-center justify-between text-slate-400 bg-slate-900/90">
+                <span className="text-[11px] font-bold tracking-wide">ניווט סטטוסים</span>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700/60 font-bold">{groupedItems.length}</span>
+              </div>
+              <div className="p-1.5 space-y-1">
                 {groupedItems.map(({ status, items: groupItems }) => (
                   <button
                     key={`nav-${status}`}
@@ -338,13 +342,17 @@ export const ProductHub: React.FC<ProductHubProps> = ({
                       const el = document.getElementById(`group-${status.replace(/[^\w]/g, '')}`);
                       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }}
-                    className={`w-full py-1 px-1.5 rounded text-[7px] font-semibold transition-all flex flex-col items-end justify-between gap-0.5 ${
-                      (STATUS_COLORS[status]?.text || 'text-slate-300') + ' border border-slate-700/50 bg-slate-800/50'
+                    className={`w-full py-1.5 px-2 rounded-lg transition-all flex items-center justify-between gap-1.5 shadow-sm hover:scale-[1.01] hover:brightness-110 active:scale-[0.99] text-right ${
+                      (STATUS_COLORS[status]?.text || 'text-slate-200') + ' border border-slate-700/50 bg-slate-850/90 hover:bg-slate-800'
                     }`}
-                    title={`${status} (${groupItems.length})`}
+                    title={`${status} (${groupItems.length} משימות)`}
                   >
-                    <span className="text-right leading-tight">{status}</span>
-                    <span className="text-[7px] opacity-60">{groupItems.length}</span>
+                    <bdi dir="auto" className="text-right leading-tight truncate text-[11px] sm:text-xs font-bold flex-1">
+                      {status}
+                    </bdi>
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-slate-900/90 border border-slate-700/60 opacity-90 shrink-0">
+                      {groupItems.length}
+                    </span>
                   </button>
                 ))}
               </div>

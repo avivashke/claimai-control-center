@@ -725,21 +725,29 @@ export const ClientTable: React.FC<ClientTableProps> = ({
             className="flex overflow-y-auto overflow-x-auto h-[calc(100vh-250px)] relative scroll-smooth"
           >
             {/* Side Group Navigation - sticky inside the scroll container, z-20 */}
-            <div className="w-28 border-r border-slate-700/60 bg-slate-900/95 shrink-0 sticky top-0 self-start z-20 min-w-0">
-              <div className="p-1 space-y-0.5">
+            <div className="w-40 sm:w-44 border-r border-slate-700/60 bg-slate-900/95 shrink-0 sticky top-0 self-start z-20 min-w-0 shadow-lg">
+              <div className="px-2.5 py-2 border-b border-slate-700/60 flex items-center justify-between text-slate-400 bg-slate-900/90">
+                <span className="text-[11px] font-bold tracking-wide">ניווט סטטוסים</span>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700/60 font-bold">{groupedClients.length}</span>
+              </div>
+              <div className="p-1.5 space-y-1">
                 {groupedClients.map(({ status, clients: groupClients }) => (
                   <button
                     key={`nav-${status}`}
                     onClick={() => scrollToStatusGroup(status)}
-                    className={`w-full py-1 px-1.5 rounded text-[7px] font-semibold transition-all flex flex-col items-end justify-between gap-0.5 ${
+                    className={`w-full py-1.5 px-2 rounded-lg transition-all flex items-center justify-between gap-1.5 shadow-sm hover:scale-[1.01] hover:brightness-110 active:scale-[0.99] text-right ${
                       status === '(ללא סטטוס)'
-                        ? 'bg-slate-800 text-slate-300 border border-slate-700'
-                        : (STATUS_COLORS[status]?.text || 'text-slate-300') + ' border border-slate-700/50 bg-slate-800/50'
+                        ? 'bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-750'
+                        : (STATUS_COLORS[status]?.text || 'text-slate-200') + ' border border-slate-700/50 bg-slate-850/90 hover:bg-slate-800'
                     }`}
-                    title={`${status} (${groupClients.length})`}
+                    title={`${status} (${groupClients.length} לקוחות)`}
                   >
-                    <span className="text-right leading-tight">{status === '(ללא סטטוס)' ? 'ללא סטטוס' : status}</span>
-                    <span className="text-[7px] opacity-60">{groupClients.length}</span>
+                    <bdi dir="auto" className="text-right leading-tight truncate text-[11px] sm:text-xs font-bold flex-1">
+                      {status === '(ללא סטטוס)' ? 'ללא סטטוס' : status}
+                    </bdi>
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-slate-900/90 border border-slate-700/60 opacity-90 shrink-0">
+                      {groupClients.length}
+                    </span>
                   </button>
                 ))}
               </div>
