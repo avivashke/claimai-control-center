@@ -1,32 +1,71 @@
 import { ChatAction } from '../components/AI/FloatingAIChat';
 
-const WORKER_URL = (import.meta.env.VITE_CLOUDFLARE_WORKER_URL || '').replace(/\/$/, '');
-const WORKER_TOKEN = import.meta.env.VITE_WORKER_AUTH_TOKEN || '';
+const STORAGE_WORKER_URL_KEY = 'claimai_custom_worker_url';
+const STORAGE_WORKER_TOKEN_KEY = 'claimai_custom_worker_token';
 
-export const isWorkerConfigured = (): boolean => {
-  return Boolean(WORKER_URL && WORKER_URL.length > 5);
+export const getWorkerUrl = (): string => {
+  const custom = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_WORKER_URL_KEY) : null;
+  if (custom && custom.trim().length > 5) {
+    return custom.trim().replace(/\/$/, '');
+  }
+  return (import.meta.env.VITE_CLOUDFLARE_WORKER_URL || '').replace(/\/$/, '');
 };
 
-export const getWorkerUrl = (): string => WORKER_URL;
+export const getWorkerToken = (): string => {
+  const custom = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_WORKER_TOKEN_KEY) : null;
+  if (custom && custom.trim()) {
+    return custom.trim();
+  }
+  return import.meta.env.VITE_WORKER_AUTH_TOKEN || '';
+};
+
+export const setCustomWorkerConfig = (url: string, token?: string): void => {
+  if (typeof window === 'undefined') return;
+  const cleanUrl = url.trim().replace(/\/$/, '');
+  if (cleanUrl) {
+    localStorage.setItem(STORAGE_WORKER_URL_KEY, cleanUrl);
+  } else {
+    localStorage.removeItem(STORAGE_WORKER_URL_KEY);
+  }
+
+  if (token && token.trim()) {
+    localStorage.setItem(STORAGE_WORKER_TOKEN_KEY, token.trim());
+  } else {
+    localStorage.removeItem(STORAGE_WORKER_TOKEN_KEY);
+  }
+};
+
+export const clearCustomWorkerConfig = (): void => {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(STORAGE_WORKER_URL_KEY);
+  localStorage.removeItem(STORAGE_WORKER_TOKEN_KEY);
+};
+
+export const isWorkerConfigured = (): boolean => {
+  const url = getWorkerUrl();
+  return Boolean(url && url.length > 5);
+};
 
 const getHeaders = (): Record<string, string> => {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-  if (WORKER_TOKEN) {
-    headers['Authorization'] = `Bearer ${WORKER_TOKEN}`;
-    headers['X-ClaimAI-Token'] = WORKER_TOKEN;
+  const token = getWorkerToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+    headers['X-ClaimAI-Token'] = token;
   }
   return headers;
 };
 
 export const checkWorkerHealth = async (): Promise<{ ok: boolean; info?: any; error?: string }> => {
   if (!isWorkerConfigured()) {
-    return { ok: false, error: 'לא הוגדר URL עבור הוורקר ב-Netlify (VITE_CLOUDFLARE_WORKER_URL)' };
+    return { ok: false, error: 'לא הוגדר URL עבור הוורקר. ניתן להגדיר ב-Netlify (VITE_CLOUDFLARE_WORKER_URL) או ישירות בהגדרות המערכת' };
   }
 
+  const url = getWorkerUrl();
   try {
-    const res = await fetch(`${WORKER_URL}/api/health`, {
+    const res = await fetch(`${url}/api/health`, {
       method: 'GET',
       headers: getHeaders(),
     });
@@ -40,18 +79,56 @@ export const checkWorkerHealth = async (): Promise<{ ok: boolean; info?: any; er
   }
 };
 
+export interface ChatContextPayload {
+  currentUser?: { name?: string; role?: string; email?: string };
+  stats?: {
+    totalClients: number;
+    urgentCount: number;
+    meetingCount: number;
+    importantCount: number;
+    statusDistribution: Record<string, number>;
+    businessTypeDistribution: Record<string, number>;
+    totalTickets: number;
+    criticalBugsCount: number;
+  };
+  matchedClients?: Array<{
+    id: string;
+    name: string;
+    company?: string;
+    businessType?: string;
+    status: string;
+    subStatus?: string;
+    phone?: string;
+    email?: string;
+    lastNote?: string;
+    requiresAttention?: boolean;
+  }>;
+  matchedTickets?: Array<{
+    id: string;
+    title: string;
+    priority: string;
+    status: string;
+    client?: string;
+    category?: string;
+  }>;
+  customTablesSummary?: Array<{
+    id: string;
+    name: string;
+    rowCount: number;
+  }>;
+  clientsSummary?: Array<{ id: string; name: string; company?: string; status: string; phone?: string; requiresAttention?: boolean }>;
+  productSummary?: Array<{ id: string; title: string; priority: string; status: string; client?: string; category?: string }>;
+}
+
 export const askWorkerAI = async (
   query: string,
-  context: {
-    currentUser?: { name?: string; role?: string; email?: string };
-    clientsSummary?: Array<{ id: string; name: string; company?: string; status: string; phone?: string; requiresAttention?: boolean }>;
-    productSummary?: Array<{ id: string; title: string; priority: string; status: string; client?: string; category?: string }>;
-  }
+  context: ChatContextPayload
 ): Promise<{ text: string; actions?: ChatAction[] } | null> => {
   if (!isWorkerConfigured()) return null;
 
+  const url = getWorkerUrl();
   try {
-    const res = await fetch(`${WORKER_URL}/api/chat`, {
+    const res = await fetch(`${url}/api/chat`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({
@@ -83,8 +160,9 @@ export const analyzeTableWithWorker = async (
 ): Promise<{ tableName: string; description: string; columns: any[] } | null> => {
   if (!isWorkerConfigured()) return null;
 
+  const url = getWorkerUrl();
   try {
-    const res = await fetch(`${WORKER_URL}/api/analyze-table`, {
+    const res = await fetch(`${url}/api/analyze-table`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({

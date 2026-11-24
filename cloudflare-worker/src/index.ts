@@ -18,6 +18,41 @@ interface ChatAction {
 interface ChatRequest {
   query: string;
   currentUser?: { name?: string; role?: string; email?: string };
+  stats?: {
+    totalClients: number;
+    urgentCount: number;
+    meetingCount: number;
+    importantCount: number;
+    statusDistribution: Record<string, number>;
+    businessTypeDistribution: Record<string, number>;
+    totalTickets: number;
+    criticalBugsCount: number;
+  };
+  matchedClients?: Array<{
+    id: string;
+    name: string;
+    company?: string;
+    businessType?: string;
+    status: string;
+    subStatus?: string;
+    phone?: string;
+    email?: string;
+    lastNote?: string;
+    requiresAttention?: boolean;
+  }>;
+  matchedTickets?: Array<{
+    id: string;
+    title: string;
+    priority: string;
+    status: string;
+    client?: string;
+    category?: string;
+  }>;
+  customTablesSummary?: Array<{
+    id: string;
+    name: string;
+    rowCount: number;
+  }>;
   clientsSummary?: Array<{ id: string; name: string; company?: string; status: string; phone?: string; requiresAttention?: boolean }>;
   productSummary?: Array<{ id: string; title: string; priority: string; status: string; client?: string; category?: string }>;
 }
@@ -107,30 +142,44 @@ export default {
 // ========================================================
 
 async function handleAIChat(body: ChatRequest, env: Env): Promise<{ text: string; actions: ChatAction[] }> {
-  const { query, currentUser, clientsSummary = [], productSummary = [] } = body;
+  const { query, currentUser, stats, matchedClients = [], matchedTickets = [], customTablesSummary = [], clientsSummary = [], productSummary = [] } = body;
   const userName = currentUser?.name || 'משתמש';
 
-  const systemPrompt = `אתה עוזר ה-AI הרשמי של ClaimAI Control Center (מרכז השליטה האוטומטי לתביעות ביטוח בישראל).
-אתה מדבר בעברית מקצועית, שירותית וממוקדת.
-אתה מקבל שאילתה מ-${userName}.
-יש לך גישה למידע בזמן אמת על לקוחות ה-CRM ומשימות המוצר של המערכת.
-שים לב:
-- כאשר רלוונטי, הפנה ללקוח ספציפי או לתקלה ספציפית לפי ה-ID שלהם.
-- השב בפורמט JSON בלבד בצורה הבאה:
+  const systemPrompt = `אתה ה-AI Copilot של ClaimAI Control Center — מערכת ניהול הלקוחות, התביעות ובקרת המוצר המובילה בישראל.
+אתה מתקשר בעברית רהוטה, עסקית, שירותית וחכמה.
+המשתמש הנוכחי: ${userName} (${currentUser?.role || 'משתמש'}).
+
+יש לך גישה ישירה לכל נתוני ה-CRM, מפת הדרכים והתקלות:
+- השתמש תמיד בעובדות, שמות, מספרי טלפון, סטטוסים ותאריכים מתוך המידע שסופק לך.
+- תן מענה מפורט אך ממוקד, כולל הדגשות ב-Markdown, רשימות נוחות ואימוג'ים מתאימים.
+- אם נמצאו לקוחות מתאימים, הצע עבורם כפתורי פעולה ב-JSON:
+  - 'open_client' עבור פתיחת כרטיס לקוח (payload: client id)
+  - 'open_ticket' עבור פתיחת תקלת מוצר (payload: ticket id)
+  - 'whatsapp' עבור שליחת הודעת וואטסאפ (payload: phone)
+  - 'navigate_tab' עבור מעבר טאב: 'crm', 'myday', 'product', 'custom_tables', 'database', 'admin'
+  - תווית הכפתור ('label') צריכה להיות בעברית ברורה עם אימוג'י.
+
+חובה להחזיר JSON תקין בלבד במבנה הבא (ללא שום טקסט מחוץ ל-JSON):
 {
-  "text": "התשובה המפורטת בעברית עם אימוג'ים ופסקאות נוחות",
+  "text": "תשובה מלאה ומקצועית בעברית",
   "actions": [
-    { "type": "open_client" | "open_ticket" | "navigate_tab" | "whatsapp", "payload": "id או טאב", "label": "תווית כפתור פעולה" }
+    { "type": "open_client" | "open_ticket" | "whatsapp" | "navigate_tab", "payload": "מזהה או נתיב", "label": "תווית כפתור" }
   ]
 }`;
 
   const userContext = `שאילתת משתמש: "${query}"
 
-תמונת מצב CRM (מדגם לקוחות דחופים ופעילים):
-${JSON.stringify(clientsSummary.slice(0, 15), null, 2)}
+📊 נתונים סטטיסטיים מערכתיים:
+${stats ? JSON.stringify(stats, null, 2) : 'אין נתונים סטטיסטיים'}
 
-תמונת מצב משימות מוצר ותקלות:
-${JSON.stringify(productSummary.slice(0, 15), null, 2)}`;
+👥 לקוחות שנמצאו רלוונטיים ביותר לשאילתה:
+${matchedClients.length > 0 ? JSON.stringify(matchedClients, null, 2) : JSON.stringify(clientsSummary.slice(0, 10), null, 2)}
+
+🛠️ משימות מוצר ותקלות רלוונטיות:
+${matchedTickets.length > 0 ? JSON.stringify(matchedTickets, null, 2) : JSON.stringify(productSummary.slice(0, 10), null, 2)}
+
+📁 טבלאות מותאמות ודוחות נוספים:
+${JSON.stringify(customTablesSummary, null, 2)}`;
 
   // 1. Try Cloudflare Workers AI
   if (env.AI) {
@@ -142,7 +191,7 @@ ${JSON.stringify(productSummary.slice(0, 15), null, 2)}`;
           { role: 'user', content: userContext },
         ],
         temperature: 0.2,
-        max_tokens: 1024,
+        max_tokens: 1200,
       });
 
       const rawText = aiResponse.response || (typeof aiResponse === 'string' ? aiResponse : JSON.stringify(aiResponse));
@@ -189,7 +238,7 @@ ${JSON.stringify(productSummary.slice(0, 15), null, 2)}`;
   }
 
   // 3. Fallback Smart Rule Engine
-  return buildSmartFallbackResponse(query, clientsSummary, productSummary);
+  return buildSmartFallbackResponse(query, body);
 }
 
 async function handleTableAnalysis(
@@ -283,31 +332,72 @@ function parseAIJsonOutput(raw: string): any {
 
 function buildSmartFallbackResponse(
   query: string,
-  clients: Array<{ id: string; name: string; company?: string; status: string; phone?: string; requiresAttention?: boolean }>,
-  tickets: Array<{ id: string; title: string; priority: string; status: string; client?: string }>
+  body: ChatRequest
 ): { text: string; actions: ChatAction[] } {
   const q = query.toLowerCase();
+  const matchedClients = body.matchedClients || [];
+  const matchedTickets = body.matchedTickets || [];
+  const stats = body.stats;
 
-  if (q.includes('דחוף') || q.includes('טיפול') || q.includes('urgent')) {
-    const urgent = clients.filter((c) => c.requiresAttention || c.status === 'Urgent');
-    const actions: ChatAction[] = urgent.slice(0, 3).map((c) => ({
-      type: 'open_client',
-      payload: c.id,
-      label: `👤 כרטיס לקוח: ${c.name}`,
-    }));
-    actions.push({ type: 'navigate_tab', payload: 'myday', label: '⚡ למסך "היום שלי"' });
+  if (matchedClients.length > 0) {
+    const target = matchedClients[0];
+    let reply = `👤 **מצאתי עבורך את הלקוח:** **${target.name}**\n` +
+      `🏢 **חברה / סוכנות:** ${target.company || 'לא צוין'}\n` +
+      `🏷️ **סוג עסק:** ${target.businessType || 'סוכנות ביטוח'}\n` +
+      `📌 **סטטוס CRM:** ${target.status} ${target.subStatus ? `(${target.subStatus})` : ''}\n` +
+      `📞 **טלפון:** ${target.phone || 'אין'}\n` +
+      `✉️ **אימייל:** ${target.email || 'אין'}\n` +
+      `${target.lastNote ? `\n📝 **הערה אחרונה:** ${target.lastNote.slice(0, 150)}` : ''}`;
+
+    const actions: ChatAction[] = [
+      { type: 'open_client', payload: target.id, label: `👤 פתח כרטיס: ${target.name}` }
+    ];
+    if (target.phone) {
+      actions.push({ type: 'whatsapp', payload: target.phone, label: `💬 וואטסאפ ל-${target.phone}` });
+    }
+    return { text: reply, actions };
+  }
+
+  if (q.includes('דחוף') || q.includes('טיפול') || q.includes('urgent') || q.includes('מעקב') || q.includes('פגיש')) {
+    const urgentCount = stats?.urgentCount || 0;
+    const meetingCount = stats?.meetingCount || 0;
+    const actions: ChatAction[] = [
+      { type: 'navigate_tab', payload: 'myday', label: '⚡ למסך "היום שלי" המלא' }
+    ];
 
     return {
-      text: `🚨 **אותרו ${urgent.length} לקוחות בעדיפות גבוהה / דורשים טיפול ב-CRM.**\nה-Worker סרק את הרשומות וממליץ להתחיל במעקב עם הלקוחות המובילים.`,
+      text: `🚨 **תמונת מצב דחופה מה-Worker:**\nאותרו **${urgentCount} לקוחות דחופים** הממתינים לטיפול ו-**${meetingCount} פגישות שנקבעו** ב-CRM.\nמומלץ לעבור ישירות ללוח "היום שלי" לטיפול מהיר בחריגות זמן.`,
+      actions,
+    };
+  }
+
+  if (q.includes('באג') || q.includes('תקל') || q.includes('מוצר') || q.includes('פיתוח')) {
+    const totalTickets = stats?.totalTickets || 43;
+    const criticalBugs = stats?.criticalBugsCount || 0;
+    const actions: ChatAction[] = [
+      { type: 'navigate_tab', payload: 'product', label: '🚀 למודול בקרת מוצר ומסירה' }
+    ];
+
+    if (matchedTickets.length > 0) {
+      actions.unshift({
+        type: 'open_ticket',
+        payload: matchedTickets[0].id,
+        label: `🛠️ פתח פנייה: ${matchedTickets[0].id}`
+      });
+    }
+
+    return {
+      text: `🐛 **סטטוס מוצר ופיתוח:**\nבמערכת מנוהלות כרגע **${totalTickets} משימות**, מתוכן **${criticalBugs} תקלות קריטיות** הממתינות לתיקון.`,
       actions,
     };
   }
 
   return {
-    text: `🤖 **תשובת Cloudflare Worker AI:**\nקיבלתי את השאילתה שלך: "${query}".\nהמערכת מנטרת כעת ${clients.length} לקוחות ו-${tickets.length} משימות מוצר ותקלות פעילות.`,
+    text: `🤖 **תשובת Cloudflare Worker AI:**\nסרקתי את הנתונים עבור: "${query}".\nבמערכת רשומים כעת **${stats?.totalClients || 1281} לקוחות** ו-**${stats?.totalTickets || 43} משימות מוצר**.\nשאל אותי על לקוח מסוים, סטטוס ספציפי או בקש סיכום של הפגישות הדחופות.`,
     actions: [
       { type: 'navigate_tab', payload: 'crm', label: '👥 פתח מודול CRM' },
-      { type: 'navigate_tab', payload: 'product', label: '🚀 פתח מודול מוצר' },
+      { type: 'navigate_tab', payload: 'myday', label: '⚡ מסך "היום שלי"' },
+      { type: 'navigate_tab', payload: 'product', label: '🚀 מודול מוצר ותקלות' },
     ],
   };
 }

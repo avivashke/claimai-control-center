@@ -40,7 +40,7 @@ import {
 } from '../services/googleSheetsBackupService';
 import { db } from '../services/db';
 import { testNetlifyBlobs } from '../services/blobsService';
-import { checkWorkerHealth, getWorkerUrl, isWorkerConfigured } from '../services/aiWorkerService';
+import { checkWorkerHealth, getWorkerUrl, getWorkerToken, setCustomWorkerConfig, clearCustomWorkerConfig, isWorkerConfigured } from '../services/aiWorkerService';
 import { FileSpreadsheet, ShieldAlert, Sparkles, Check, Link2, Sheet } from 'lucide-react';
 
 interface DatabaseSettingsProps {
@@ -66,6 +66,9 @@ export const DatabaseSettings: React.FC<DatabaseSettingsProps> = ({
   const [blobsResult, setBlobsResult] = useState<{ success: boolean; message: string; latency?: number } | null>(null);
   const [isTestingWorker, setIsTestingWorker] = useState(false);
   const [workerResult, setWorkerResult] = useState<{ success: boolean; message: string; info?: any } | null>(null);
+  const [dbWorkerUrl, setDbWorkerUrl] = useState(getWorkerUrl());
+  const [dbWorkerToken, setDbWorkerToken] = useState(getWorkerToken());
+  const [isWorkerSaved, setIsWorkerSaved] = useState(false);
   const [isRestoringCSV, setIsRestoringCSV] = useState(false);
   const [csvRestoreResult, setCsvRestoreResult] = useState<{ success: boolean; message: string } | null>(null);
 
@@ -137,6 +140,9 @@ export const DatabaseSettings: React.FC<DatabaseSettingsProps> = ({
   };
 
   const handleTestWorker = async () => {
+    setCustomWorkerConfig(dbWorkerUrl, dbWorkerToken);
+    setIsWorkerSaved(true);
+    setTimeout(() => setIsWorkerSaved(false), 2500);
     setIsTestingWorker(true);
     setWorkerResult(null);
     try {
@@ -823,13 +829,13 @@ CREATE TABLE product_items (
                     ? 'bg-purple-500/20 text-purple-300 border-purple-500/30'
                     : 'bg-slate-800 text-slate-400 border-slate-700'
                 }`}>
-                  {isWorkerConfigured() ? 'מוגדר ב-Netlify' : 'לא מוגדר (פולבאק מקומי)'}
+                  {isWorkerConfigured() ? 'מוגדר ופעיל' : 'לא מוגדר (פולבאק מקומי)'}
                 </span>
               </div>
               <p className="text-xs text-slate-300 mt-0.5">
                 {isWorkerConfigured()
-                  ? `מחובר לוורקר: ${getWorkerUrl()}`
-                  : 'הגדר VITE_CLOUDFLARE_WORKER_URL ב-Netlify כדי לחבר את ה-Worker ב-Cloudflare לביצוע עיבודי AI בענן.'}
+                  ? `כתובת נוכחית: ${getWorkerUrl()}`
+                  : 'הזן את כתובת ה-Worker שפרסת ב-Cloudflare או הגדר VITE_CLOUDFLARE_WORKER_URL ב-Netlify.'}
               </p>
             </div>
           </div>
@@ -841,8 +847,32 @@ CREATE TABLE product_items (
               className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold shadow-md shadow-purple-600/30 transition-all disabled:opacity-50 flex items-center gap-1.5"
             >
               <Cloud className="w-3.5 h-3.5" />
-              <span>{isTestingWorker ? 'בודק Worker...' : '⚡ בדיקת חיבור Cloudflare Worker'}</span>
+              <span>{isTestingWorker ? 'בודק Worker...' : isWorkerSaved ? '✓ נשמר ונבדק!' : '⚡ שמור ובדוק חיבור'}</span>
             </button>
+          </div>
+        </div>
+
+        {/* Worker URL Inputs */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+          <div className="space-y-1">
+            <label className="text-[11px] font-bold text-slate-300">כתובת Worker URL:</label>
+            <input
+              type="url"
+              placeholder="https://claimai-ai-worker.xyz.workers.dev"
+              value={dbWorkerUrl}
+              onChange={(e) => setDbWorkerUrl(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:ring-1 focus:ring-purple-500"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[11px] font-bold text-slate-300">טוקן אבטחה (WORKER_SECRET_TOKEN, אופציונלי):</label>
+            <input
+              type="password"
+              placeholder="טוקן סודי (אם מוגדר ב-Worker)"
+              value={dbWorkerToken}
+              onChange={(e) => setDbWorkerToken(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:ring-1 focus:ring-purple-500"
+            />
           </div>
         </div>
 

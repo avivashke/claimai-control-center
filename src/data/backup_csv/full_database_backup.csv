@@ -1579,6 +1579,6 @@
 "id","email","name","role","avatarUrl","permissions","isActive","createdAt","lastLogin"
 "user-admin-1","aviv.claimai@gmail.com","אביב אשכנזי (מנהל מערכת)","admin","https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80","{""canEditCrm"":true,""canEditProduct"":true,""canEditTables"":true,""canManageUsers"":true}","true","2026-11-19","2026-11-19 13:40"
 "user-editor-2","avivashke95@gmail.com","אביב (עורך CRM ומוצר)","editor","","{""canEditCrm"":true,""canEditProduct"":true,""canEditTables"":true,""canManageUsers"":false}","true","2026-11-19","2026-11-19 11:20"
-"user-admin-3","eyal@claimai.com","אייל מנכ""ל","admin","","{""canEditCrm"":true,""canEditProduct"":true,""canEditTables"":true,""canManageUsers"":true}","true","2026-11-19",""
+"user-admin-3","eyal@claimi.co.il","אייל מנכ""ל","admin","","{""canEditCrm"":true,""canEditProduct"":true,""canEditTables"":true,""canManageUsers"":true}","true","2026-11-19",""
 "user-viewer-4","viewer@claimai.com","משתמש פורטל צפייה (Viewer)","viewer","","{""canEditCrm"":false,""canEditProduct"":false,""canEditTables"":false,""canManageUsers"":false}","true","2026-11-19",""
 
