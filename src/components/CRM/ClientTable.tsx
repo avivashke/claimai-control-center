@@ -15,6 +15,7 @@ import {
   UserCheck, 
   Plus, 
   Edit,
+  Pencil,
   Users,
   Table as TableIcon,
   Sparkles,
@@ -100,6 +101,23 @@ export const ClientTable: React.FC<ClientTableProps> = ({
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedBusinessType, setSelectedBusinessType] = useState<string>('all');
   const [additionalBusinessTypes, setAdditionalBusinessTypes] = useState<string[]>([]);
+
+  // Inline editing for client name
+  const [editingClientId, setEditingClientId] = useState<string | null>(null);
+  const [editingClientName, setEditingClientName] = useState<string>('');
+
+  const handleSaveInlineName = (client: Client, newName: string) => {
+    const trimmed = newName.trim();
+    setEditingClientId(null);
+    if (!trimmed || trimmed === client.name) return;
+    if (onUpdateClient) {
+      onUpdateClient({
+        ...client,
+        name: trimmed,
+        updatedDate: new Date().toISOString().slice(0, 10)
+      });
+    }
+  };
 
   // CRM Main Table Custom Columns (persistent in localStorage)
   const [crmCustomColumns, setCrmCustomColumns] = useState<CrmCustomColumn[]>(() => {
@@ -772,10 +790,78 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                                 onClick={() => onSelectClient(client)}
                               >
                                 {/* Name & Company */}
-                                <td className="py-1.5 px-2 min-w-[150px]">
-                                  <div className="font-semibold text-white group-hover:text-blue-400 transition-colors text-[9px] leading-tight">
-                                    {client.name || 'ללא שם'}
-                                  </div>
+                                <td 
+                                  className="py-1.5 px-2 min-w-[170px]"
+                                  onClick={(e) => {
+                                    if (editingClientId === client.id) {
+                                      e.stopPropagation();
+                                    }
+                                  }}
+                                >
+                                  {editingClientId === client.id ? (
+                                    <div className="flex items-center gap-1.5 min-w-[210px] w-full" onClick={(e) => e.stopPropagation()}>
+                                      <input
+                                        type="text"
+                                        autoFocus
+                                        value={editingClientName}
+                                        onChange={(e) => setEditingClientName(e.target.value)}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter') {
+                                            handleSaveInlineName(client, editingClientName);
+                                          } else if (e.key === 'Escape') {
+                                            setEditingClientId(null);
+                                          }
+                                        }}
+                                        onBlur={() => handleSaveInlineName(client, editingClientName)}
+                                        className="flex-1 text-[11px] font-semibold bg-slate-850 text-white border border-blue-500 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-inner"
+                                        placeholder="שם לקוח"
+                                      />
+                                      <button
+                                        type="button"
+                                        onMouseDown={(e) => {
+                                          e.preventDefault();
+                                          handleSaveInlineName(client, editingClientName);
+                                        }}
+                                        className="p-1 rounded bg-blue-600 hover:bg-blue-500 text-white shrink-0 shadow-sm transition-transform active:scale-95"
+                                        title="שמור שינוי (Enter)"
+                                      >
+                                        <Check className="w-3 h-3" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onMouseDown={(e) => {
+                                          e.preventDefault();
+                                          setEditingClientId(null);
+                                        }}
+                                        className="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 shrink-0 transition-transform active:scale-95"
+                                        title="בטל (Esc)"
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center justify-between group/name gap-1.5">
+                                      <div 
+                                        className="font-semibold text-white group-hover:text-blue-400 transition-colors text-[9px] leading-tight truncate flex-1"
+                                      >
+                                        {client.name || 'ללא שם'}
+                                      </div>
+                                      {canEdit && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditingClientId(client.id);
+                                            setEditingClientName(client.name || '');
+                                          }}
+                                          className="opacity-30 group-hover:opacity-100 hover:opacity-100 p-0.5 rounded hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-all shrink-0"
+                                          title="ערוך שם לקוח"
+                                        >
+                                          <Pencil className="w-2.5 h-2.5" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
                                   {client.company && client.company !== client.name && (
                                     <div className="text-[8px] text-slate-400 flex items-center gap-0.5 mt-0.5">
                                       <Building className="w-2 h-2 text-slate-500" />

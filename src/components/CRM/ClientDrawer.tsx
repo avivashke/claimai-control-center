@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   Building, 
@@ -60,6 +60,12 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
   const [newNote, setNewNote] = useState('');
   const [isSavedAlert, setIsSavedAlert] = useState(false);
 
+  useEffect(() => {
+    if (client) {
+      setFormData({ ...client });
+    }
+  }, [client?.id, client?.name, client?.company, client?.status]);
+
   const authorName = currentUser?.name || currentUser?.email?.split('@')[0] || 'משתמש מערכת';
 
   const formatWhatsAppNumber = (phone?: string) => {
@@ -84,6 +90,8 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
 
     const updated = {
       ...formData,
+      name: formData.name?.trim() || client.name,
+      company: formData.company?.trim() ?? client.company ?? '',
       lastNote: updatedNotes,
       updatedDate: new Date().toISOString().slice(0, 10),
       updatedBy: authorName
@@ -102,23 +110,56 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
         
         {/* Drawer Header */}
         <div className="p-5 border-b border-slate-800 bg-slate-850 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold text-sm">
+          <div className="flex items-center gap-3 flex-1 min-w-0 mr-2">
+            <div className="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold text-sm shrink-0">
               {client.id}
             </div>
-            <div>
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <span>{formData.name || 'ללא שם'}</span>
-                {formData.requiresAttention && (
-                  <span className="px-2 py-0.5 rounded text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/30 font-semibold">
-                    דחוף
-                  </span>
-                )}
-              </h2>
-              <p className="text-xs text-slate-400 flex items-center gap-1">
-                <Building className="w-3.5 h-3.5 text-slate-500" />
-                <span>{formData.company || 'אין חברה רשומה'}</span>
-              </p>
+            <div className="flex-1 min-w-0">
+              {canEdit ? (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={formData.name || ''}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="הזן שם לקוח..."
+                      className="text-base font-bold text-white bg-slate-800/90 hover:bg-slate-800 focus:bg-slate-800 border border-slate-700 focus:border-blue-500 rounded-lg px-2.5 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all w-full max-w-sm"
+                      title="עריכת שם לקוח"
+                    />
+                    {formData.requiresAttention && (
+                      <span className="shrink-0 px-2 py-0.5 rounded text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/30 font-semibold">
+                        דחוף
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                    <Building className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                    <input
+                      type="text"
+                      value={formData.company || ''}
+                      onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                      placeholder="חברה / משרד (אופציונלי)"
+                      className="text-xs text-slate-300 bg-slate-800/50 hover:bg-slate-800 focus:bg-slate-800 border border-slate-700/60 focus:border-blue-500 rounded px-2 py-0.5 focus:outline-none transition-all w-full max-w-xs"
+                      title="עריכת שם חברה / משרד"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                    <span>{formData.name || 'ללא שם'}</span>
+                    {formData.requiresAttention && (
+                      <span className="px-2 py-0.5 rounded text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/30 font-semibold">
+                        דחוף
+                      </span>
+                    )}
+                  </h2>
+                  <p className="text-xs text-slate-400 flex items-center gap-1">
+                    <Building className="w-3.5 h-3.5 text-slate-500" />
+                    <span>{formData.company || 'אין חברה רשומה'}</span>
+                  </p>
+                </>
+              )}
             </div>
           </div>
 
@@ -210,6 +251,34 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
             </h3>
 
             <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2 sm:col-span-1">
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  שם הלקוח <span className="text-blue-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.name || ''}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="הזן שם מלא..."
+                  disabled={!canEdit}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-semibold disabled:opacity-60"
+                />
+              </div>
+
+              <div className="col-span-2 sm:col-span-1">
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  שם חברה / משרד
+                </label>
+                <input
+                  type="text"
+                  value={formData.company || ''}
+                  onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                  placeholder="שם חברה או משרד..."
+                  disabled={!canEdit}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-60"
+                />
+              </div>
+
               <div>
                 <label className="block text-xs text-slate-400 mb-1">סטטוס CRM</label>
                 <select
