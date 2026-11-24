@@ -351,7 +351,7 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0b0f19] text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white" dir="rtl">
+    <div style={{ backgroundColor: 'var(--bg-page)', color: 'var(--text-main)' }} className="min-h-screen bg-[#0b0f19] text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white transition-colors" dir="rtl">
       
       {/* Top Sticky Header */}
       <Header
