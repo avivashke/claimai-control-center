@@ -123,7 +123,7 @@ table thead th {
 
 table thead th {
   position: sticky !important;
-  top: 0 !important;
+  top: var(--table-header-top, 0px) !important;
   z-index: 20 !important;
   box-shadow: 0 1px 0 0 var(--border-color) !important;
 }

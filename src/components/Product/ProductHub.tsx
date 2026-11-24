@@ -325,11 +325,11 @@ export const ProductHub: React.FC<ProductHubProps> = ({
           })}
         </div>
       ) : (
-        /* VIEW: TABLE */
-        <div className="rounded-2xl border border-slate-700/70 bg-slate-900/70 shadow-2xl ring-1 ring-slate-800/40">
-          <div className="flex min-h-[calc(100vh-340px)] overflow-y-auto">
-            {/* Side Group Navigation */}
-            <div className="w-40 sm:w-44 border-r border-slate-700/60 bg-slate-900/95 flex-none shrink-0 sticky top-4 self-start z-40 min-w-0 shadow-lg">
+        /* VIEW: TABLE - Natural Infinite Page Scroll with Unified Sticky Header (No inner rectangle trap) */
+        <div className="rounded-2xl border border-slate-700/70 bg-slate-900/70 shadow-2xl ring-1 ring-slate-800/40 relative">
+          <div className="flex relative">
+            {/* Side Group Navigation - Sticky to viewport on natural page scroll */}
+            <div className="w-40 sm:w-44 border-r border-slate-700/60 bg-slate-900/95 flex-none shrink-0 sticky top-[160px] self-start z-30 min-w-0 shadow-lg rounded-r-2xl">
               <div className="px-2.5 py-2 border-b border-slate-700/60 flex items-center justify-between text-slate-400 bg-slate-900/90">
                 <span className="text-[11px] font-bold tracking-wide">ניווט סטטוסים</span>
                 <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700/60 font-bold">{groupedItems.length}</span>
@@ -340,7 +340,15 @@ export const ProductHub: React.FC<ProductHubProps> = ({
                     key={`nav-${status}`}
                     onClick={() => {
                       const el = document.getElementById(`group-${status.replace(/[^\w]/g, '')}`);
-                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      if (el) {
+                        const headerOffset = 195;
+                        const elementPosition = el.getBoundingClientRect().top;
+                        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+                        window.scrollTo({
+                          top: offsetPosition,
+                          behavior: 'smooth'
+                        });
+                      }
                     }}
                     className={`w-full py-1.5 px-2 rounded-lg transition-all flex items-center justify-between gap-1.5 shadow-sm hover:scale-[1.01] hover:brightness-110 active:scale-[0.99] text-right ${
                       (STATUS_COLORS[status]?.text || 'text-slate-200') + ' border border-slate-700/50 bg-slate-850/90 hover:bg-slate-800'
@@ -358,162 +366,166 @@ export const ProductHub: React.FC<ProductHubProps> = ({
               </div>
             </div>
 
-            {/* Scrollable Table Area */}
-            <div className="flex-1 min-w-0 relative">
-              {/* Header table - sticks to top on scroll */}
-              <div className="sticky top-0 z-50 bg-slate-900/[0.96] shadow-sm border-b border-slate-700">
-                <table style={{ tableLayout: 'fixed' }} className="w-full border-collapse text-right text-[9px]">
-                  <tr className="border-b border-slate-700">
-                    <th className="py-1.5 px-2 w-16">מזהה</th>
-                    <th className="py-1.5 px-2 min-w-[80px]">סוג</th>
-                    <th className="py-1.5 px-2 min-w-[150px]">כותרת המשימה</th>
-                    <th className="py-1.5 px-2 min-w-[140px]">לקוח / מקור</th>
-                    <th className="py-1.5 px-2 min-w-[120px]">מודול במערכת</th>
-                    <th className="py-1.5 px-2 min-w-[80px]">עדיפות</th>
-                    <th className="py-1.5 px-2 min-w-[120px]">סטטוס מסירה</th>
-                    <th className="py-1.5 px-2 min-w-[100px]">גרסה / יעד</th>
-                    <th className="py-1.5 px-2 text-center w-20">פעולות</th>
+            {/* Natural Infinite Scroll Table Area with Unified Sticky Header */}
+            <div className="flex-1 min-w-0">
+              <table 
+                style={{ 
+                  tableLayout: 'fixed', 
+                  borderCollapse: 'separate', 
+                  borderSpacing: 0,
+                  '--table-header-top': '148px'
+                } as React.CSSProperties} 
+                className="w-full border-separate border-spacing-0 text-right text-[9px]"
+              >
+                <thead style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="bg-slate-900 sticky top-[148px] z-30 shadow-md">
+                  <tr style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="border-b border-slate-700 bg-slate-900">
+                    <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-[148px] z-30 bg-slate-900 shadow-sm py-2 px-2.5 w-16 text-slate-300 font-bold border-b border-slate-700">מזהה</th>
+                    <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-[148px] z-30 bg-slate-900 shadow-sm py-2 px-2.5 w-24 text-slate-300 font-bold border-b border-slate-700">סוג</th>
+                    <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-[148px] z-30 bg-slate-900 shadow-sm py-2 px-2.5 min-w-[180px] text-slate-300 font-bold border-b border-slate-700">כותרת המשימה</th>
+                    <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-[148px] z-30 bg-slate-900 shadow-sm py-2 px-2.5 w-36 text-slate-300 font-bold border-b border-slate-700">לקוח / מקור</th>
+                    <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-[148px] z-30 bg-slate-900 shadow-sm py-2 px-2.5 w-28 text-slate-300 font-bold border-b border-slate-700">מודול במערכת</th>
+                    <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-[148px] z-30 bg-slate-900 shadow-sm py-2 px-2.5 w-20 text-slate-300 font-bold border-b border-slate-700">עדיפות</th>
+                    <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-[148px] z-30 bg-slate-900 shadow-sm py-2 px-2.5 w-36 text-slate-300 font-bold border-b border-slate-700">סטטוס מסירה</th>
+                    <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-[148px] z-30 bg-slate-900 shadow-sm py-2 px-2.5 w-28 text-slate-300 font-bold border-b border-slate-700">גרסה / יעד</th>
+                    <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-[148px] z-30 bg-slate-900 shadow-sm py-2 px-2.5 text-center w-20 text-slate-300 font-bold border-b border-slate-700">פעולות</th>
                   </tr>
-                </table>
-              </div>
-              {/* Body table - scrolls vertically */}
-              <div className="overflow-y-auto overflow-x-auto min-h-full">
-                <table style={{ tableLayout: 'fixed' }} className="w-full border-collapse text-right text-[9px]">
-                  <tbody className="divide-y divide-slate-800/60">
-                  {groupedItems.length === 0 ? (
-                    <tr>
-                      <td colSpan={9} className="py-12 text-center text-slate-500 text-[10px]">
-                        לא נמצאו פריטי מוצר העונים לסינון
-                      </td>
-                    </tr>
-                  ) : (
-                    <>
-                    {groupedItems.map(({ status, items: groupItems }, gi) => (
-                      <>
-                        {/* Dark background band behind each group */}
-                        <tr key={`band-${status}`}>
-                          <td colSpan={9} className="h-2 bg-slate-950/40 border-0 p-0"></td>
-                        </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                {groupedItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="py-12 text-center text-slate-500 text-[10px]">
+                      לא נמצאו פריטי מוצר העונים לסינון
+                    </td>
+                  </tr>
+                ) : (
+                  <>
+                  {groupedItems.map(({ status, items: groupItems }) => (
+                    <React.Fragment key={`group-frag-${status}`}>
+                      {/* Dark background band behind each group */}
+                      <tr key={`band-${status}`}>
+                        <td colSpan={9} className="h-2 bg-slate-950/40 border-0 p-0"></td>
+                      </tr>
 
-                        {/* Group header */}
-                        <tr key={`group-${status}`} id={`group-${status.replace(/[^\w]/g, '')}`}>
-                          <td colSpan={9} className="py-2.5 px-4 bg-slate-800/90 text-[9px] font-bold text-slate-100 border-b border-slate-700/60 flex items-center justify-between rounded-t-xl rounded-b-none shadow-sm">
-                            <div className="flex items-center gap-1.5">
+                      {/* Group header */}
+                      <tr key={`group-${status}`} id={`group-${status.replace(/[^\w]/g, '')}`}>
+                        <td colSpan={9} className="py-2.5 px-4 bg-slate-800/95 text-[10px] font-bold text-slate-100 border-b border-slate-700/80 rounded-t-xl rounded-b-none shadow-sm">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
                               <span
-                                className={`px-2 py-0.5 rounded border inline-flex items-center gap-1 ${groupStyle(status).bg} ${groupStyle(status).text} ${groupStyle(status).border} font-bold`}
+                                className={`px-2.5 py-1 rounded-md border inline-flex items-center gap-1.5 ${groupStyle(status).bg} ${groupStyle(status).text} ${groupStyle(status).border} font-bold shadow-sm`}
                               >
                                 {status}
                               </span>
-                              <span className="ml-1.5 text-slate-300 font-normal">({groupItems.length})</span>
+                              <span className="text-slate-300 font-semibold text-xs">({groupItems.length} משימות)</span>
                             </div>
-                          </td>
-                        </tr>
-                        {groupItems.map(item => (
-                          <tr
-                            key={item.id}
-                            onClick={() => onSelectTicket(item)}
-                            className="monday-table-row transition-all group cursor-pointer"
-                          >
-                              {/* ID */}
-                              <td 
-                                style={{ borderRight: `4px solid ${item.category === 'bug' ? '#f43f5e' : '#10b981'}` }}
-                                className="py-2 px-2.5 font-mono text-[8.5px] font-bold text-blue-400"
-                              >
-                                {item.id}
-                              </td>
+                          </div>
+                        </td>
+                      </tr>
+                      {groupItems.map(item => (
+                        <tr
+                          key={item.id}
+                          onClick={() => onSelectTicket(item)}
+                          className="monday-table-row transition-all group cursor-pointer"
+                        >
+                            {/* ID */}
+                            <td 
+                              style={{ borderRight: `4px solid ${item.category === 'bug' ? '#f43f5e' : '#10b981'}` }}
+                              className="py-2 px-2.5 font-mono text-[8.5px] font-bold text-blue-400"
+                            >
+                              {item.id}
+                            </td>
 
-                              {/* Category Badge */}
-                              <td className="py-1.5 px-2">
-                                <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] font-semibold border ${
-                                  item.category === 'bug'
-                                    ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
-                                    : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-                                }`}>
-                                  {item.category === 'bug' ? <Bug className="w-2 h-2" /> : <Compass className="w-2 h-2" />}
-                                  <span>{item.type}</span>
-                                </span>
-                              </td>
+                            {/* Category Badge */}
+                            <td className="py-2 px-2.5">
+                              <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8.5px] font-semibold border ${
+                                item.category === 'bug'
+                                  ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+                                  : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                              }`}>
+                                {item.category === 'bug' ? <Bug className="w-2.5 h-2.5" /> : <Compass className="w-2.5 h-2.5" />}
+                                <span>{item.type}</span>
+                              </span>
+                            </td>
 
-                              {/* Title & Description */}
-                              <td className="py-1.5 px-2 max-w-xs">
-                                <div className="font-semibold text-white group-hover:text-blue-400 transition-colors text-[8px] leading-tight">
-                                  {item.title}
+                            {/* Title & Description */}
+                            <td className="py-2 px-2.5 max-w-xs">
+                              <div className="font-semibold text-slate-100 group-hover:text-blue-400 transition-colors text-[9.5px] leading-tight">
+                                {item.title}
+                              </div>
+                              {item.description && (
+                                <div className="text-[8px] text-slate-400 line-clamp-1 mt-0.5">
+                                  {item.description}
                                 </div>
-                                {item.description && (
-                                  <div className="text-[7px] text-slate-400 line-clamp-1 mt-0.5">
-                                    {item.description}
-                                  </div>
-                                )}
-                              </td>
+                              )}
+                            </td>
 
-                              {/* Client */}
-                              <td className="py-1.5 px-2">
-                                <span className="text-[8px] text-slate-200 font-medium flex items-center gap-0.5">
-                                  <Building2 className="w-2.5 h-2.5 text-slate-500" />
-                                  <span className="truncate max-w-xs">{item.client}</span>
-                                </span>
-                              </td>
+                            {/* Client */}
+                            <td className="py-2 px-2.5">
+                              <span className="text-[8.5px] text-slate-200 font-medium flex items-center gap-1">
+                                <Building2 className="w-2.5 h-2.5 text-slate-500" />
+                                <span className="truncate max-w-xs">{item.client}</span>
+                              </span>
+                            </td>
 
-                              {/* Module */}
-                              <td className="py-1.5 px-2">
-                                <span className="px-1 py-0.5 rounded text-[7px] font-mono bg-slate-800 text-slate-300 border border-slate-700">
-                                  {item.module || 'כללי'}
-                                </span>
-                              </td>
+                            {/* Module */}
+                            <td className="py-2 px-2.5">
+                              <span className="px-1.5 py-0.5 rounded text-[8px] font-mono bg-slate-800 text-slate-300 border border-slate-700">
+                                {item.module || 'כללי'}
+                              </span>
+                            </td>
 
-                              {/* Priority */}
-                              <td className="py-1.5 px-2">
-                                <span className={`px-1 py-0.5 rounded text-[7px] border uppercase ${PRIORITY_BADGES[item.priority] || 'border-slate-700'}`}>
-                                  {item.priority}
-                                </span>
-                              </td>
+                            {/* Priority */}
+                            <td className="py-2 px-2.5">
+                              <span className={`px-1.5 py-0.5 rounded text-[8px] border font-bold uppercase ${PRIORITY_BADGES[item.priority] || 'border-slate-700'}`}>
+                                {item.priority}
+                              </span>
+                            </td>
 
-                              {/* Status */}
-                              <td className="py-1.5 px-2" onClick={(e) => e.stopPropagation()}>
-                                {canEdit ? (
-                                  <select
-                                    value={item.status}
-                                    onChange={(e) => onUpdateTicketStatus(item.id, e.target.value as ProductStatus)}
-                                    className={`bg-slate-800 border border-slate-700 rounded text-[8px] py-0.5 px-1.5 text-slate-200 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500 w-full ${styleForStatus(item.status)}`}
-                                  >
-                                    {ALL_STATUSES.map(st => (
-                                      <option key={st} value={st}>{st}</option>
-                                    ))}
-                                  </select>
-                                ) : (
-                                  <span className={`px-1 py-0.5 rounded text-[8px] font-medium bg-slate-800 text-slate-300 border border-slate-700`}>
-                                    {item.status}
-                                  </span>
-                                )}
-                              </td>
-
-                              {/* Release / Target */}
-                              <td className="py-1.5 px-2 font-mono text-[8px] text-amber-400">
-                                {item.release || item.targetDate || 'Q1 2027'}
-                              </td>
-
-                              {/* Actions */}
-                              <td className="py-1.5 px-2 text-center">
-                                <button
-                                  onClick={() => onSelectTicket(item)}
-                                  className="px-1 py-0.5 rounded-lg bg-slate-800 group-hover:bg-blue-600 group-hover:text-white border border-slate-700 text-slate-300 text-[8px] font-medium transition-all"
+                            {/* Status */}
+                            <td className="py-2 px-2.5" onClick={(e) => e.stopPropagation()}>
+                              {canEdit ? (
+                                <select
+                                  value={item.status}
+                                  onChange={(e) => onUpdateTicketStatus(item.id, e.target.value as ProductStatus)}
+                                  className={`bg-slate-800 border border-slate-700 rounded text-[9px] py-1 px-2 text-slate-200 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500 w-full shadow-sm ${styleForStatus(item.status)}`}
                                 >
-                                  פרטים
-                                </button>
-                              </td>
-                            </tr>
-                          )                          )}
-                          {/* Dark background band below each group */}
-                          <tr key={`band-bottom-${status}`}>
-                            <td colSpan={9} className="h-3 bg-slate-950/30 border-0 p-0"></td>
+                                  {ALL_STATUSES.map(st => (
+                                    <option key={st} value={st}>{st}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <span className={`px-2 py-0.5 rounded text-[9px] font-medium bg-slate-800 text-slate-300 border border-slate-700`}>
+                                  {item.status}
+                                </span>
+                              )}
+                            </td>
+
+                            {/* Release / Target */}
+                            <td className="py-2 px-2.5 font-mono text-[9px] text-amber-400">
+                              {item.release || item.targetDate || 'Q1 2027'}
+                            </td>
+
+                            {/* Actions */}
+                            <td className="py-2 px-2.5 text-center">
+                              <button
+                                onClick={() => onSelectTicket(item)}
+                                className="px-2 py-1 rounded-md bg-slate-800 group-hover:bg-blue-600 group-hover:text-white border border-slate-700 text-slate-300 text-[8.5px] font-medium transition-all shadow-sm"
+                              >
+                                פרטים
+                              </button>
+                            </td>
                           </tr>
-                        </>
-                      ))}
-                    </>
-                  )}
-                  </tbody>
-                </table>
-              </div>
+                        ))}
+                        {/* Dark background band below each group */}
+                        <tr key={`band-bottom-${status}`}>
+                          <td colSpan={9} className="h-3 bg-slate-950/30 border-0 p-0"></td>
+                        </tr>
+                      </React.Fragment>
+                    ))}
+                  </>
+                )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
