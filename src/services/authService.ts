@@ -22,7 +22,7 @@ export const getNetlifyPasswordForUser = (email: string, role: UserRole): string
   }
 
   // 2. Direct personal password for Eyal (VITE_EYAL_PASSWORD or VITE_PASSWORD_EYAL)
-  if (cleanEmail === 'eyal@claimai.com' || cleanEmail.includes('eyal')) {
+  if (cleanEmail === 'eyal@claimi.co.il' || cleanEmail === 'eyal@claimai.com' || cleanEmail.includes('eyal')) {
     const eyalPass = env.VITE_EYAL_PASSWORD || env.VITE_PASSWORD_EYAL;
     if (eyalPass) return eyalPass;
   }
@@ -241,6 +241,10 @@ export const loginWithPassword = async (
 
   if (!user && (cleanEmail === 'admin@claimai.co.il' || cleanEmail === 'admin')) {
     user = allUsers.find(u => u.role === 'admin') || (seedUsers as AppUser[])[0];
+  }
+
+  if (!user && (cleanEmail === 'eyal@claimi.co.il' || cleanEmail === 'eyal@claimai.com' || cleanEmail.includes('eyal'))) {
+    user = allUsers.find(u => u.id === 'user-eyal' || u.name.includes('אייל'));
   }
 
   if (!user) {

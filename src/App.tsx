@@ -534,7 +534,11 @@ export const App: React.FC = () => {
         linkedTickets={getLinkedTicketsForClient(selectedClient)}
         onOpenTicket={(ticket) => setSelectedTicket(ticket)}
         onNewTicketForClient={handleOpenNewTicketForClient}
+        onAddTicket={handleAddTicket}
+        nextBugId={nextBugId}
+        nextRoadmapId={nextRoadmapId}
         canEdit={canEditCrm}
+        canEditProduct={canEditProduct}
         currentUser={currentUser}
       />
 

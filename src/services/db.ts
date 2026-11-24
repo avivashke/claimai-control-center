@@ -108,7 +108,7 @@ export const checkSupabaseHealth = async (): Promise<{ isConnected: boolean; mes
 };
 
 // Database initialization & seeding
-export const CURRENT_DATA_VERSION = '2026-11-24-v3-users-aviv-eyal';
+export const CURRENT_DATA_VERSION = '2026-11-24-v4-eyal-claimi';
 
 export const initDatabase = async (): Promise<{ clientsCount: number; productCount: number; tablesCount: number; usersCount: number }> => {
   if (USE_LOCAL_API) {
@@ -451,6 +451,13 @@ export const getAppUsers = async (): Promise<AppUser[]> => {
       await initDatabase();
       return await db.users.toArray();
     }
+    // Self-healing: ensure user-eyal has email eyal@claimi.co.il
+    for (const u of list) {
+      if ((u.id === 'user-eyal' || u.name.includes('אייל')) && u.email !== 'eyal@claimi.co.il') {
+        u.email = 'eyal@claimi.co.il';
+        await db.users.put(u);
+      }
+    }
     return list;
   } catch (e) {
     console.error('Failed to get app users', e);
@@ -505,7 +512,14 @@ export const deleteAppUser = async (userId: string): Promise<void> => {
 };
 
 export const findUserByEmail = async (email: string): Promise<AppUser | undefined> => {
-  return await db.users.where('email').equalsIgnoreCase(email.trim()).first();
+  const clean = email.trim().toLowerCase();
+  const found = await db.users.where('email').equalsIgnoreCase(clean).first();
+  if (found) return found;
+  if (clean === 'eyal@claimi.co.il' || clean === 'eyal@claimai.com' || clean.includes('eyal')) {
+    const eyalUser = await db.users.get('user-eyal');
+    if (eyalUser) return eyalUser;
+  }
+  return undefined;
 };
 
 // Contacts

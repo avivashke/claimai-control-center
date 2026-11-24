@@ -13,13 +13,18 @@ import {
   Bug, 
   ExternalLink, 
   CheckCircle, 
+  CheckCircle2,
   User, 
   Cpu, 
   MapPin,
   TrendingUp,
-  FileText
+  FileText,
+  Plus,
+  Wrench,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
-import { Client, ProductItem, AppUser } from '../../types';
+import { Client, ProductItem, AppUser, ProductPriority, ProductItemCategory } from '../../types';
 
 interface ClientDrawerProps {
   client: Client | null;
@@ -27,8 +32,12 @@ interface ClientDrawerProps {
   onSaveClient: (client: Client) => void;
   linkedTickets: ProductItem[];
   onOpenTicket: (ticket: ProductItem) => void;
-  onNewTicketForClient: (client: Client) => void;
+  onNewTicketForClient?: (client: Client) => void;
+  onAddTicket?: (ticket: ProductItem) => void;
+  nextBugId?: string;
+  nextRoadmapId?: string;
   canEdit?: boolean;
+  canEditProduct?: boolean;
   currentUser?: AppUser;
 }
 
@@ -44,6 +53,17 @@ const ALL_STATUSES = [
   "Irrelevant"
 ];
 
+const PRODUCT_MODULES = [
+  'אינטגרציית באפי (Bafi Integration)',
+  'פתיחת תביעה (Claim Creation)',
+  'מודול מסמכים ודוא״ל (Documents & Email)',
+  'ממשק משתמש ו-UX',
+  'דוחות ואנליטיקה (Reports & Analytics)',
+  'אבטחה והרשאות (Security & Auth)',
+  'אוטומציות ו-AI Copilot',
+  'כללי (General)'
+];
+
 export const ClientDrawer: React.FC<ClientDrawerProps> = ({
   client,
   onClose,
@@ -51,7 +71,11 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
   linkedTickets,
   onOpenTicket,
   onNewTicketForClient,
+  onAddTicket,
+  nextBugId = 'FX-044',
+  nextRoadmapId = 'RM-008',
   canEdit = true,
+  canEditProduct = true,
   currentUser
 }) => {
   if (!client) return null;
@@ -59,6 +83,16 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
   const [formData, setFormData] = useState<Client>({ ...client });
   const [newNote, setNewNote] = useState('');
   const [isSavedAlert, setIsSavedAlert] = useState(false);
+
+  // Inline Ticket Creation State
+  const [isAddingTicket, setIsAddingTicket] = useState(false);
+  const [ticketCategory, setTicketCategory] = useState<ProductItemCategory>('bug');
+  const [ticketTitle, setTicketTitle] = useState('');
+  const [ticketDescription, setTicketDescription] = useState('');
+  const [ticketModule, setTicketModule] = useState('אינטגרציית באפי (Bafi Integration)');
+  const [ticketPriority, setTicketPriority] = useState<ProductPriority>('High');
+  const [ticketTargetDate, setTicketTargetDate] = useState('');
+  const [ticketSuccessMessage, setTicketSuccessMessage] = useState('');
 
   useEffect(() => {
     if (client) {
@@ -103,6 +137,62 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
     setNewNote('');
     setIsSavedAlert(true);
     setTimeout(() => setIsSavedAlert(false), 2500);
+  };
+
+  const handleCreateTicketInline = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ticketTitle.trim()) return;
+
+    const currentId = ticketCategory === 'bug' ? nextBugId : nextRoadmapId;
+
+    const newTicket: ProductItem = {
+      id: currentId,
+      category: ticketCategory,
+      client: formData.company || formData.name,
+      type: ticketCategory === 'bug' ? 'Bug' : 'Feature',
+      module: ticketModule || 'כללי',
+      title: ticketTitle.trim(),
+      description: ticketDescription.trim(),
+      priority: ticketPriority,
+      status: ticketCategory === 'bug' ? 'Open' : 'Backlog',
+      owner: 'Dev Team',
+      reportedBy: authorName,
+      source: `כרטיס לקוח: ${formData.name}`,
+      release: ticketCategory === 'bug' ? 'Next Sprint' : 'Q1 2027',
+      openedDate: new Date().toISOString().slice(0, 10),
+      targetDate: ticketTargetDate || '',
+      daysOpen: 0,
+      health: 'On track'
+    };
+
+    if (onAddTicket) {
+      onAddTicket(newTicket);
+    }
+
+    // Record automatic activity note
+    const now = new Date();
+    const dateStr = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
+    const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    const catLabel = ticketCategory === 'bug' ? 'תקלה (Bug)' : 'בקשת פיתוח (Feature)';
+    const noteEntry = `${dateStr} | ${timeStr} | 👤 ${authorName} | פניית מוצר חדשה [${currentId}]: ${ticketTitle.trim()} (${catLabel})`;
+    const updatedNotes = formData.lastNote ? `${noteEntry}\n---\n${formData.lastNote}` : noteEntry;
+
+    const updatedClient = {
+      ...formData,
+      lastNote: updatedNotes,
+      updatedDate: new Date().toISOString().slice(0, 10),
+      updatedBy: authorName
+    };
+    onSaveClient(updatedClient);
+    setFormData(updatedClient);
+
+    // Reset inline form
+    setTicketTitle('');
+    setTicketDescription('');
+    setTicketTargetDate('');
+    setIsAddingTicket(false);
+    setTicketSuccessMessage(`פנייה ${currentId} נוצרה והושתלה בהצלחה בטבלת הפיתוחים והתיקונים וב-Google Sheets!`);
+    setTimeout(() => setTicketSuccessMessage(''), 4500);
   };
 
   return (
@@ -165,6 +255,17 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            {canEditProduct && (
+              <button
+                type="button"
+                onClick={() => setIsAddingTicket(!isAddingTicket)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold shadow-sm transition-all"
+                title="הוספת בקשת פיתוח או דיווח תקלה ללקוח זה"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>+ בקשת פיתוח / תיקון</span>
+              </button>
+            )}
             {canEdit ? (
               <button
                 onClick={handleSave}
@@ -393,21 +494,166 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
                 </h3>
               </div>
               <button
-                onClick={() => onNewTicketForClient(formData)}
-                className="px-2.5 py-1 rounded-md bg-blue-600/30 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/40 text-[11px] font-semibold transition-all"
+                type="button"
+                onClick={() => setIsAddingTicket(!isAddingTicket)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/25 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/40 text-xs font-semibold shadow-sm transition-all"
               >
-                + פתח פנייה ללקוח זה
+                <Plus className="w-3.5 h-3.5" />
+                <span>{isAddingTicket ? 'סגור טופס' : '+ בקשה לפיתוח או תיקון'}</span>
               </button>
             </div>
 
-            {linkedTickets.length === 0 ? (
+            {/* Success Message Banner */}
+            {ticketSuccessMessage && (
+              <div className="p-3 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-200">
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                <span>{ticketSuccessMessage}</span>
+              </div>
+            )}
+
+            {/* Inline Ticket Creation Form */}
+            {isAddingTicket && (
+              <form 
+                onSubmit={handleCreateTicketInline}
+                className="p-4 rounded-xl bg-slate-900 border border-emerald-500/40 shadow-xl space-y-3.5 animate-in slide-in-from-top-2 duration-150"
+              >
+                <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span className="text-xs font-bold text-white">פנייה חדשה עבור: <strong className="text-blue-300">{formData.company || formData.name}</strong></span>
+                  </div>
+                  <span className="font-mono text-xs font-extrabold px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                    {ticketCategory === 'bug' ? nextBugId : nextRoadmapId}
+                  </span>
+                </div>
+
+                {/* Category Switcher: Bug Fix vs Feature Request */}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTicketCategory('bug')}
+                    className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all border ${
+                      ticketCategory === 'bug'
+                        ? 'bg-rose-600/30 text-rose-200 border-rose-500 shadow-sm'
+                        : 'bg-slate-800/80 text-slate-400 border-slate-700 hover:text-slate-200'
+                    }`}
+                  >
+                    <Bug className="w-4 h-4 text-rose-400" />
+                    <span>🐛 תיקון תקלה (Bug)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTicketCategory('roadmap')}
+                    className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all border ${
+                      ticketCategory === 'roadmap'
+                        ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500 shadow-sm'
+                        : 'bg-slate-800/80 text-slate-400 border-slate-700 hover:text-slate-200'
+                    }`}
+                  >
+                    <Sparkles className="w-4 h-4 text-emerald-400" />
+                    <span>🚀 בקשת פיתוח (Feature)</span>
+                  </button>
+                </div>
+
+                {/* Ticket Title */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">
+                    כותרת הפנייה <span className="text-rose-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder={ticketCategory === 'bug' ? 'למשל: שגיאה בייבוא פוליסות מקובץ באפי...' : 'למשל: הוספת תבנית מכתב אוטומטי למבוטח...'}
+                    value={ticketTitle}
+                    onChange={(e) => setTicketTitle(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+
+                {/* Module, Priority, Target Date Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">מודול מוצר</label>
+                    <select
+                      value={ticketModule}
+                      onChange={(e) => setTicketModule(e.target.value)}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    >
+                      {PRODUCT_MODULES.map(m => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">עדיפות</label>
+                    <select
+                      value={ticketPriority}
+                      onChange={(e) => setTicketPriority(e.target.value as ProductPriority)}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    >
+                      <option value="Urgent">דחוף / Urgent</option>
+                      <option value="High">גבוהה / High</option>
+                      <option value="Medium">בינונית / Medium</option>
+                      <option value="Low">נמוכה / Low</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">יעד ביצוע (אופציונלי)</label>
+                    <input
+                      type="date"
+                      value={ticketTargetDate}
+                      onChange={(e) => setTicketTargetDate(e.target.value)}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">תיאור מפורט של הפנייה</label>
+                  <textarea
+                    rows={2}
+                    placeholder="פרטים נוספים, שלבים לשחזור או דרישות המשתמש..."
+                    value={ticketDescription}
+                    onChange={(e) => setTicketDescription(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center justify-between pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingTicket(false)}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-semibold transition-all"
+                  >
+                    ביטול
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={!ticketTitle.trim()}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 transition-all hover:scale-[1.02]"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>⚡ השתל בטבלת הפיתוחים והתיקונים</span>
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {linkedTickets.length === 0 && !isAddingTicket ? (
               <div className="p-4 rounded-lg bg-slate-900/60 border border-slate-800/80 text-center text-xs text-slate-400">
                 אין עדיין תקלות או בקשות מוצר מקושרות ללקוח זה.
                 <button
-                  onClick={() => onNewTicketForClient(formData)}
+                  type="button"
+                  onClick={() => setIsAddingTicket(true)}
                   className="block mx-auto mt-2 text-blue-400 hover:underline font-semibold"
                 >
-                  לחץ כאן כדי לרשום בקשת פיצ'ר או תקלה
+                  לחץ כאן כדי לרשום בקשת פיתוח או תקלה
                 </button>
               </div>
             ) : (
