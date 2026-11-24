@@ -38,6 +38,7 @@ import {
 } from './services/authService';
 import { Client, ProductItem, ProductStatus, CustomTable, AppUser, AppTheme } from './types';
 import { ShieldCheck, Sparkles, CheckCircle2 } from 'lucide-react';
+import { triggerGoogleSheetsAutoSync } from './services/googleSheetsBackupService';
 
 export const App: React.FC = () => {
   const [theme, setTheme] = useState<AppTheme>(() => {
@@ -202,6 +203,7 @@ export const App: React.FC = () => {
     await saveClient(updatedClient);
     setClients(prev => prev.map(c => c.id === updatedClient.id ? updatedClient : c));
     setSelectedClient(updatedClient);
+    triggerGoogleSheetsAutoSync();
   };
 
   const handleAddClient = async (newClient: Client) => {
@@ -209,12 +211,14 @@ export const App: React.FC = () => {
     await saveClient(newClient);
     setClients(prev => [newClient, ...prev]);
     setSelectedClient(newClient);
+    triggerGoogleSheetsAutoSync();
   };
 
   const handleSyncCustomRowsToCrm = async (newLeads: Client[]) => {
     if (!canEditCrm) return;
     await saveMultipleClients(newLeads);
     setClients(prev => [...newLeads, ...prev]);
+    triggerGoogleSheetsAutoSync();
   };
 
   // Handlers for Product Items
@@ -232,6 +236,7 @@ export const App: React.FC = () => {
     if (selectedTicket?.id === ticketId) {
       setSelectedTicket(updated);
     }
+    triggerGoogleSheetsAutoSync();
   };
 
   const handleSaveTicket = async (updatedTicket: ProductItem) => {
@@ -239,6 +244,7 @@ export const App: React.FC = () => {
     await saveProductItem(updatedTicket);
     setProductItems(prev => prev.map(p => p.id === updatedTicket.id ? updatedTicket : p));
     setSelectedTicket(updatedTicket);
+    triggerGoogleSheetsAutoSync();
   };
 
   const handleAddTicket = async (newTicket: ProductItem) => {
@@ -246,6 +252,7 @@ export const App: React.FC = () => {
     await saveProductItem(newTicket);
     setProductItems(prev => [newTicket, ...prev]);
     setSelectedTicket(newTicket);
+    triggerGoogleSheetsAutoSync();
   };
 
   const handleOpenNewTicketForClient = (client: Client) => {

@@ -24,9 +24,24 @@ import {
   downloadFullDatabaseCSV, 
   restoreFromInternalStaticCSV 
 } from '../services/csvBackupService';
+import { 
+  CRM_SPREADSHEET_ID,
+  CRM_SPREADSHEET_URL,
+  PRODUCT_SPREADSHEET_ID,
+  PRODUCT_SPREADSHEET_URL,
+  getSheetsWebhookUrl,
+  setSheetsWebhookUrl,
+  getLastSheetsSyncTime,
+  generateCrmSheetCSV,
+  generateProductSheetCSV,
+  downloadCSV,
+  syncToGoogleSheetsWebhook,
+  GOOGLE_APPS_SCRIPT_CODE
+} from '../services/googleSheetsBackupService';
+import { db } from '../services/db';
 import { testNetlifyBlobs } from '../services/blobsService';
 import { checkWorkerHealth, getWorkerUrl, isWorkerConfigured } from '../services/aiWorkerService';
-import { FileSpreadsheet, ShieldAlert } from 'lucide-react';
+import { FileSpreadsheet, ShieldAlert, Sparkles, Check, Link2, Sheet } from 'lucide-react';
 
 interface DatabaseSettingsProps {
   clientsCount: number;
@@ -53,6 +68,50 @@ export const DatabaseSettings: React.FC<DatabaseSettingsProps> = ({
   const [workerResult, setWorkerResult] = useState<{ success: boolean; message: string; info?: any } | null>(null);
   const [isRestoringCSV, setIsRestoringCSV] = useState(false);
   const [csvRestoreResult, setCsvRestoreResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  // Google Sheets Backup & Live Sync State
+  const [sheetsWebhookUrl, setSheetsWebhookUrlState] = useState(getSheetsWebhookUrl());
+  const [isSyncingSheets, setIsSyncingSheets] = useState(false);
+  const [sheetsSyncResult, setSheetsSyncResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [isWebhookSaved, setIsWebhookSaved] = useState(false);
+  const [copiedAppsScript, setCopiedAppsScript] = useState(false);
+  const [showAppsScriptModal, setShowAppsScriptModal] = useState(false);
+
+  const handleSaveWebhook = () => {
+    setSheetsWebhookUrl(sheetsWebhookUrl);
+    setIsWebhookSaved(true);
+    setTimeout(() => setIsWebhookSaved(false), 2500);
+  };
+
+  const handleSyncGoogleSheets = async () => {
+    setIsSyncingSheets(true);
+    setSheetsSyncResult(null);
+    try {
+      const res = await syncToGoogleSheetsWebhook(sheetsWebhookUrl);
+      setSheetsSyncResult(res);
+    } catch (err: any) {
+      setSheetsSyncResult({
+        success: false,
+        message: `שגיאה בסנכרון לגוגל שיטס: ${err.message || err}`
+      });
+    } finally {
+      setIsSyncingSheets(false);
+    }
+  };
+
+  const handleDownloadCrmSheetCSV = async () => {
+    const clients = await db.clients.toArray();
+    const csv = generateCrmSheetCSV(clients);
+    const dateStr = new Date().toISOString().slice(0, 10);
+    downloadCSV(csv, `Claimai_CRM_DirectBackup_${dateStr}.csv`);
+  };
+
+  const handleDownloadProductSheetCSV = async () => {
+    const items = await db.productItems.toArray();
+    const csv = generateProductSheetCSV(items);
+    const dateStr = new Date().toISOString().slice(0, 10);
+    downloadCSV(csv, `CLAIMAI_Product_Delivery_DirectBackup_${dateStr}.csv`);
+  };
 
   const handleRestoreFromCSV = async () => {
     if (!confirm('האם לבצע שחזור חירום מקובצי ה-CSV הפנימיים? פעולה זו תטען את כל 1,282 הלקוחות והמשימות מתוך קובצי הגיבוי הפנימיים.')) {
@@ -288,6 +347,176 @@ CREATE TABLE product_items (
             <h4 className="text-xs font-bold text-white">דאטה-בייס טעון מראש</h4>
             <p className="text-[11px] text-slate-400">עובד מיד עם כל 1,282 הלקוחות והתקלות</p>
           </div>
+        </div>
+      </div>
+
+      {/* Featured Card: Google Sheets Continuous Backup & Live Sync */}
+      <div className="sheets-featured-card p-6 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-slate-900 to-slate-900 border border-emerald-500/30 shadow-xl space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
+              <FileSpreadsheet className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-bold text-white">גיבוי וסנכרון תמידי ל-Google Sheets</h3>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  Dual-Sheet Backup
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-1">
+                סנכרון וגיבוי מלא ומותאם 1:1 לשני הגיליונות הרשמיים של המערכת ב-Google Drive.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleSyncGoogleSheets}
+              disabled={isSyncingSheets}
+              className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 transition-all disabled:opacity-50 flex items-center gap-2 hover:scale-[1.02]"
+              title="שליחת כל הנתונים המעודכנים ישירות ל-Google Sheets"
+            >
+              <Cloud className="w-4 h-4" />
+              <span>{isSyncingSheets ? 'מסנכרן לשיטס...' : '⚡ סנכרן וגבה עכשיו ל-Google Sheets'}</span>
+            </button>
+          </div>
+        </div>
+
+        {sheetsSyncResult && (
+          <div className={`p-3.5 rounded-xl border text-xs font-semibold flex items-center gap-2 ${
+            sheetsSyncResult.success
+              ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+              : 'bg-amber-500/15 border-amber-500/30 text-amber-300'
+          }`}>
+            {sheetsSyncResult.success ? <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" /> : <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />}
+            <span>{sheetsSyncResult.message}</span>
+          </div>
+        )}
+
+        {/* The Two Target Google Spreadsheets */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+          {/* Target 1: Claimai_CRM */}
+          <div className="sheets-inner-card p-4 rounded-xl bg-slate-800/80 border border-slate-700/80 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                <h4 className="text-sm font-bold text-white">Claimai_CRM</h4>
+              </div>
+              <a
+                href={CRM_SPREADSHEET_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 transition-colors"
+              >
+                <span>פתח ב-Google Sheets</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              מזהה גיליון: <code className="text-emerald-300/80 font-mono text-[10px]">{CRM_SPREADSHEET_ID}</code>
+            </p>
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-xs text-slate-300">
+                סה״כ לקוחות: <strong className="text-white font-bold">{clientsCount.toLocaleString()}</strong>
+              </span>
+              <button
+                onClick={handleDownloadCrmSheetCSV}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-semibold transition-all"
+                title="הורדת קובץ CSV מותאם ב-100% ל-33 העמודות המדויקות של Claimai_CRM"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>הורד CSV מותאם ל-CRM</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Target 2: CLAIMAI | Product & Delivery Control */}
+          <div className="sheets-inner-card p-4 rounded-xl bg-slate-800/80 border border-slate-700/80 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-400"></span>
+                <h4 className="text-sm font-bold text-white">CLAIMAI | Product & Delivery Control</h4>
+              </div>
+              <a
+                href={PRODUCT_SPREADSHEET_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                <span>פתח ב-Google Sheets</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              מזהה גיליון: <code className="text-blue-300/80 font-mono text-[10px]">{PRODUCT_SPREADSHEET_ID}</code>
+            </p>
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-xs text-slate-300">
+                סה״כ משימות ובאגים: <strong className="text-white font-bold">{productCount}</strong>
+              </span>
+              <button
+                onClick={handleDownloadProductSheetCSV}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 text-xs font-semibold transition-all"
+                title="הורדת קובץ CSV מותאם לעמודות של Product & Delivery Control"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>הורד CSV מותאם למוצר</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Live Webhook Auto-Sync Configuration */}
+        <div className="sheets-inner-card p-4 rounded-xl bg-slate-800/50 border border-slate-700/60 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                <span>חיבור Webhook לסנכרון חי אוטומטי (Google Apps Script)</span>
+                {getSheetsWebhookUrl() ? (
+                  <span className="px-2 py-0.2 rounded text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold">
+                    סנכרון אוטומטי מופעל
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.2 rounded text-[10px] bg-slate-700 text-slate-300 font-semibold">
+                    אופציונלי
+                  </span>
+                )}
+              </h4>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                כאשר כתובת ה-Webhook מוגדרת, כל שינוי של לקוח או משימה במערכת נשלח ומגובה מיידית לתוך הגיליונות.
+              </p>
+            </div>
+
+            <button
+              onClick={() => setShowAppsScriptModal(true)}
+              className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold underline shrink-0 text-right"
+            >
+              הצג סקריפט Apps Script מוכן להעתקה (30 שניות)
+            </button>
+          </div>
+
+          <div className="flex gap-2">
+            <input
+              type="url"
+              placeholder="https://script.google.com/macros/s/.../exec"
+              value={sheetsWebhookUrl}
+              onChange={(e) => setSheetsWebhookUrlState(e.target.value)}
+              className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            />
+            <button
+              onClick={handleSaveWebhook}
+              className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shrink-0"
+            >
+              {isWebhookSaved ? 'נשמר בהצלחה!' : 'שמור כתובת Webhook'}
+            </button>
+          </div>
+
+          {getLastSheetsSyncTime() && (
+            <p className="text-[10px] text-slate-500 font-mono">
+              סנכרון אחרון שנשלח: {new Date(getLastSheetsSyncTime()!).toLocaleString('he-IL')}
+            </p>
+          )}
         </div>
       </div>
 
@@ -657,6 +886,73 @@ CREATE TABLE product_items (
           {sampleSchema}
         </pre>
       </div>
+
+      {/* Google Apps Script Setup Modal */}
+      {showAppsScriptModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
+                <h3 className="text-base font-bold text-white">הגדרת סנכרון חי ב-Google Sheets (Apps Script)</h3>
+              </div>
+              <button
+                onClick={() => setShowAppsScriptModal(false)}
+                className="text-slate-400 hover:text-white text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-slate-300">
+              <p className="font-semibold text-emerald-300">
+                מדריך מהיר להפעלת סנכרון חי (דקה אחת בלבד):
+              </p>
+              <ol className="list-decimal list-inside space-y-1.5 text-slate-300 pr-2 leading-relaxed">
+                <li>פתח את גיליון Google Sheets שלך (<a href={CRM_SPREADSHEET_URL} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline font-semibold">Claimai_CRM</a>).</li>
+                <li>בתפריט העליון לחץ על <strong>Extensions</strong> (הרחבות) &gt; <strong>Apps Script</strong>.</li>
+                <li>מחק את הקוד הקיים, הדבק את הסקריפט שמופיע למטה, ושמור (<code className="font-mono">Ctrl+S</code>).</li>
+                <li>לחץ על <strong>Deploy</strong> (פריסה) &gt; <strong>New deployment</strong> (פריסה חדשה).</li>
+                <li>בחר סוג <strong>Web app</strong>, הגדר ב-<em>Who has access</em>: <strong>Anyone</strong> (כל אחד), ולחץ Deploy.</li>
+                <li>העתק את ה-<strong>Web app URL</strong> והדבק אותו בשדה ה-Webhook בהגדרות המערכת!</li>
+              </ol>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-300">קוד הסקריפט להעתקה:</span>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(GOOGLE_APPS_SCRIPT_CODE);
+                    setCopiedAppsScript(true);
+                    setTimeout(() => setCopiedAppsScript(false), 2000);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-all shadow-sm"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>{copiedAppsScript ? 'הועתק ללוח!' : 'העתק את הקוד'}</span>
+                </button>
+              </div>
+
+              <pre 
+                dir="ltr"
+                className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-[11px] font-mono text-emerald-400 overflow-x-auto leading-relaxed max-h-64 text-left select-all"
+              >
+                {GOOGLE_APPS_SCRIPT_CODE}
+              </pre>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={() => setShowAppsScriptModal(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition-all"
+              >
+                סגור
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
