@@ -45,16 +45,16 @@
 /* Light Mode Monday Rows */
 [data-theme="light"] .monday-table-row {
   background-color: #ffffff !important;
-  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.04) !important;
   border-bottom: 1px solid #e2e8f0 !important;
 }
 [data-theme="light"] .monday-table-row:nth-child(even) {
   background-color: #f8fafc !important;
 }
 [data-theme="light"] .monday-table-row:hover {
-  background-color: #f1f5f9 !important;
-  transform: translateY(-1.5px) !important;
-  box-shadow: 0 6px 16px -2px rgba(15, 23, 42, 0.14), inset 0 1px 0 0 #ffffff !important;
+  background-color: #eef2f6 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.08) !important;
 }
 
 /* Sepia Mode Monday Rows */
@@ -74,14 +74,14 @@
 
 [data-theme="light"] {
   color-scheme: light;
-  --bg-page: #f8fafc; /* Crisp, clean, luminous white/slate-50 canvas */
+  --bg-page: #f1f5f9; /* Soft, refined Slate-100 canvas (gentle on the eyes, removes blinding glare) */
   --bg-header: #ffffff;
   --bg-card: #ffffff;
   --bg-card-subtle: #f8fafc;
-  --bg-th: #f1f5f9;
-  --bg-hover: #f1f5f9;
-  --border-color: #e2e8f0; /* Crisp subtle modern borders */
-  --border-subtle: #edf2f7;
+  --bg-th: #e2e8f0;
+  --bg-hover: #eef2f6;
+  --border-color: #cbd5e1; /* Calm, defined border */
+  --border-subtle: #e2e8f0;
   --text-main: #0f172a;
   --text-secondary: #334155;
   --text-muted: #64748b;
@@ -231,9 +231,9 @@ textarea {
 }
 
 [data-theme="light"] .overview-hero-banner {
-  background: linear-gradient(135deg, #f0f7ff 0%, #fdfefe 50%, #ffffff 100%) !important;
-  border: 1px solid #b9d5f3 !important;
-  box-shadow: 0 4px 20px -2px rgba(37, 99, 235, 0.1), 0 1px 3px 0 rgba(15, 23, 42, 0.06), inset 0 1px 0 0 rgba(255, 255, 255, 1) !important;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 50%, #f1f5f9 100%) !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 2px 10px -2px rgba(15, 23, 42, 0.05), inset 0 1px 0 0 rgba(255, 255, 255, 0.9) !important;
 }
 [data-theme="light"] .hero-title {
   color: #0f172a !important;
@@ -245,19 +245,19 @@ textarea {
   color: #0f172a !important;
 }
 [data-theme="light"] .hero-badge {
-  background-color: #dbeafe !important;
-  color: #1d4ed8 !important;
-  border: 1px solid #93c5fd !important;
-  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+  background-color: #e0f2fe !important;
+  color: #0369a1 !important;
+  border: 1px solid #bae6fd !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
 }
 [data-theme="light"] .hero-secondary-btn {
   background-color: #ffffff !important;
   color: #0f172a !important;
-  border: 1px solid #cbd8e6 !important;
-  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.04) !important;
 }
 [data-theme="light"] .hero-secondary-btn:hover {
-  background-color: #f1f5fa !important;
+  background-color: #f1f5f9 !important;
 }
 
 [data-theme="sepia"] .overview-hero-banner {
@@ -296,7 +296,7 @@ textarea {
 [data-theme="light"] body,
 [data-theme="light"] .min-h-screen,
 [data-theme="light"] .bg-\[\#0b0f19\] {
-  background-color: #f8fafc !important;
+  background-color: #f1f5f9 !important;
   color: #0f172a !important;
 }
 
@@ -349,7 +349,7 @@ textarea {
 [data-theme="light"] .hover\:bg-slate-800\/30:hover,
 [data-theme="light"] .hover\:bg-slate-750:hover,
 [data-theme="light"] .hover\:bg-slate-700:hover {
-  background-color: #f1f5f9 !important;
+  background-color: #eef2f6 !important;
 }
 
 /* Crisp Structural Borders */
@@ -364,7 +364,7 @@ textarea {
 [data-theme="light"] .border-slate-700\/60,
 [data-theme="light"] .border-slate-700\/50,
 [data-theme="light"] .border-slate-750 {
-  border-color: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
 }
 
 /* Typography Hierarchy */
@@ -383,14 +383,14 @@ textarea {
   color: #64748b !important;
 }
 
-/* Form Controls (Inputs, Selects, Search) - Recessed 3D Inset */
+/* Form Controls (Inputs, Selects, Search) - Recessed Inset */
 [data-theme="light"] input:not([type="checkbox"]):not([type="radio"]),
 [data-theme="light"] select,
 [data-theme="light"] textarea {
   background-color: #ffffff !important;
   color: #0f172a !important;
-  border-color: #e2e8f0 !important;
-  box-shadow: inset 0 2px 4px 0 rgba(15, 23, 42, 0.04), 0 1px 0 0 rgba(255, 255, 255, 0.9) !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: inset 0 1px 2px 0 rgba(15, 23, 42, 0.04) !important;
 }
 
 [data-theme="light"] input::placeholder,
@@ -400,54 +400,54 @@ textarea {
 
 /* Table Specific Styling */
 [data-theme="light"] tr:hover td {
-  background-color: #f1f5f9 !important;
+  background-color: #eef2f6 !important;
 }
 
 [data-theme="light"] th {
-  background-color: #f1f5f9 !important;
+  background-color: #e2e8f0 !important;
   color: #0f172a !important;
-  border-color: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
   font-weight: 700 !important;
 }
 
 [data-theme="light"] td {
-  border-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
   color: #334155 !important;
 }
 
 /* Table Group Header Rows & Spacer Bands (Light Mode) */
 [data-theme="light"] tr[id^="group-"] td,
 [data-theme="light"] tr[id^="group-"] {
-  background-color: #f8fafc !important;
-  border-color: #e2e8f0 !important;
+  background-color: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
   color: #0f172a !important;
 }
 
 [data-theme="light"] tr[id^="group-"] td span {
-  color: #334155 !important;
+  color: #1e293b !important;
 }
 
 [data-theme="light"] tr[key^="band-"] td,
 [data-theme="light"] tr[key^="band-bottom-"] td {
-  background-color: #f8fafc !important;
+  background-color: #f1f5f9 !important;
 }
 
-/* 3D Tactile Elevation Shadows (Light Mode) */
+/* Subtle Elevation Shadows (Light Mode) */
 [data-theme="light"] .shadow-xl,
 [data-theme="light"] .shadow-2xl,
 [data-theme="light"] .shadow-lg,
 [data-theme="light"] .shadow-md {
-  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 6px 18px -3px rgba(15, 23, 42, 0.05), inset 0 1px 0 0 rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 4px 12px -2px rgba(15, 23, 42, 0.04) !important;
 }
 
 [data-theme="light"] .rounded-2xl.border,
 [data-theme="light"] .rounded-xl.border {
-  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 6px 18px -3px rgba(15, 23, 42, 0.05), inset 0 1px 0 0 rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 4px 12px -2px rgba(15, 23, 42, 0.04) !important;
 }
 
 [data-theme="light"] .cursor-pointer.rounded-2xl:hover,
 [data-theme="light"] .cursor-pointer.rounded-xl:hover {
-  box-shadow: 0 4px 8px 0 rgba(15, 23, 42, 0.06), 0 12px 24px -4px rgba(15, 23, 42, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 1) !important;
+  box-shadow: 0 2px 6px 0 rgba(15, 23, 42, 0.06), 0 8px 18px -4px rgba(15, 23, 42, 0.07) !important;
 }
 
 /* Rich SaaS Status Badges & Pills (Light Mode) */
@@ -1015,9 +1015,9 @@ textarea {
    MY DAY (Daily Focus Center) Theming
    ======================================================== */
 [data-theme="light"] .myday-header-card {
-  background: linear-gradient(135deg, #fffdf5 0%, #ffffff 50%, #fffbf0 100%) !important;
-  border-color: #fde68a !important;
-  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.08), 0 6px 18px -3px rgba(15, 23, 42, 0.07), inset 0 1px 0 0 rgba(255, 255, 255, 0.95) !important;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 50%, #f1f5f9 100%) !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 4px 12px -2px rgba(15, 23, 42, 0.04) !important;
 }
 
 [data-theme="light"] .myday-header-card h1,
@@ -1030,15 +1030,15 @@ textarea {
 }
 
 [data-theme="light"] .myday-pill {
-  background-color: #fffbeb !important;
+  background-color: #fef3c7 !important;
   color: #92400e !important;
-  border-color: #fde68a !important;
+  border-color: #fcd34d !important;
 }
 
 [data-theme="light"] .myday-stat-card {
   background-color: #ffffff !important;
-  border-color: #e2e8f0 !important;
-  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.95) !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04) !important;
 }
 
 [data-theme="light"] .myday-stat-card .text-white {
@@ -1082,7 +1082,7 @@ textarea {
 [data-theme="light"] .product-header-card {
   background: linear-gradient(135deg, #f8fafc 0%, #ffffff 50%, #f1f5f9 100%) !important;
   border-color: #cbd5e1 !important;
-  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.08), 0 6px 18px -3px rgba(15, 23, 42, 0.07), inset 0 1px 0 0 rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 4px 12px -2px rgba(15, 23, 42, 0.04) !important;
 }
 
 [data-theme="light"] .product-header-card h1,
@@ -1102,8 +1102,8 @@ textarea {
 
 [data-theme="light"] .product-stat-card {
   background-color: #ffffff !important;
-  border-color: #e2e8f0 !important;
-  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.95) !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04) !important;
 }
 
 [data-theme="light"] .product-stat-card .text-white {
