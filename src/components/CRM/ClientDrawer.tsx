@@ -100,6 +100,7 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
   const prevClientIdRef = useRef(client?.id);
   const lastSavedDataRef = useRef<Client>({ ...client });
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const noteDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Sync client when switching to a different client
   useEffect(() => {
@@ -180,6 +181,10 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
 
   // Direct note adding function
   const handleAddNoteDirect = (noteText?: string) => {
+    if (noteDebounceTimerRef.current) {
+      clearTimeout(noteDebounceTimerRef.current);
+      noteDebounceTimerRef.current = null;
+    }
     const text = (noteText !== undefined ? noteText : newNote).trim();
     if (!text || !canEdit) return;
 
@@ -788,35 +793,44 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
                   <span className="font-medium text-slate-300">הוספת הערה או סיכום שיחה</span>
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/25 text-blue-300 text-[11px] font-semibold">
                     <User className="w-3 h-3 text-blue-400" />
-                    <span>נכתב ע״י: <strong className="text-white font-bold">{authorName}</strong></span>
+                    <span>חתימה אוטומטית: <strong className="text-white font-bold">{authorName}</strong></span>
                   </span>
                 </div>
                 <textarea
                   rows={3}
-                  placeholder={`הוסף הערה או סיכום שיחה חדש... (יישמר אוטומטית עם חתימת שמך: ${authorName})`}
+                  placeholder={`הקלד הערה או סיכום שיחה כאן... (נשמר אוטומטית ללא צורך בלחיצה על שום כפתור)`}
                   value={newNote}
-                  onChange={(e) => setNewNote(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setNewNote(val);
+                    if (noteDebounceTimerRef.current) {
+                      clearTimeout(noteDebounceTimerRef.current);
+                    }
+                    if (val.trim().length > 3) {
+                      setSaveStatus('saving');
+                      noteDebounceTimerRef.current = setTimeout(() => {
+                        handleAddNoteDirect(val);
+                      }, 2000);
+                    }
+                  }}
+                  onBlur={() => {
+                    if (newNote.trim()) {
+                      handleAddNoteDirect(newNote);
+                    }
+                  }}
                   onKeyDown={(e) => {
-                    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
-                      handleAddNoteDirect();
+                      handleAddNoteDirect(newNote);
                     }
                   }}
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-[11px] text-slate-400">
-                    נשמר אוטומטית בעת סגירה או ב-<kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-[10px] text-slate-300">Ctrl+Enter</kbd>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleAddNoteDirect()}
-                    disabled={!newNote.trim()}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:hover:bg-blue-600 text-white text-xs font-semibold shadow-md shadow-blue-600/20 transition-all"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>הוסף הערה חתומה ליומן</span>
-                  </button>
+                  <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20">
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>נשמר אוטומטית בעת סיום הקלדה, בלחיצה על Enter או בסגירת הכרטיס</span>
+                  </div>
                 </div>
               </div>
             ) : (
