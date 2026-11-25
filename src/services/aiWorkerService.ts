@@ -2,6 +2,8 @@ import { ChatAction } from '../components/AI/FloatingAIChat';
 
 const STORAGE_WORKER_URL_KEY = 'claimai_custom_worker_url';
 const STORAGE_WORKER_TOKEN_KEY = 'claimai_custom_worker_token';
+const STORAGE_AI_API_KEY = 'claimai_ai_api_key';
+const STORAGE_AI_PROVIDER = 'claimai_ai_provider'; // 'worker' | 'groq' | 'gemini' | 'openai'
 
 export const getWorkerUrl = (): string => {
   const custom = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_WORKER_URL_KEY) : null;
@@ -17,6 +19,26 @@ export const getWorkerToken = (): string => {
     return custom.trim();
   }
   return import.meta.env.VITE_WORKER_AUTH_TOKEN || '';
+};
+
+export const getDirectAIKey = (): string => {
+  if (typeof window === 'undefined') return '';
+  return localStorage.getItem(STORAGE_AI_API_KEY) || import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_GROQ_API_KEY || '';
+};
+
+export const setDirectAIKey = (key: string, provider: 'groq' | 'gemini' | 'openai' = 'groq'): void => {
+  if (typeof window === 'undefined') return;
+  if (key && key.trim()) {
+    localStorage.setItem(STORAGE_AI_API_KEY, key.trim());
+    localStorage.setItem(STORAGE_AI_PROVIDER, provider);
+  } else {
+    localStorage.removeItem(STORAGE_AI_API_KEY);
+  }
+};
+
+export const getAIProvider = (): 'worker' | 'groq' | 'gemini' | 'openai' => {
+  if (typeof window === 'undefined') return 'groq';
+  return (localStorage.getItem(STORAGE_AI_PROVIDER) as any) || 'groq';
 };
 
 export const setCustomWorkerConfig = (url: string, token?: string): void => {
@@ -60,7 +82,7 @@ const getHeaders = (): Record<string, string> => {
 
 export const checkWorkerHealth = async (): Promise<{ ok: boolean; info?: any; error?: string }> => {
   if (!isWorkerConfigured()) {
-    return { ok: false, error: 'לא הוגדר URL עבור הוורקר. ניתן להגדיר ב-Netlify (VITE_CLOUDFLARE_WORKER_URL) או ישירות בהגדרות המערכת' };
+    return { ok: false, error: 'לא הוגדר URL עבור הוורקר.' };
   }
 
   const url = getWorkerUrl();
@@ -78,6 +100,11 @@ export const checkWorkerHealth = async (): Promise<{ ok: boolean; info?: any; er
     return { ok: false, error: err.message || 'שגיאת רשת בפנייה לוורקר' };
   }
 };
+
+export interface ChatHistoryEntry {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
 
 export interface ChatContextPayload {
   currentUser?: { name?: string; role?: string; email?: string };
@@ -102,6 +129,7 @@ export interface ChatContextPayload {
     email?: string;
     lastNote?: string;
     requiresAttention?: boolean;
+    location?: string;
   }>;
   matchedTickets?: Array<{
     id: string;
@@ -116,41 +144,175 @@ export interface ChatContextPayload {
     name: string;
     rowCount: number;
   }>;
-  clientsSummary?: Array<{ id: string; name: string; company?: string; status: string; phone?: string; requiresAttention?: boolean }>;
-  productSummary?: Array<{ id: string; title: string; priority: string; status: string; client?: string; category?: string }>;
+  chatHistory?: ChatHistoryEntry[];
 }
 
+/**
+ * Call Groq directly from client if key is configured (Ultra-fast LLM conversation)
+ */
+async function callGroqDirect(
+  query: string,
+  systemPrompt: string,
+  history: ChatHistoryEntry[] = [],
+  apiKey: string
+): Promise<{ text: string; actions?: ChatAction[] } | null> {
+  try {
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      ...history.slice(-6),
+      { role: 'user', content: query }
+    ];
+
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey.trim()}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages,
+        temperature: 0.3,
+        max_tokens: 1800,
+        response_format: { type: 'json_object' }
+      })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const content = data.choices?.[0]?.message?.content;
+      if (content) {
+        const parsed = JSON.parse(content);
+        return {
+          text: parsed.text || parsed.answer || parsed.message || content,
+          actions: parsed.actions || []
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('Direct Groq call error:', err);
+  }
+  return null;
+}
+
+/**
+ * Call Gemini directly from client if key is configured
+ */
+async function callGeminiDirect(
+  query: string,
+  systemPrompt: string,
+  history: ChatHistoryEntry[] = [],
+  apiKey: string
+): Promise<{ text: string; actions?: ChatAction[] } | null> {
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey.trim()}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            { role: 'user', parts: [{ text: `${systemPrompt}\n\nהיסטוריית שיחה:\n${JSON.stringify(history.slice(-4))}\n\nשאילתת משתמש: ${query}` }] }
+          ],
+          generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 1800 }
+        })
+      }
+    );
+
+    if (res.ok) {
+      const data = await res.json();
+      const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (content) {
+        const parsed = JSON.parse(content);
+        return {
+          text: parsed.text || parsed.answer || parsed.message || content,
+          actions: parsed.actions || []
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('Direct Gemini call error:', err);
+  }
+  return null;
+}
+
+/**
+ * Main AI Copilot invocation:
+ * 1. Direct LLM (Groq / Gemini) if user has a free API key for instant unlimited reasoning
+ * 2. Cloudflare Worker AI endpoint (/api/chat)
+ * 3. Deep Hebrew Semantic Reasoning Engine
+ */
 export const askWorkerAI = async (
   query: string,
   context: ChatContextPayload
 ): Promise<{ text: string; actions?: ChatAction[] } | null> => {
-  if (!isWorkerConfigured()) return null;
+  const directKey = getDirectAIKey();
+  const provider = getAIProvider();
 
-  const url = getWorkerUrl();
-  try {
-    const res = await fetch(`${url}/api/chat`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify({
-        query,
-        ...context,
-      }),
-    });
+  const systemPrompt = `אתה ה-AI Copilot האישי והאינטראקטיבי של מערכת ClaimAI Control Center.
+אתה לא משיב תשובות גנריות! אתה סוכן אינטליגנטי, רהוט, בעל חשיבה עסקית חדה ושיחה שוטפת בעברית.
 
-    if (!res.ok) {
-      console.warn(`Cloudflare Worker chat failed with HTTP ${res.status}`);
-      return null;
+המשתמש שמדבר איתך: ${context.currentUser?.name || 'משתמש'} (${context.currentUser?.role || 'מנהל'}).
+
+תפקידך:
+1. לספק תובנות עסקיות חכמות על לקוחות, התנגדויות ("יקר", "עובד בבאפי", "אין זמן"), סיכויי נטישה והמלצות אינגייג'מנט.
+2. לסייע בניווט במערכת: בלחיצת כפתור לפתוח כרטיסי לקוח, לעבור בין מסכים (CRM, משימות, דוח ללא תיקים, תקלות מוצר), לפתוח שיחת וואטסאפ או חיוג.
+3. לקשר לאינטרנט: עבור כל לקוח/סוכנות שמוזכרים, חפש קישור רלוונטי ברשת (למשל חיפוש גוגל: https://www.google.com/search?q=...) כדי שהמשתמש יוכל לחקור עליהם מיד.
+4. לשוחח בחופשיות על כל שאלה, לענות בהומור מקצועי, לזכור את ההקשר של השיחה ולהציע צעדים הבאים פרקטיים.
+
+נתונים זמינים:
+- סטטיסטיקה: ${JSON.stringify(context.stats || {})}
+- לקוחות רלוונטיים: ${JSON.stringify(context.matchedClients || [])}
+- תקלות/משימות מוצר: ${JSON.stringify(context.matchedTickets || [])}
+- טבלאות נוספות: ${JSON.stringify(context.customTablesSummary || [])}
+
+חובה להחזיר JSON תקין בלבד במבנה הבא:
+{
+  "text": "תשובה שיחתית מפורטת ועשירה ב-Markdown בעברית, כולל ניתוח, תובנות מעשיות, וקישורים חיצוניים שימושיים",
+  "actions": [
+    { "type": "open_client" | "open_ticket" | "navigate_tab" | "whatsapp" | "call" | "web_link", "payload": "מזהה / טלפון / טאב / כתובת URL", "label": "תווית כפתור פעולה עם אימוג'י" }
+  ]
+}`;
+
+  // 1. Direct LLM Call if API key configured (Instant LPU reasoning)
+  if (directKey) {
+    if (provider === 'gemini') {
+      const res = await callGeminiDirect(query, systemPrompt, context.chatHistory, directKey);
+      if (res && res.text) return res;
+    } else {
+      const res = await callGroqDirect(query, systemPrompt, context.chatHistory, directKey);
+      if (res && res.text) return res;
     }
-
-    const data = await res.json();
-    return {
-      text: data.text || '',
-      actions: data.actions || [],
-    };
-  } catch (err) {
-    console.warn('Failed to contact Cloudflare Worker AI, falling back to local engine:', err);
-    return null;
   }
+
+  // 2. Cloudflare Worker AI Proxy (/api/chat)
+  if (isWorkerConfigured()) {
+    const url = getWorkerUrl();
+    try {
+      const res = await fetch(`${url}/api/chat`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({
+          query,
+          ...context,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.text && data.text.length > 10) {
+          return {
+            text: data.text,
+            actions: data.actions || [],
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('Worker chat error:', err);
+    }
+  }
+
+  return null;
 };
 
 export interface ClientEngagementAdvice {
@@ -175,34 +337,12 @@ export const getClientSmartAdvice = async (
   client: any,
   openTickets: any[] = []
 ): Promise<ClientEngagementAdvice> => {
-  if (isWorkerConfigured()) {
-    const url = getWorkerUrl();
-    try {
-      const res = await fetch(`${url}/api/client-advice`, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify({ client, openTickets }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.executiveSummary) {
-          return data;
-        }
-      }
-    } catch (err) {
-      console.warn('Worker client advice endpoint unreachable, using local fallback:', err);
-    }
-  }
-
-  // Local rule-based advisor fallback
   return getLocalClientAdvice(client, openTickets);
 };
 
 export const getLocalClientAdvice = (client: any, openTickets: any[] = []): ClientEngagementAdvice => {
   const status = client.status || "1'st Lead";
   const notes = (client.lastNote || '').toLowerCase();
-  const hasIt = Boolean(client.itContact?.trim());
-  const hasTeam = Boolean(client.teamContacts?.trim());
   
   let engagementScore = 65;
   let churnRisk: 'נמוך' | 'בינוני' | 'גבוה' = 'נמוך';
@@ -226,7 +366,7 @@ export const getLocalClientAdvice = (client: any, openTickets: any[] = []): Clie
     engagementScore = 55;
     churnRisk = 'בינוני';
     recommendedNextStatus = 'Meeting Scheduled';
-    keyInsights.push('הלקוח נמצא בשלבי היכרות ראשוניים — המטרה המרכזית היא תיאום הדגמה חיה ממוקדת (Zoom / פרונטלי).');
+    keyInsights.push('הלקוח נמצא בשלבי היכרות ראשוניים — המטרה המרכזית היא תיאום הדגמה חיה ממוקדת.');
     actionPlan.push({
       step: 1,
       title: 'הצעת הדגמה קצרה בת 15 דקות',
@@ -249,39 +389,14 @@ export const getLocalClientAdvice = (client: any, openTickets: any[] = []): Clie
     keyInsights.push('הלקוח כבר פעיל ומטמיע את המערכת — שביעות רצון הפקידות תקבע את המשך המנוי.');
     actionPlan.push({
       step: 1,
-      title: 'מעקב שבועי אחר נפח התביעות המוקלדות',
-      detail: 'לוודא חיבור תקין למערכת באפי (Bafi) ולפתור תקלות תוך שעות ספורות.',
+      title: 'בדיקת קצב הזנת תביעות שבועי',
+      detail: 'לוודא שהפקידה לא נתקלת בבאגים במודול המסמכים או בתאימות מול באפי.',
       priority: 'Medium',
     });
   }
 
-  if (!hasIt) {
-    keyInsights.push('חסרים פרטי איש מחשוב (IT) — עלול לעכב אינטגרציות טכנולוגיות וחיבורי רשת.');
-    actionPlan.push({
-      step: 2,
-      title: 'בירור פרטי איש IT',
-      detail: 'לבקש שם וטלפון של איש התמיכה להתקנת הרחבות או הגדרות מייל.',
-      priority: 'Medium',
-    });
-  }
-
-  if (!hasTeam) {
-    keyInsights.push('לא הוגדרו פקידות או מזכירות — הפקידות הן משתמשות הקצה העיקריות המייצרות אינגייג\'מנט יומיומי.');
-  }
-
-  if (openTickets.length > 0) {
-    churnRisk = 'גבוה';
-    keyInsights.push(`ללקוח ישנן ${openTickets.length} פניות מוצר או תקלות פתוחות במערכת.`);
-    actionPlan.unshift({
-      step: 0,
-      title: 'עדכון יזום בסטטוס התקלה',
-      detail: 'לעדכן את הלקוח שהנושא נמצא בטיפול צוות הפיתוח כדי לחזק אמון.',
-      priority: 'High',
-    });
-  }
-
-  const cleanName = client.name ? client.name.split(' ')[0] : 'שלום';
-  const suggestedWhatsApp = `היי ${cleanName}, מה שלומך? רציתי לשמוע איך הולך עם בדיקת המערכת של ClaimAI, והאם נוח לתאם שיחה קצרה להראות לך כמה תכונות חדשות שיחסכו לכם שעות בכל פתיחת תביעה?`;
+  const clientName = client.name ? client.name.split(' ')[0] : 'שלום';
+  const suggestedWhatsApp = `היי ${clientName}, מה שלומך? רציתי לשמוע איך הולך עם בדיקת המערכת של ClaimAI, והאם נוח לתאם שיחה קצרה להראות לך כמה תכונות חדשות שיחסכו לכם שעות בכל פתיחת תביעה?`;
 
   return {
     engagementScore,
@@ -323,3 +438,4 @@ export const analyzeTableWithWorker = async (
     return null;
   }
 };
+
