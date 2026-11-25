@@ -23,9 +23,14 @@ import {
   Plus,
   Wrench,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Lightbulb,
+  Zap,
+  RefreshCw,
+  Send
 } from 'lucide-react';
 import { Client, ProductItem, AppUser, ProductPriority, ProductItemCategory } from '../../types';
+import { getClientSmartAdvice, ClientEngagementAdvice } from '../../services/aiWorkerService';
 
 interface ClientDrawerProps {
   client: Client | null;
@@ -96,11 +101,33 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
   const [ticketTargetDate, setTicketTargetDate] = useState('');
   const [ticketSuccessMessage, setTicketSuccessMessage] = useState('');
 
+  const [advice, setAdvice] = useState<ClientEngagementAdvice | null>(null);
+  const [isLoadingAdvice, setIsLoadingAdvice] = useState(false);
+  const [isAdviceExpanded, setIsAdviceExpanded] = useState(true);
+
   const authorName = currentUser?.name || currentUser?.email?.split('@')[0] || 'משתמש מערכת';
   const prevClientIdRef = useRef(client?.id);
   const lastSavedDataRef = useRef<Client>({ ...client });
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const noteDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const loadAdvice = useCallback(async (clientData: Client) => {
+    setIsLoadingAdvice(true);
+    try {
+      const res = await getClientSmartAdvice(clientData, linkedTickets);
+      setAdvice(res);
+    } catch (e) {
+      console.warn('Failed to fetch AI advice:', e);
+    } finally {
+      setIsLoadingAdvice(false);
+    }
+  }, [linkedTickets]);
+
+  useEffect(() => {
+    if (client) {
+      loadAdvice(client);
+    }
+  }, [client?.id]);
 
   // Sync client when switching to a different client
   useEffect(() => {
@@ -574,6 +601,170 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
                 סמן כ"דורש טיפול מיידי" (התראה בהיום שלי)
               </label>
             </div>
+          </div>
+
+          {/* AI Customer Success & Engagement Advisor */}
+          <div className="p-4 rounded-xl bg-gradient-to-br from-purple-950/40 via-indigo-950/30 to-blue-950/20 border border-purple-500/30 space-y-3.5 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center justify-center">
+                  <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
+                    <span>יועץ AI לניהול לקוח ואינגייג'מנט</span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 font-mono font-semibold">
+                      Groq LLaMA 3.3
+                    </span>
+                  </h3>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => loadAdvice(formData)}
+                  disabled={isLoadingAdvice}
+                  className="p-1 rounded-md bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs transition-all disabled:opacity-50"
+                  title="רענן ניתוח AI"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isLoadingAdvice ? 'animate-spin' : ''}`} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsAdviceExpanded(!isAdviceExpanded)}
+                  className="p-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition-all"
+                >
+                  {isAdviceExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+            </div>
+
+            {isLoadingAdvice ? (
+              <div className="py-6 flex flex-col items-center justify-center gap-2 text-xs text-purple-300 animate-pulse">
+                <Loader2 className="w-5 h-5 animate-spin text-purple-400" />
+                <span>מנתח היסטוריית הערות, זמני סטטוס ומדדי אינגייג'מנט...</span>
+              </div>
+            ) : advice && isAdviceExpanded ? (
+              <div className="space-y-3 pt-1">
+                {/* Metrics Row */}
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="p-2 rounded-lg bg-slate-900/80 border border-slate-800">
+                    <span className="text-[10px] text-slate-400 block mb-0.5">ציון אינגייג'מנט</span>
+                    <span className={`text-base font-extrabold ${
+                      advice.engagementScore >= 75 ? 'text-emerald-400' : advice.engagementScore >= 50 ? 'text-amber-400' : 'text-rose-400'
+                    }`}>
+                      {advice.engagementScore}/100
+                    </span>
+                  </div>
+
+                  <div className="p-2 rounded-lg bg-slate-900/80 border border-slate-800">
+                    <span className="text-[10px] text-slate-400 block mb-0.5">סיכון נטישה</span>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full inline-block ${
+                      advice.churnRisk === 'גבוה'
+                        ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                        : advice.churnRisk === 'בינוני'
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                        : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                    }`}>
+                      {advice.churnRisk}
+                    </span>
+                  </div>
+
+                  <div className="p-2 rounded-lg bg-slate-900/80 border border-slate-800">
+                    <span className="text-[10px] text-slate-400 block mb-0.5">סטטוס מומלץ</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (advice.recommendedNextStatus && advice.recommendedNextStatus !== formData.status) {
+                          const updated = { ...formData, status: advice.recommendedNextStatus };
+                          setFormData(updated);
+                          performSave(updated);
+                        }
+                      }}
+                      className="text-xs font-bold text-blue-300 hover:text-blue-200 underline decoration-dotted truncate block w-full text-center"
+                      title="לחץ לעדכון סטטוס הלקוח"
+                    >
+                      {advice.recommendedNextStatus}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Executive Summary */}
+                <div className="p-2.5 rounded-lg bg-slate-900/60 border border-purple-500/20 text-xs text-slate-200 leading-relaxed">
+                  <div className="flex items-center gap-1.5 text-purple-300 font-semibold mb-1 text-[11px]">
+                    <Lightbulb className="w-3.5 h-3.5 text-amber-400" />
+                    <span>תמצית אסטרטגית מניתוח ההערות:</span>
+                  </div>
+                  <p>{advice.executiveSummary}</p>
+                  {advice.statusAnalysis && (
+                    <p className="mt-1.5 text-[11px] text-slate-400 border-t border-slate-800/80 pt-1">
+                      {advice.statusAnalysis}
+                    </p>
+                  )}
+                </div>
+
+                {/* Key Insights & Action Plan */}
+                {advice.keyInsights && advice.keyInsights.length > 0 && (
+                  <div className="space-y-1">
+                    <span className="text-[11px] font-bold text-slate-300 block">💡 תובנות עיקריות מיומן הלקוח:</span>
+                    <ul className="space-y-1 text-xs text-slate-300 pr-4 list-disc marker:text-purple-400">
+                      {advice.keyInsights.map((insight, idx) => (
+                        <li key={idx} className="leading-snug">{insight}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Suggested Action Plan */}
+                {advice.actionPlan && advice.actionPlan.length > 0 && (
+                  <div className="space-y-1.5">
+                    <span className="text-[11px] font-bold text-slate-300 block">⚡ תוכנית פעולה לקידום אינגייג'מנט:</span>
+                    <div className="space-y-1.5">
+                      {advice.actionPlan.map((act, idx) => (
+                        <div key={idx} className="p-2 rounded-lg bg-slate-900/80 border border-slate-800 flex items-start gap-2">
+                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase shrink-0 ${
+                            act.priority === 'High' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                          }`}>
+                            {act.priority}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-xs font-bold text-white block">{act.title}</span>
+                            <span className="text-[11px] text-slate-400 block mt-0.5">{act.detail}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Suggested Personalized WhatsApp */}
+                {advice.suggestedWhatsApp && (
+                  <div className="p-2.5 rounded-lg bg-emerald-950/20 border border-emerald-500/30 space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-bold text-emerald-300 flex items-center gap-1">
+                        <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>נוסח וואטסאפ מותאם אישית:</span>
+                      </span>
+                      {waNumber && (
+                        <a
+                          href={`https://wa.me/${waNumber}?text=${encodeURIComponent(advice.suggestedWhatsApp)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[10px] inline-flex items-center gap-1 shadow-sm transition-all"
+                        >
+                          <Send className="w-2.5 h-2.5" />
+                          <span>שלח עכשיו בוואטסאפ</span>
+                        </a>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-300 italic bg-slate-900/70 p-2 rounded border border-emerald-500/20">
+                      "{advice.suggestedWhatsApp}"
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : null}
           </div>
 
           {/* LINKED PRODUCT & DELIVERY TICKETS */}

@@ -877,15 +877,32 @@ CREATE TABLE product_items (
         </div>
 
         {workerResult && (
-          <div className={`p-3 rounded-xl border text-xs font-semibold flex items-center gap-2 ${
+          <div className={`p-3 rounded-xl border text-xs font-semibold flex items-center justify-between ${
             workerResult.success
               ? 'bg-purple-500/15 border-purple-500/30 text-purple-300'
               : 'bg-amber-500/15 border-amber-500/30 text-amber-300'
           }`}>
-            {workerResult.success ? <CheckCircle2 className="w-4 h-4 text-purple-400 shrink-0" /> : <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />}
-            <span>{workerResult.message}</span>
+            <div className="flex items-center gap-2">
+              {workerResult.success ? <CheckCircle2 className="w-4 h-4 text-purple-400 shrink-0" /> : <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />}
+              <span>{workerResult.message}</span>
+            </div>
+            {workerResult.info?.activeEngine && (
+              <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-200 border border-purple-500/30 font-mono text-[10px]">
+                {workerResult.info.activeEngine}
+              </span>
+            )}
           </div>
         )}
+
+        <div className="p-3 rounded-xl bg-purple-950/20 border border-purple-800/30 text-[11px] text-purple-300 leading-relaxed space-y-1">
+          <div className="font-bold flex items-center gap-1.5 text-white">
+            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+            <span>תמיכה מובנית ב-Groq LPU (llama-3.3-70b-versatile)</span>
+          </div>
+          <p className="text-slate-300 text-[10.5px]">
+            הוורקר תומך ישירות ב-<strong>Groq API</strong>. כל מה שצריך לעשות הוא להוסיף בלוח הבקרה של Cloudflare (תחת <strong>Settings ⭠ Variables and Secrets</strong>) מפתח סודי בשם <code className="text-amber-300 font-mono">GROQ_API_KEY</code>. הוורקר יזהה אותו אוטומטית ויפעיל את מודל 70B במהירות שיא וברמת אינטיליגנציה גבוהה במיוחד עבור סייר ה-AI וניתוח הלקוחות!
+          </p>
+        </div>
       </div>
 
       {/* SQL Migration Script Viewer */}
