@@ -39,7 +39,8 @@ import {
   syncToGoogleSheetsWebhook,
   pullFromGoogleSheetsWebhook,
   getLastSheetsPullTime,
-  GOOGLE_APPS_SCRIPT_WEBHOOK_EXTENSION
+  GOOGLE_APPS_SCRIPT_WEBHOOK_EXTENSION,
+  DEFAULT_SHEETS_WEBHOOK_URL
 } from '../services/googleSheetsBackupService';
 import { db } from '../services/db';
 import { testNetlifyBlobs } from '../services/blobsService';
@@ -86,6 +87,13 @@ export const DatabaseSettings: React.FC<DatabaseSettingsProps> = ({
 
   const handleSaveWebhook = () => {
     setSheetsWebhookUrl(sheetsWebhookUrl);
+    setIsWebhookSaved(true);
+    setTimeout(() => setIsWebhookSaved(false), 2500);
+  };
+
+  const handleResetDefaultWebhook = () => {
+    setSheetsWebhookUrlState(DEFAULT_SHEETS_WEBHOOK_URL);
+    setSheetsWebhookUrl(DEFAULT_SHEETS_WEBHOOK_URL);
     setIsWebhookSaved(true);
     setTimeout(() => setIsWebhookSaved(false), 2500);
   };
@@ -534,7 +542,7 @@ CREATE TABLE product_items (
             </button>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <input
               type="url"
               placeholder="https://script.google.com/macros/s/.../exec"
@@ -542,12 +550,21 @@ CREATE TABLE product_items (
               onChange={(e) => setSheetsWebhookUrlState(e.target.value)}
               className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
-            <button
-              onClick={handleSaveWebhook}
-              className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shrink-0"
-            >
-              {isWebhookSaved ? 'נשמר בהצלחה!' : 'שמור כתובת Webhook'}
-            </button>
+            <div className="flex gap-1.5 shrink-0">
+              <button
+                onClick={handleSaveWebhook}
+                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all"
+              >
+                {isWebhookSaved ? 'נשמר בהצלחה!' : 'שמור כתובת Webhook'}
+              </button>
+              <button
+                onClick={handleResetDefaultWebhook}
+                title="אפס לוובהוק המערכת המובנה של גוגל שיטס"
+                className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition-all border border-slate-700"
+              >
+                שחזר ברירת מחדל
+              </button>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-500 font-mono">

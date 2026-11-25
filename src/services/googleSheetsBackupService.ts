@@ -11,12 +11,18 @@ const WEBHOOK_STORAGE_KEY = 'claimai_google_sheets_webhook_url';
 const LAST_SYNC_STORAGE_KEY = 'claimai_last_sheets_sync';
 const LAST_PULL_STORAGE_KEY = 'claimai_last_sheets_pull';
 
+export const DEFAULT_SHEETS_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbz5lgHnd62VgdV7nc2MXLV2AJBWaza6cEzMvvAFS2ZpraktKDMEvvYjDSKJzzvuc7_0/exec';
+
 export const getSheetsWebhookUrl = (): string => {
-  return localStorage.getItem(WEBHOOK_STORAGE_KEY) || (import.meta as any).env?.VITE_GOOGLE_SHEETS_WEBHOOK_URL || '';
+  return localStorage.getItem(WEBHOOK_STORAGE_KEY) || (import.meta as any).env?.VITE_GOOGLE_SHEETS_WEBHOOK_URL || DEFAULT_SHEETS_WEBHOOK_URL;
 };
 
 export const setSheetsWebhookUrl = (url: string) => {
-  localStorage.setItem(WEBHOOK_STORAGE_KEY, url.trim());
+  if (url && url.trim()) {
+    localStorage.setItem(WEBHOOK_STORAGE_KEY, url.trim());
+  } else {
+    localStorage.removeItem(WEBHOOK_STORAGE_KEY);
+  }
 };
 
 export const getLastSheetsSyncTime = (): string | null => {
