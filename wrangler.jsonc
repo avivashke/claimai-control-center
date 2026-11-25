@@ -1,0 +1,10 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "claimai-control-center",
+  "pages_build_output_dir": "dist",
+  "compatibility_date": "2026-11-01",
+  "vars": {
+    "VITE_CLOUDFLARE_WORKER_URL": "https://small-sea-ba86.avivashke95.workers.dev",
+    "VITE_USE_LOCAL_API": "false"
+  }
+}
