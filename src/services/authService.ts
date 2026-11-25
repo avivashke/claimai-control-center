@@ -9,28 +9,26 @@ const ADMIN_RESET_CODES_STORAGE_KEY = 'claimai_admin_reset_codes';
 
 // Default fallback password when environment variable is not configured
 export const DEFAULT_FALLBACK_PASSWORD = 'ClaimAI2026!';
-export const KNOWN_ADMIN_PASSWORDS = ['ClaimAI2026!', '28041995', 'admin', 'admin123'];
+export const KNOWN_ADMIN_PASSWORDS = ['ClaimAI2026!', '28041995', 'eyal313131', 'admin', 'admin123'];
 
-// Read Netlify Environment Variable passwords by user email or role
+// Read Environment Variable passwords by user email or role
 export const getNetlifyPasswordForUser = (email: string, role: UserRole): string | undefined => {
   const env = import.meta.env;
   const cleanEmail = email.trim().toLowerCase();
 
-  // 1. Direct personal password for Aviv (VITE_AVIV_PASSWORD or VITE_PASSWORD_AVIV)
+  // 1. Direct personal password for Aviv (VITE_AVIV_PASSWORD or VITE_PASSWORD_AVIV or default 28041995)
   if (cleanEmail === 'aviv.claimai@gmail.com' || cleanEmail === 'avivashke95@gmail.com' || cleanEmail.includes('aviv')) {
-    const avivPass = env.VITE_AVIV_PASSWORD || env.VITE_PASSWORD_AVIV;
-    if (avivPass) return avivPass;
+    return env.VITE_AVIV_PASSWORD || env.VITE_PASSWORD_AVIV || '28041995';
   }
 
-  // 2. Direct personal password for Eyal (VITE_EYAL_PASSWORD or VITE_PASSWORD_EYAL)
+  // 2. Direct personal password for Eyal (VITE_EYAL_PASSWORD or VITE_PASSWORD_EYAL or default eyal313131)
   if (cleanEmail === 'eyal@claimi.co.il' || cleanEmail === 'eyal@claimai.com' || cleanEmail.includes('eyal')) {
-    const eyalPass = env.VITE_EYAL_PASSWORD || env.VITE_PASSWORD_EYAL;
-    if (eyalPass) return eyalPass;
+    return env.VITE_EYAL_PASSWORD || env.VITE_PASSWORD_EYAL || 'eyal313131';
   }
 
   // 3. Admin / role fallback password (VITE_ADMIN_PASSWORD or VITE_APP_PASSWORD)
   if (role === 'admin') {
-    return env.VITE_ADMIN_PASSWORD || env.VITE_APP_PASSWORD;
+    return env.VITE_ADMIN_PASSWORD || env.VITE_APP_PASSWORD || '28041995';
   }
   if (role === 'editor') {
     return env.VITE_EDITOR_PASSWORD || env.VITE_APP_PASSWORD;

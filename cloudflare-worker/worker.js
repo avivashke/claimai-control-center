@@ -72,6 +72,38 @@ export default {
         );
       }
 
+      // 3.6 Free Shared Cloud Database Sync Endpoint (/api/db/sync)
+      // Supports Cloudflare KV (env.CRM_DATA / env.CRM_KV)
+      if (url.pathname === '/api/db/sync' || url.pathname === '/db/sync') {
+        const kv = env.CRM_DATA || env.CRM_KV;
+        if (request.method === 'GET') {
+          if (kv) {
+            const raw = await kv.get('claimai_shared_db');
+            if (raw) {
+              return new Response(raw, {
+                status: 200,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              });
+            }
+          }
+          return new Response(JSON.stringify({ ok: true, data: null, message: 'No remote sync snapshot yet' }), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        if (request.method === 'POST') {
+          const body = await request.text();
+          if (kv) {
+            await kv.put('claimai_shared_db', body);
+          }
+          return new Response(JSON.stringify({ ok: true, savedAt: Date.now(), size: body.length }), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
+
       // 3.5 Direct Groq Diagnostic Endpoint (/api/test-groq)
       if (url.pathname === '/api/test-groq' || url.pathname === '/test-groq') {
         if (!env.GROQ_API_KEY) {
