@@ -382,7 +382,7 @@ export const syncToGoogleSheetsWebhook = async (customUrl?: string): Promise<{ s
 
     return {
       success: true,
-      message: `סנכרון מלא לגוגל שיטס נשלח בהצלחה! (${clients.length} לקוחות ב'ראשי', ${noCasesRows.length} ב'דוח ללא תיקים', ו-${productItems.length} פיתוחים/באגים).`,
+      message: `סנכרון מלא לגוגל שיטס נשלח בהצלחה! (${clients.length} לקוחות כולל הערות מלאות ב'ראשי', ${noCasesRows.length} ב'דוח ללא תיקים', ו-${productItems.length} פיתוחים/באגים).`,
       rowsPushed: clients.length + noCasesRows.length + productItems.length
     };
   } catch (err: any) {
@@ -428,7 +428,7 @@ export const pullFromGoogleSheetsWebhook = async (customUrl?: string): Promise<{
     let noCasesUpdated = 0;
     let productsUpdated = 0;
 
-    // 1. Process 'ראשי' sheet rows
+    // 1. Process 'ראשי' sheet rows (includes notes)
     if (data.clients && Array.isArray(data.clients) && data.clients.length > 0) {
       const incomingClients: Client[] = [];
       for (const row of data.clients) {
@@ -513,7 +513,7 @@ export const pullFromGoogleSheetsWebhook = async (customUrl?: string): Promise<{
 
     return {
       success: true,
-      message: `סנכרון משיכה הצליח! עודכנו ${clientsUpdated} לקוחות ב'ראשי', ${noCasesUpdated} ב'דוח ללא תיקים' ו-${productsUpdated} פיתוחים/באגים.`,
+      message: `סנכרון משיכה הצליח! עודכנו ${clientsUpdated} לקוחות ב'ראשי', ${noCasesUpdated} ב'דוח ללא תיקים' ו-${productsUpdated} פיתוחים/באגים כולל הערות עדכניות.`,
       clientsUpdated,
       noCasesUpdated,
       productsUpdated
@@ -546,18 +546,18 @@ export const triggerGoogleSheetsAutoSync = (delayMs: number = 3000) => {
   }, delayMs);
 };
 
-// Combined Apps Script Add-on Code (Preserves all existing logic & adds doGet/doPost)
+// Combined Apps Script Add-on Code with Full Note History & Activity Log Synchronization
 export const GOOGLE_APPS_SCRIPT_WEBHOOK_EXTENSION = `
 /* ===================================================================
  * תוסף סנכרון דו-כיווני חי למערכת ClaimAI Control Center (Web App API)
- * מתווסף בתחתית Code.gs בלי לפגוע בשום פונקציה קיימת של ה-CRM!
+ * מסנכרן לקוחות, הערות מלאות, יומן פעילות, דוח ללא תיקים ומוצר/באגים
  * =================================================================== */
 
 function doGet(e) {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     
-    // 1. קריאת גליון "ראשי"
+    // 1. קריאת גליון "ראשי" (עמודה 25 היא 'הערה אחרונה')
     var mainSheet = ss.getSheetByName(CFG.MAIN) || ss.getSheetByName("ראשי") || ss.getActiveSheet();
     var lastRowMain = mainSheet.getLastRow();
     var lastColMain = mainSheet.getLastColumn();
@@ -629,14 +629,65 @@ function doPost(e) {
     var updatedNoCases = 0;
     var updatedBugs = 0;
     var updatedRoadmap = 0;
+    var newNotesRecorded = 0;
 
-    // 1. עדכון גליון "ראשי"
+    // 1. עדכון גליון "ראשי" והערות
     if (data.clients && data.clients.length > 0) {
       var sheet = ss.getSheetByName(CFG.MAIN) || ss.getSheetByName("ראשי") || ss.getActiveSheet();
       var rows = data.clients;
       var numCols = rows[0].length;
+      
+      // קריאת הערכים הקיימים לצורך זיהוי הערות חדשות שנכתבו באפליקציה
+      var currentValues = [];
+      var lastRow = sheet.getLastRow();
+      if (lastRow >= 2) {
+        currentValues = sheet.getRange(2, 1, lastRow - 1, numCols).getValues();
+      }
+      var prevNotesById = {};
+      currentValues.forEach(function(r) {
+        if (r[0]) prevNotesById[String(r[0])] = String(r[IDX.lastNote - 1] || '').trim();
+      });
+
+      // כתיבת הנתונים המעודכנים לגליון ראשי
       sheet.getRange(2, 1, rows.length, numCols).setValues(rows);
       updatedClients = rows.length;
+
+      // בדיקה ותיעוד הערות חדשות שנשלחו מהאפליקציה ביומן הפעילות + רענון קומבו
+      var now = new Date();
+      var logSheet = ss.getSheetByName(CFG.LOG);
+      rows.forEach(function(r, idx) {
+        var id = String(r[0]);
+        var incomingNote = String(r[IDX.lastNote - 1] || '').trim();
+        var prevNote = prevNotesById[id] || '';
+        
+        if (incomingNote && incomingNote !== prevNote) {
+          // מפרידים מקטעים אם נשלח שרשור
+          var chunks = incomingNote.split('\\n---\\n');
+          var topNote = chunks[0].trim();
+          
+          // מוציאים את גוף ההערה
+          var body = topNote;
+          var parts = topNote.split(/\\s*\\|\\s*/);
+          var author = r[IDX.updatedBy - 1] || 'Control Center';
+          if (parts.length >= 3) {
+            author = parts[2].replace('👤', '').trim() || author;
+            body = parts.slice(3).join(' | ').trim() || parts.slice(2).join(' | ').trim();
+          } else if (parts.length === 2) {
+            body = parts[1].trim();
+          }
+
+          if (logSheet) {
+            logSheet.appendRow([now, author, "app@claimai.co.il", id, r[1] + (r[2] ? ' · ' + r[2] : ''), "שיחה", "", "", "", body]);
+            newNotesRecorded++;
+          }
+          
+          // מרעננים את הקומבו (Data Validation) של ההערות עבור שורה זו
+          try {
+            refreshNoteDropdown_(sheet, idx + 2, id);
+          } catch(eDropdown) {}
+        }
+      });
+
       try { recompute_(sheet); } catch (re) {}
     }
 
@@ -674,19 +725,20 @@ function doPost(e) {
       console.warn("Product sheet write skipped in doPost:", pe);
     }
 
-    // 4. תיעוד ביומן פעילות הקיים
+    // 4. תיעוד פעולת הסנכרון הכללית
     try {
       appendLog_([new Date(), "Control Center API", "api@claimai.co.il", "", "", "סנכרון דו-כיווני", "Web App Webhook", "", "", 
-        "עודכנו " + updatedClients + " לקוחות, " + updatedNoCases + " ללא תיקים, " + (updatedBugs + updatedRoadmap) + " משימות מוצר"]);
+        "עודכנו " + updatedClients + " לקוחות, " + newNotesRecorded + " הערות חדשות נרשמו, " + updatedNoCases + " ללא תיקים, " + (updatedBugs + updatedRoadmap) + " משימות מוצר"]);
     } catch (le) {
       console.warn("Log write skipped:", le);
     }
 
     return ContentService.createTextOutput(JSON.stringify({
       status: "success",
-      message: "סנכרון דו-כיווני עודכן בהצלחה!",
+      message: "סנכרון דו-כיווני כולל הערות הושלם בהצלחה!",
       timestamp: new Date().toISOString(),
       updatedClients: updatedClients,
+      newNotesRecorded: newNotesRecorded,
       updatedNoCases: updatedNoCases,
       updatedBugs: updatedBugs,
       updatedRoadmap: updatedRoadmap
