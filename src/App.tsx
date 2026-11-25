@@ -38,7 +38,11 @@ import {
 } from './services/authService';
 import { Client, ProductItem, ProductStatus, CustomTable, AppUser, AppTheme } from './types';
 import { ShieldCheck, Sparkles, CheckCircle2 } from 'lucide-react';
-import { triggerGoogleSheetsAutoSync } from './services/googleSheetsBackupService';
+import { 
+  triggerGoogleSheetsAutoSync, 
+  pullFromGoogleSheetsWebhook, 
+  getSheetsWebhookUrl 
+} from './services/googleSheetsBackupService';
 
 export const App: React.FC = () => {
   const [theme, setTheme] = useState<AppTheme>(() => {
@@ -112,6 +116,20 @@ export const App: React.FC = () => {
           setSelectedCustomTableId(fetchedTables[0].id);
         }
         checkConnectionStatuses();
+
+        // Automatic background two-way pull from Google Sheets if Webhook is configured
+        if (getSheetsWebhookUrl()) {
+          pullFromGoogleSheetsWebhook().then(res => {
+            if (res.success && (res.clientsUpdated || res.noCasesUpdated)) {
+              Promise.all([getClients(), getCustomTables()]).then(([reloadedClients, reloadedTables]) => {
+                setClients(reloadedClients);
+                setCustomTables(reloadedTables);
+              });
+            }
+          }).catch(err => {
+            console.warn('Background initial pull from Google Sheets skipped:', err);
+          });
+        }
       });
     });
   };
@@ -290,6 +308,9 @@ export const App: React.FC = () => {
     if (!canEditTables) return;
     await saveCustomTable(updatedTable);
     setCustomTables(prev => prev.map(t => t.id === updatedTable.id ? updatedTable : t));
+    if (updatedTable.id === 'table-no-cases') {
+      triggerGoogleSheetsAutoSync();
+    }
   };
 
   const handleDeleteTable = async (tableId: string) => {

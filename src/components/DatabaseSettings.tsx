@@ -12,7 +12,8 @@ import {
   Server,
   ShieldCheck,
   Code2,
-  Globe
+  Globe,
+  RefreshCw
 } from 'lucide-react';
 import { 
   getSupabaseConfig, 
@@ -36,6 +37,8 @@ import {
   generateProductSheetCSV,
   downloadCSV,
   syncToGoogleSheetsWebhook,
+  pullFromGoogleSheetsWebhook,
+  getLastSheetsPullTime,
   GOOGLE_APPS_SCRIPT_CODE
 } from '../services/googleSheetsBackupService';
 import { db } from '../services/db';
@@ -75,6 +78,7 @@ export const DatabaseSettings: React.FC<DatabaseSettingsProps> = ({
   // Google Sheets Backup & Live Sync State
   const [sheetsWebhookUrl, setSheetsWebhookUrlState] = useState(getSheetsWebhookUrl());
   const [isSyncingSheets, setIsSyncingSheets] = useState(false);
+  const [isPullingSheets, setIsPullingSheets] = useState(false);
   const [sheetsSyncResult, setSheetsSyncResult] = useState<{ success: boolean; message: string } | null>(null);
   const [isWebhookSaved, setIsWebhookSaved] = useState(false);
   const [copiedAppsScript, setCopiedAppsScript] = useState(false);
@@ -99,6 +103,25 @@ export const DatabaseSettings: React.FC<DatabaseSettingsProps> = ({
       });
     } finally {
       setIsSyncingSheets(false);
+    }
+  };
+
+  const handlePullGoogleSheets = async () => {
+    setIsPullingSheets(true);
+    setSheetsSyncResult(null);
+    try {
+      const res = await pullFromGoogleSheetsWebhook(sheetsWebhookUrl);
+      setSheetsSyncResult(res);
+      if (res.success) {
+        onRefreshData();
+      }
+    } catch (err: any) {
+      setSheetsSyncResult({
+        success: false,
+        message: `שגיאה במשיכת נתונים מגוגל שיטס: ${err.message || err}`
+      });
+    } finally {
+      setIsPullingSheets(false);
     }
   };
 
@@ -378,13 +401,22 @@ CREATE TABLE product_items (
 
           <div className="flex items-center gap-2 shrink-0">
             <button
+              onClick={handlePullGoogleSheets}
+              disabled={isPullingSheets || isSyncingSheets}
+              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-emerald-300 border border-emerald-500/40 text-xs font-bold shadow-md transition-all disabled:opacity-50 flex items-center gap-2 hover:scale-[1.02]"
+              title="משיכת נתונים מעודכנים מתוך גליון ראשי וגליון דוח לקוחות ללא תיקים"
+            >
+              <RefreshCw className={`w-4 h-4 ${isPullingSheets ? 'animate-spin' : ''}`} />
+              <span>{isPullingSheets ? 'מושך מגוגל שיטס...' : '⬇️ משוך נתונים מגוגל שיטס'}</span>
+            </button>
+            <button
               onClick={handleSyncGoogleSheets}
-              disabled={isSyncingSheets}
+              disabled={isSyncingSheets || isPullingSheets}
               className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 transition-all disabled:opacity-50 flex items-center gap-2 hover:scale-[1.02]"
-              title="שליחת כל הנתונים המעודכנים ישירות ל-Google Sheets"
+              title="שליחת כל הנתונים המעודכנים ישירות ל-Google Sheets (ראשי + דוח ללא תיקים)"
             >
               <Cloud className="w-4 h-4" />
-              <span>{isSyncingSheets ? 'מסנכרן לשיטס...' : '⚡ סנכרן וגבה עכשיו ל-Google Sheets'}</span>
+              <span>{isSyncingSheets ? 'מסנכרן לשיטס...' : '⬆️ דחוף סנכרון לגוגל שיטס'}</span>
             </button>
           </div>
         </div>
@@ -518,11 +550,18 @@ CREATE TABLE product_items (
             </button>
           </div>
 
-          {getLastSheetsSyncTime() && (
-            <p className="text-[10px] text-slate-500 font-mono">
-              סנכרון אחרון שנשלח: {new Date(getLastSheetsSyncTime()!).toLocaleString('he-IL')}
-            </p>
-          )}
+          <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-500 font-mono">
+            {getLastSheetsSyncTime() && (
+              <p>
+                ⬆️ דחיפה אחרונה לגוגל שיטס: {new Date(getLastSheetsSyncTime()!).toLocaleString('he-IL')}
+              </p>
+            )}
+            {getLastSheetsPullTime() && (
+              <p>
+                ⬇️ משיכה אחרונה מגוגל שיטס: {new Date(getLastSheetsPullTime()!).toLocaleString('he-IL')}
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
