@@ -331,6 +331,27 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
                         דחוף
                       </span>
                     )}
+                    {(formData.requiresAttention || formData.status === 'Urgent') && canEdit && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = {
+                            ...formData,
+                            requiresAttention: false,
+                            status: formData.status === 'Urgent' ? 'Follow-Up' : formData.status,
+                            updatedDate: new Date().toISOString().slice(0, 10),
+                            updatedBy: authorName
+                          };
+                          setFormData(updated);
+                          performSave(updated);
+                        }}
+                        className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/35 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold transition-all shadow-sm hover:scale-[1.02]"
+                        title="הורד משולחן הדחוף וסמן כטופל"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>הורד מדחוף</span>
+                      </button>
+                    )}
                   </div>
                   <div className="flex items-center gap-1.5 text-xs text-slate-400">
                     <Building className="w-3.5 h-3.5 text-slate-500 shrink-0" />
@@ -597,8 +618,13 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
                 onChange={(e) => setFormData({ ...formData, requiresAttention: e.target.checked })}
                 className="rounded bg-slate-800 border-slate-700 text-rose-500 focus:ring-rose-500"
               />
-              <label htmlFor="attn" className="text-xs text-slate-300 font-semibold cursor-pointer">
-                סמן כ"דורש טיפול מיידי" (התראה בהיום שלי)
+              <label htmlFor="attn" className="text-xs text-slate-300 font-semibold cursor-pointer flex items-center gap-2">
+                <span>סמן כ"דורש טיפול מיידי" (התראה בהיום שלי)</span>
+                {formData.requiresAttention && (
+                  <span className="text-[10px] text-rose-400 font-bold bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/20">
+                    פעיל בשולחן הדחוף
+                  </span>
+                )}
               </label>
             </div>
           </div>

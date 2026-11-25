@@ -933,10 +933,25 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                                     </div>
                                   )}
                                   {client.requiresAttention && (
-                                    <span className="inline-flex items-center gap-0.5 text-[8px] text-rose-400 font-semibold mt-0.5">
-                                      <AlertCircle className="w-2 h-2" />
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (canEdit && onUpdateClient) {
+                                          onUpdateClient({
+                                            ...client,
+                                            requiresAttention: false,
+                                            status: client.status === 'Urgent' ? 'Follow-Up' : client.status
+                                          });
+                                        }
+                                      }}
+                                      className="inline-flex items-center gap-1 text-[8px] text-rose-300 font-semibold mt-0.5 px-1.5 py-0.5 rounded bg-rose-500/20 hover:bg-rose-500/40 border border-rose-500/30 cursor-pointer transition-all group/badge"
+                                      title="לחץ להסרה משולחן הדחוף וסימון כטופל"
+                                    >
+                                      <AlertCircle className="w-2 h-2 text-rose-400" />
                                       <span>דחוף</span>
-                                    </span>
+                                      <span className="text-[7.5px] text-rose-300 group-hover/badge:text-white underline">✕ הסר</span>
+                                    </button>
                                   )}
                                 </td>
 

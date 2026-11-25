@@ -198,6 +198,20 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleToggleUrgent = async (clientId: string, isUrgent: boolean, newStatus?: string) => {
+    if (!canEditCrm) return;
+    const target = clients.find(c => c.id === clientId);
+    if (!target) return;
+    const updated: Client = {
+      ...target,
+      requiresAttention: isUrgent,
+      status: (!isUrgent && target.status === 'Urgent') ? (newStatus || 'Follow-Up') : target.status,
+      updatedDate: new Date().toISOString().slice(0, 10),
+      updatedBy: currentUser?.name || 'משתמש מערכת'
+    };
+    await handleSaveClient(updated);
+  };
+
   const handleSaveClient = async (updatedClient: Client) => {
     if (!canEditCrm) return;
     await saveClient(updatedClient);
@@ -427,6 +441,7 @@ export const App: React.FC = () => {
                 clients={clients}
                 onSelectClient={setSelectedClient}
                 onUpdateClientStatus={handleUpdateClientStatus}
+                onToggleUrgent={handleToggleUrgent}
               />
             )}
 

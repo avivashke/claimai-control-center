@@ -18,12 +18,14 @@ interface MyDayProps {
   clients: Client[];
   onSelectClient: (client: Client) => void;
   onUpdateClientStatus: (clientId: string, newStatus: string) => void;
+  onToggleUrgent?: (clientId: string, isUrgent: boolean, newStatus?: string) => void;
 }
 
 export const MyDay: React.FC<MyDayProps> = ({
   clients,
   onSelectClient,
-  onUpdateClientStatus
+  onUpdateClientStatus,
+  onToggleUrgent
 }) => {
   // Urgent items
   const urgentClients = clients.filter(c => c.requiresAttention || c.status === 'Urgent');
@@ -157,15 +159,35 @@ export const MyDay: React.FC<MyDayProps> = ({
                       )}
                     </div>
 
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSelectClient(client);
-                      }}
-                      className="text-xs text-blue-400 hover:text-blue-300 font-medium"
-                    >
-                      טפל עכשיו ←
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onToggleUrgent) {
+                            onToggleUrgent(client.id, false);
+                          } else {
+                            onUpdateClientStatus(client.id, 'Follow-Up');
+                          }
+                        }}
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/35 text-emerald-300 hover:text-emerald-200 border border-emerald-500/40 text-[11px] font-bold transition-all shadow-sm hover:scale-[1.02]"
+                        title="הורד משולחן הדחוף וסמן כטופל"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>הורד מדחוף</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSelectClient(client);
+                        }}
+                        className="text-xs text-blue-400 hover:text-blue-300 font-medium px-2 py-1 rounded-lg hover:bg-slate-800"
+                      >
+                        טפל עכשיו ←
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
