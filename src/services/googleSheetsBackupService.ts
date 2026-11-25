@@ -201,6 +201,62 @@ export const mapRecordToNoCasesRow = (r: Record<string, any>): any[] => {
   ];
 };
 
+// Map Product Item to Row (Fixes & Bugs or Product Roadmap)
+export const mapProductItemToSheetRow = (item: ProductItem): any[] => {
+  return [
+    item.id,
+    item.client || '',
+    item.type || (item.category === 'bug' ? 'Bug' : 'Feature'),
+    item.module || '',
+    item.title || '',
+    item.description || '',
+    item.priority || 'Medium',
+    item.status || 'Open',
+    item.owner || 'Dev Team',
+    item.reportedBy || '',
+    item.source || '',
+    item.release || '',
+    item.openedDate || '',
+    item.targetDate || '',
+    item.completedDate || '',
+    String(item.daysOpen || 0),
+    item.health || '🟢 On track',
+    new Date().toLocaleDateString('he-IL'),
+    'Control Center'
+  ];
+};
+
+// Map Sheet Row to Product Item
+export const mapSheetRowToProductItem = (row: any[], defaultCategory: 'bug' | 'roadmap'): ProductItem | null => {
+  if (!row || !row[0]) return null;
+  const id = String(row[0]).trim();
+  if (!id || id.toLowerCase() === 'id' || id.includes('FIXES') || id.includes('ROADMAP')) return null;
+
+  const category = (id.startsWith('FX') || defaultCategory === 'bug') ? 'bug' : 'roadmap';
+
+  return {
+    id,
+    category,
+    client: String(row[1] || '').trim(),
+    type: String(row[2] || (category === 'bug' ? 'Bug' : 'Feature')).trim(),
+    module: String(row[3] || '').trim(),
+    title: String(row[4] || '').trim(),
+    description: String(row[5] || '').trim(),
+    priority: (String(row[6] || 'Medium').trim() as any),
+    status: (String(row[7] || 'Open').trim() as any),
+    owner: String(row[8] || '').trim(),
+    reportedBy: String(row[9] || '').trim(),
+    source: String(row[10] || '').trim(),
+    release: String(row[11] || '').trim(),
+    openedDate: String(row[12] || '').trim(),
+    targetDate: String(row[13] || '').trim(),
+    completedDate: String(row[14] || '').trim(),
+    daysOpen: Number(row[15]) || 0,
+    health: (String(row[16] || '🟢 On track').trim() as any),
+    notes: String(row[17] || '').trim()
+  };
+};
+
 // Generate CSV for Claimai_CRM
 export const generateCrmSheetCSV = (clients: Client[]): string => {
   const headerLine = CRM_EXACT_HEADERS.map(h => `"${h.replace(/"/g, '""')}"`).join(',');
@@ -295,6 +351,9 @@ export const syncToGoogleSheetsWebhook = async (customUrl?: string): Promise<{ s
     const noCasesTable = customTables.find(t => t.id === 'table-no-cases');
     const noCasesRows = noCasesTable ? noCasesTable.rows.map(mapRecordToNoCasesRow) : [];
 
+    const bugs = productItems.filter(p => p.category === 'bug').map(mapProductItemToSheetRow);
+    const roadmap = productItems.filter(p => p.category === 'roadmap').map(mapProductItemToSheetRow);
+
     const payload = {
       action: 'push_all',
       timestamp: new Date().toISOString(),
@@ -305,6 +364,8 @@ export const syncToGoogleSheetsWebhook = async (customUrl?: string): Promise<{ s
       noCasesCount: noCasesRows.length,
       clients: clients.map(mapClientToCrmSheetRow),
       noCasesRows: noCasesRows,
+      bugs: bugs,
+      roadmap: roadmap,
       productItems
     };
 
@@ -321,8 +382,8 @@ export const syncToGoogleSheetsWebhook = async (customUrl?: string): Promise<{ s
 
     return {
       success: true,
-      message: `סנכרון מלא לגוגל שיטס נשלח בהצלחה! (${clients.length} לקוחות ב'ראשי', ו-${noCasesRows.length} שורות ב'דוח לקוחות ללא תיקים').`,
-      rowsPushed: clients.length + noCasesRows.length
+      message: `סנכרון מלא לגוגל שיטס נשלח בהצלחה! (${clients.length} לקוחות ב'ראשי', ${noCasesRows.length} ב'דוח ללא תיקים', ו-${productItems.length} פיתוחים/באגים).`,
+      rowsPushed: clients.length + noCasesRows.length + productItems.length
     };
   } catch (err: any) {
     console.error('Google Sheets sync error:', err);
@@ -339,6 +400,7 @@ export const pullFromGoogleSheetsWebhook = async (customUrl?: string): Promise<{
   message: string;
   clientsUpdated?: number;
   noCasesUpdated?: number;
+  productsUpdated?: number;
 }> => {
   const webhookUrl = customUrl || getSheetsWebhookUrl();
   if (!webhookUrl) {
@@ -364,6 +426,7 @@ export const pullFromGoogleSheetsWebhook = async (customUrl?: string): Promise<{
     const data = await res.json();
     let clientsUpdated = 0;
     let noCasesUpdated = 0;
+    let productsUpdated = 0;
 
     // 1. Process 'ראשי' sheet rows
     if (data.clients && Array.isArray(data.clients) && data.clients.length > 0) {
@@ -426,14 +489,34 @@ export const pullFromGoogleSheetsWebhook = async (customUrl?: string): Promise<{
       }
     }
 
+    // 3. Process Product Items (Fixes & Bugs + Product Roadmap)
+    const incomingProducts: ProductItem[] = [];
+    if (data.bugs && Array.isArray(data.bugs)) {
+      for (const row of data.bugs) {
+        const item = mapSheetRowToProductItem(row, 'bug');
+        if (item) incomingProducts.push(item);
+      }
+    }
+    if (data.roadmap && Array.isArray(data.roadmap)) {
+      for (const row of data.roadmap) {
+        const item = mapSheetRowToProductItem(row, 'roadmap');
+        if (item) incomingProducts.push(item);
+      }
+    }
+    if (incomingProducts.length > 0) {
+      await db.productItems.bulkPut(incomingProducts);
+      productsUpdated = incomingProducts.length;
+    }
+
     const now = new Date().toISOString();
     localStorage.setItem(LAST_PULL_STORAGE_KEY, now);
 
     return {
       success: true,
-      message: `סנכרון משיכה מגוגל שיטס הצליח! עודכנו ${clientsUpdated} לקוחות מגליון 'ראשי' ו-${noCasesUpdated} שורות מגליון 'דוח לקוחות ללא תיקים'.`,
+      message: `סנכרון משיכה הצליח! עודכנו ${clientsUpdated} לקוחות ב'ראשי', ${noCasesUpdated} ב'דוח ללא תיקים' ו-${productsUpdated} פיתוחים/באגים.`,
       clientsUpdated,
-      noCasesUpdated
+      noCasesUpdated,
+      productsUpdated
     };
   } catch (err: any) {
     console.error('Google Sheets pull error:', err);
@@ -463,31 +546,19 @@ export const triggerGoogleSheetsAutoSync = (delayMs: number = 3000) => {
   }, delayMs);
 };
 
-// Complete Apps Script Code for Two-Way Sync
-export const GOOGLE_APPS_SCRIPT_CODE = `/**
- * ClaimAI Control Center - Google Sheets Two-Way Live Sync Webhook
- * 
- * הוראות התקנה (חד פעמי):
- * 1. פתח את גליון Google Sheets של Claimai_CRM:
- *    https://docs.google.com/spreadsheets/d/16qi8qhHFtlaoxgtda2fvv9bd3WmGU168-RlEwtfP8NM/edit
- * 2. בתפריט העליון לחץ על Extensions > Apps Script
- * 3. הדבק את כל הקוד הזה במקום הקוד הקיים, ולחץ Save (Ctrl+S / Cmd+S).
- * 4. לחץ על כפתור Deploy > New deployment (בצד ימין למעלה):
- *    - Select type: בחר "Web app" (גלגל שיניים ליד)
- *    - Description: ClaimAI Two Way Sync
- *    - Execute as: "Me" (avivashke95@gmail.com)
- *    - Who has access: "Anyone" (חשוב מאוד כדי שהמערכת תוכל לתקשר ללא שגיאת CORS)
- * 5. לחץ Deploy ואשר הרשאות (Authorize access).
- * 6. העתק את ה-Web app URL והדבק אותו בהגדרות המערכת בלשונית סנכרון גוגל שיטס!
- */
+// Combined Apps Script Add-on Code (Preserves all existing logic & adds doGet/doPost)
+export const GOOGLE_APPS_SCRIPT_WEBHOOK_EXTENSION = `
+/* ===================================================================
+ * תוסף סנכרון דו-כיווני חי למערכת ClaimAI Control Center (Web App API)
+ * מתווסף בתחתית Code.gs בלי לפגוע בשום פונקציה קיימת של ה-CRM!
+ * =================================================================== */
 
-// 1. GET Request: משיכת כל הנתונים מהגליונות למערכת ClaimAI
 function doGet(e) {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     
-    // א. קריאת גליון "ראשי" (החל משורה 2 עד הסוף)
-    var mainSheet = ss.getSheetByName("ראשי") || ss.getSheetByName("לקוחות") || ss.getActiveSheet();
+    // 1. קריאת גליון "ראשי"
+    var mainSheet = ss.getSheetByName(CFG.MAIN) || ss.getSheetByName("ראשי") || ss.getActiveSheet();
     var lastRowMain = mainSheet.getLastRow();
     var lastColMain = mainSheet.getLastColumn();
     var clients = [];
@@ -495,7 +566,7 @@ function doGet(e) {
       clients = mainSheet.getRange(2, 1, lastRowMain - 1, lastColMain).getValues();
     }
     
-    // ב. קריאת גליון "דוח לקוחות ללא תיקים"
+    // 2. קריאת גליון "דוח לקוחות ללא תיקים"
     var noCasesSheet = ss.getSheetByName("דוח לקוחות ללא תיקים");
     var noCases = [];
     if (noCasesSheet) {
@@ -505,14 +576,36 @@ function doGet(e) {
         noCases = noCasesSheet.getRange(1, 1, lastRowNoCases, lastColNoCases).getValues();
       }
     }
+
+    // 3. קריאת באגים ופיתוחים מגליון המוצר
+    var bugs = [];
+    var roadmap = [];
+    var prodSheetId = "1Jn8jbwlhukd9jsP8nrLbW8ggtljYVZd_5WYqaZkL5x4";
+    try {
+      var prodSs = SpreadsheetApp.openById(prodSheetId);
+      var bugSheet = prodSs.getSheetByName("Fixes & Bugs");
+      if (bugSheet && bugSheet.getLastRow() >= 3) {
+        bugs = bugSheet.getRange(3, 1, bugSheet.getLastRow() - 2, 19).getValues();
+      }
+      var rmSheet = prodSs.getSheetByName("Product Roadmap");
+      if (rmSheet && rmSheet.getLastRow() >= 3) {
+        roadmap = rmSheet.getRange(3, 1, rmSheet.getLastRow() - 2, 19).getValues();
+      }
+    } catch (pe) {
+      console.warn("Product sheet read skipped in doGet:", pe);
+    }
     
     var response = {
       status: "success",
       timestamp: new Date().toISOString(),
       clientsCount: clients.length,
       noCasesCount: noCases.length,
+      bugsCount: bugs.length,
+      roadmapCount: roadmap.length,
       clients: clients,
-      noCases: noCases
+      noCases: noCases,
+      bugs: bugs,
+      roadmap: roadmap
     };
     
     return ContentService.createTextOutput(JSON.stringify(response))
@@ -526,7 +619,6 @@ function doGet(e) {
   }
 }
 
-// 2. POST Request: עדכון הגליונות מתוך המערכת
 function doPost(e) {
   try {
     var raw = e.postData.contents;
@@ -535,17 +627,20 @@ function doPost(e) {
 
     var updatedClients = 0;
     var updatedNoCases = 0;
+    var updatedBugs = 0;
+    var updatedRoadmap = 0;
 
-    // א. עדכון גליון "ראשי"
+    // 1. עדכון גליון "ראשי"
     if (data.clients && data.clients.length > 0) {
-      var sheet = ss.getSheetByName("ראשי") || ss.getSheetByName("לקוחות") || ss.getActiveSheet();
+      var sheet = ss.getSheetByName(CFG.MAIN) || ss.getSheetByName("ראשי") || ss.getActiveSheet();
       var rows = data.clients;
       var numCols = rows[0].length;
       sheet.getRange(2, 1, rows.length, numCols).setValues(rows);
       updatedClients = rows.length;
+      try { recompute_(sheet); } catch (re) {}
     }
 
-    // ב. עדכון גליון "דוח לקוחות ללא תיקים"
+    // 2. עדכון גליון "דוח לקוחות ללא תיקים"
     if (data.noCasesRows && data.noCasesRows.length > 0) {
       var noCasesSheet = ss.getSheetByName("דוח לקוחות ללא תיקים");
       if (!noCasesSheet) {
@@ -557,20 +652,44 @@ function doPost(e) {
       updatedNoCases = ncRows.length;
     }
 
-    // ג. תיעוד ביומן סנכרון
-    var logSheet = ss.getSheetByName("יומן_סנכרון");
-    if (!logSheet) {
-      logSheet = ss.insertSheet("יומן_סנכרון");
-      logSheet.appendRow(["תאריך ושעה", "פעולה", "לקוחות ראשי", "דוח ללא תיקים"]);
+    // 3. עדכון גליון באגים ופיתוחים
+    var prodSheetId = data.productSpreadsheetId || "1Jn8jbwlhukd9jsP8nrLbW8ggtljYVZd_5WYqaZkL5x4";
+    try {
+      var prodSs = SpreadsheetApp.openById(prodSheetId);
+      if (data.bugs && data.bugs.length > 0) {
+        var bugSheet = prodSs.getSheetByName("Fixes & Bugs");
+        if (bugSheet) {
+          bugSheet.getRange(3, 1, data.bugs.length, data.bugs[0].length).setValues(data.bugs);
+          updatedBugs = data.bugs.length;
+        }
+      }
+      if (data.roadmap && data.roadmap.length > 0) {
+        var rmSheet = prodSs.getSheetByName("Product Roadmap");
+        if (rmSheet) {
+          rmSheet.getRange(3, 1, data.roadmap.length, data.roadmap[0].length).setValues(data.roadmap);
+          updatedRoadmap = data.roadmap.length;
+        }
+      }
+    } catch (pe) {
+      console.warn("Product sheet write skipped in doPost:", pe);
     }
-    logSheet.appendRow([new Date(), data.action || "push", updatedClients, updatedNoCases]);
+
+    // 4. תיעוד ביומן פעילות הקיים
+    try {
+      appendLog_([new Date(), "Control Center API", "api@claimai.co.il", "", "", "סנכרון דו-כיווני", "Web App Webhook", "", "", 
+        "עודכנו " + updatedClients + " לקוחות, " + updatedNoCases + " ללא תיקים, " + (updatedBugs + updatedRoadmap) + " משימות מוצר"]);
+    } catch (le) {
+      console.warn("Log write skipped:", le);
+    }
 
     return ContentService.createTextOutput(JSON.stringify({
       status: "success",
       message: "סנכרון דו-כיווני עודכן בהצלחה!",
       timestamp: new Date().toISOString(),
       updatedClients: updatedClients,
-      updatedNoCases: updatedNoCases
+      updatedNoCases: updatedNoCases,
+      updatedBugs: updatedBugs,
+      updatedRoadmap: updatedRoadmap
     })).setMimeType(ContentService.MimeType.JSON);
 
   } catch (err) {

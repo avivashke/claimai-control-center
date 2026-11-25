@@ -120,9 +120,10 @@ export const App: React.FC = () => {
         // Automatic background two-way pull from Google Sheets if Webhook is configured
         if (getSheetsWebhookUrl()) {
           pullFromGoogleSheetsWebhook().then(res => {
-            if (res.success && (res.clientsUpdated || res.noCasesUpdated)) {
-              Promise.all([getClients(), getCustomTables()]).then(([reloadedClients, reloadedTables]) => {
+            if (res.success && (res.clientsUpdated || res.noCasesUpdated || res.productsUpdated)) {
+              Promise.all([getClients(), getProductItems(), getCustomTables()]).then(([reloadedClients, reloadedProducts, reloadedTables]) => {
                 setClients(reloadedClients);
+                setProductItems(reloadedProducts);
                 setCustomTables(reloadedTables);
               });
             }

@@ -39,7 +39,7 @@ import {
   syncToGoogleSheetsWebhook,
   pullFromGoogleSheetsWebhook,
   getLastSheetsPullTime,
-  GOOGLE_APPS_SCRIPT_CODE
+  GOOGLE_APPS_SCRIPT_WEBHOOK_EXTENSION
 } from '../services/googleSheetsBackupService';
 import { db } from '../services/db';
 import { testNetlifyBlobs } from '../services/blobsService';
@@ -997,7 +997,7 @@ CREATE TABLE product_items (
               <ol className="list-decimal list-inside space-y-1.5 text-slate-300 pr-2 leading-relaxed">
                 <li>פתח את גיליון Google Sheets שלך (<a href={CRM_SPREADSHEET_URL} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline font-semibold">Claimai_CRM</a>).</li>
                 <li>בתפריט העליון לחץ על <strong>Extensions</strong> (הרחבות) &gt; <strong>Apps Script</strong>.</li>
-                <li>מחק את הקוד הקיים, הדבק את הסקריפט שמופיע למטה, ושמור (<code className="font-mono">Ctrl+S</code>).</li>
+                <li>גלול לתחתית קובץ <strong>Code.gs</strong> והדבק את הקטע שלמטה (או הדבק אותו כקובץ חדש בשם Webhook.gs) – זה שומר על כל הפונקציות הקיימות של ה-CRM!</li>
                 <li>לחץ על <strong>Deploy</strong> (פריסה) &gt; <strong>New deployment</strong> (פריסה חדשה).</li>
                 <li>בחר סוג <strong>Web app</strong>, הגדר ב-<em>Who has access</em>: <strong>Anyone</strong> (כל אחד), ולחץ Deploy.</li>
                 <li>העתק את ה-<strong>Web app URL</strong> והדבק אותו בשדה ה-Webhook בהגדרות המערכת!</li>
@@ -1006,10 +1006,10 @@ CREATE TABLE product_items (
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-300">קוד הסקריפט להעתקה:</span>
+                <span className="text-xs font-bold text-slate-300">קוד התוסף להדבקה בתחתית Code.gs (לא דורס שום דבר קיים):</span>
                 <button
                   onClick={() => {
-                    navigator.clipboard.writeText(GOOGLE_APPS_SCRIPT_CODE);
+                    navigator.clipboard.writeText(GOOGLE_APPS_SCRIPT_WEBHOOK_EXTENSION);
                     setCopiedAppsScript(true);
                     setTimeout(() => setCopiedAppsScript(false), 2000);
                   }}
@@ -1024,7 +1024,7 @@ CREATE TABLE product_items (
                 dir="ltr"
                 className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-[11px] font-mono text-emerald-400 overflow-x-auto leading-relaxed max-h-64 text-left select-all"
               >
-                {GOOGLE_APPS_SCRIPT_CODE}
+                {GOOGLE_APPS_SCRIPT_WEBHOOK_EXTENSION}
               </pre>
             </div>
 
