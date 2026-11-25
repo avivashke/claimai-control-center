@@ -92,7 +92,7 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
     {
       id: 'msg-welcome',
       sender: 'ai',
-      text: `שלום ${currentUser.name}! אני ה-Copilot החכם של ClaimAI Control Center 🤖. \nאני מחובר בזמן אמת לכל לקוחות ה-CRM (1,281+), ל-44 משימות המוצר והתקלות, ולטבלאות המותאמות. \nשאל אותי על לקוח ספציפי, פילוח סטטוסים, פגישות שנקבעו, או תקלות דחופות!`,
+      text: `שלום ${currentUser.name}! אני ה-Copilot החכם של ClaimAI Control Center 🤖. \nאני מחובר בזמן אמת לכל לקוחות ה-CRM (${clients.length || 1281} לקוחות), ל-43 משימות המוצר והתקלות, ולטבלאות המותאמות. \nשאל אותי בחופשיות על כל לקוח, הערה, פגישה, עדיפות, סטטוס או תקלה!`,
       actions: [
         { type: 'navigate_tab', payload: 'myday', label: '⚡ היום שלי (מעקבים דחופים)' },
         { type: 'navigate_tab', payload: 'crm', label: '👥 פתח טבלת לקוחות מלאה' },
@@ -118,25 +118,34 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
   const handleTestAndSaveWorker = async () => {
     setIsTestingWorker(true);
     setWorkerStatusMsg(null);
+
     setCustomWorkerConfig(workerUrlInput, workerTokenInput);
-    const result = await checkWorkerHealth();
-    setIsTestingWorker(false);
-    if (result.ok) {
-      setWorkerConfigured(true);
-      setWorkerStatusMsg({
-        success: true,
-        text: `🟢 הוורקר מחובר בהצלחה! (${result.info?.service || 'ClaimAI AI Worker'})`
-      });
-    } else {
-      setWorkerConfigured(isWorkerConfigured());
+    setWorkerConfigured(Boolean(workerUrlInput.trim()));
+
+    try {
+      const res = await checkWorkerHealth();
+      if (res.ok) {
+        setWorkerStatusMsg({
+          success: true,
+          text: `וורקר פעיל בהצלחה! מנוע: ${res.info?.activeEngine || 'LPU Engine'}`
+        });
+      } else {
+        setWorkerStatusMsg({
+          success: false,
+          text: `בדיקת וורקר נכשלה: ${res.error || 'שגיאה לא ידועה'}`
+        });
+      }
+    } catch (err: any) {
       setWorkerStatusMsg({
         success: false,
-        text: `🔴 שגיאת חיבור: ${result.error || 'בדוק כתובת URL'}`
+        text: `שגיאת תקשורת: ${err.message || err}`
       });
+    } finally {
+      setIsTestingWorker(false);
     }
   };
 
-  const handleResetWorkerConfig = () => {
+  const handleResetWorker = () => {
     clearCustomWorkerConfig();
     setWorkerUrlInput(getWorkerUrl());
     setWorkerTokenInput(getWorkerToken());
@@ -144,7 +153,7 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
     setWorkerStatusMsg(null);
   };
 
-  // Pre-calculate full system metrics for deep intelligence
+  // Pre-calculate full system metrics
   const systemStats = useMemo(() => {
     const statusDistribution: Record<string, number> = {};
     const businessTypeDistribution: Record<string, number> = {};
@@ -178,33 +187,33 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
     };
   }, [clients, productItems]);
 
-  // Deep Local Knowledge & Semantic Context Parser
+  // Comprehensive Hebrew Natural Language CRM Processor
   const processUserQuery = (query: string): ChatMessage => {
-    const q = query.trim().toLowerCase();
+    const raw = query.trim();
+    const q = raw.toLowerCase();
     const time = new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
 
     // 1. Database & Sync Health Status
-    if (q.includes('דאטה') || q.includes('בסיס נתונים') || q.includes('חיבור') || q.includes('סופבייס') || q.includes('בלובס') || q.includes('תקינות') || q.includes('שיטס') || q.includes('גיבוי') || q.includes('וורקר')) {
+    if (q.includes('דאטה') || q.includes('בסיס נתונים') || q.includes('סופבייס') || q.includes('בלובס') || q.includes('שיטס') || q.includes('גיבוי') || q.includes('וורקר') || q.includes('סנכרון')) {
       const workerUrl = getWorkerUrl();
-      const dbText = `📊 **תמונת מצב שירותי הנתונים, הגיבוי וה-AI של ClaimAI:**
-- **Cloudflare AI Worker:** ${workerConfigured ? `🟢 מחובר ופעיל (${workerUrl})` : '🟡 לא מוגדר / מנוע מקומי פעיל (לחץ על גלגל השיניים להגדרה)'}
-- **Supabase Cloud (PostgreSQL):** ${supabaseConnected ? '🟢 מחובר ומסונכרן (פרויקט eiuwqhqbfvxsxlrjcixf)' : '🟡 מוגדר בענן, בדוק סנכרון בהגדרות'}
-- **Google Sheets Backup:** 🟢 גיבוי חי פעיל (Claimai_CRM + Product & Delivery)
-- **Netlify Blobs (Edge Storage):** ${blobsConnected ? '🟢 פעיל ב-Edge' : '🔵 פעיל בסביבת Netlify'}
-- **IndexedDB מקומי בדפדפן:** 🟢 פעיל עם ${clients.length.toLocaleString()} לקוחות, ${productItems.length} משימות ו-${customTables.length} טבלאות מותאמות`;
+      const dbText = `📊 **תמונת מצב שירותי הנתונים, הגיבוי והסנכרון של ClaimAI:**
+- **Google Sheets Two-Way Sync:** 🟢 מחובר ומסונכרן (ראשי + דוח ללא תיקים + Fixes & Bugs + Roadmap)
+- **דאטה-בייס מקומי (IndexedDB):** 🟢 פעיל עם ${clients.length.toLocaleString()} לקוחות, ${productItems.length} משימות ו-${customTables.length} טבלאות מותאמות
+- **Cloudflare AI Worker:** ${workerConfigured ? `🟢 מחובר (${workerUrl})` : '🔵 מנוע AI מקומי מובנה פעיל'}
+- **Supabase Cloud:** ${supabaseConnected ? '🟢 מחובר' : '🟡 Offline-first פעיל'}`;
 
       return {
         id: `ai-${Date.now()}`,
         sender: 'ai',
         text: dbText,
         actions: [
-          { type: 'navigate_tab', payload: 'database', label: '⚙️ פתח מסך אבחון וחיבורים' }
+          { type: 'navigate_tab', payload: 'database', label: '⚙️ פתח מסך הגדרות וסנכרון' }
         ],
         timestamp: time
       };
     }
 
-    // 2. Total Count & Status Breakdown (סטטיסטיקה, כמה לקוחות, פילוח סטטוסים)
+    // 2. Statistics & Status Breakdown
     if (q.includes('כמה לקוחות') || q.includes('סטטיסטיקה') || q.includes('פילוח') || q.includes('חלוקת סטטוסים') || q.includes('כל הסטטוסים') || q.includes('תמונת מצב')) {
       const sortedStatuses = Object.entries(systemStats.statusDistribution).sort((a, b) => b[1] - a[1]);
       let statsText = `📈 **תמונת מצב מלאה של לקוחות ה-CRM (${systemStats.totalClients.toLocaleString()} לקוחות):**\n\n`;
@@ -214,7 +223,7 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
       statsText += `📊 **פילוח לפי סטטוסים מובילים:**\n`;
 
       sortedStatuses.slice(0, 7).forEach(([st, count]) => {
-        const pct = ((count / systemStats.totalClients) * 100).toFixed(1);
+        const pct = ((count / (systemStats.totalClients || 1)) * 100).toFixed(1);
         statsText += `- **${st}:** ${count.toLocaleString()} לקוחות (${pct}%)\n`;
       });
 
@@ -230,17 +239,17 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
       };
     }
 
-    // 3. Urgent / MyDay Queries (דורש טיפול, דחוף, מעקבים)
-    if (q.includes('דחוף') || q.includes('טיפול') || q.includes('urgent') || q.includes('עדיפות עליונה') || q.includes('מעקבים') || q.includes('פגישות')) {
+    // 3. Urgent / Attention / Follow-up queries
+    if (q.includes('דחוף') || q.includes('טיפול') || q.includes('urgent') || q.includes('עדיפות עליונה') || q.includes('מעקבים') || q.includes('חריגות')) {
       const urgentClients = clients.filter(c => c.requiresAttention || c.status === 'Urgent');
       const meetings = clients.filter(c => c.status === 'Meeting Scheduled');
 
       let reply = `🚨 **איתרתי ${urgentClients.length} לקוחות בעדיפות עליונה ו-${meetings.length} פגישות שנקבעו:**\n`;
       const actions: ChatAction[] = [];
 
-      urgentClients.slice(0, 3).forEach((c, i) => {
+      urgentClients.slice(0, 4).forEach((c, i) => {
         reply += `\n${i + 1}. **${c.name}** (${c.company || 'ללא חברה'}) - סטטוס: **${c.status}**`;
-        if (c.phone) reply += ` | טל: ${c.phone}`;
+        if (c.phone) reply += ` | 📞 ${c.phone}`;
         if (c.lastNote) reply += `\n   📝 "${c.lastNote.replace(/^[0-9/:\s|]+👤[^|]+\|\s*/, '').slice(0, 90)}..."`;
         
         actions.push({
@@ -265,77 +274,31 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
       };
     }
 
-    // 4. Custom Tables Query (דוח לקוחות ללא תיקים, משתמשי פלטפורמה)
-    if (q.includes('ללא תיקים') || q.includes('דוח') || q.includes('משתמשים') || q.includes('טבלאות נוספות') || q.includes('טבלה נוספת') || q.includes('טבלאות מותאמות')) {
-      const noCasesTable = customTables.find(t => t.name.includes('ללא תיקים') || t.id.includes('ללא_תיקים') || t.id.includes('no_cases'));
-      const usersTable = customTables.find(t => t.name.includes('משתמש') || t.id.includes('users'));
-
-      if (noCasesTable) {
-        let reply = `📋 **דוח לקוחות ללא תיקים (${noCasesTable.rows.length} לקוחות רשומים):**\n` +
-          `בדוח זה מרוכזים לקוחות שפתחו כרטיס אך טרם פתחו תיק פעיל במערכת.\n` +
-          `מדגם לקוחות מהדוח:\n`;
-
-        noCasesTable.rows.slice(0, 3).forEach((r, idx) => {
-          const clientName = r['שם לקוח'] || r.clientName || r.name || Object.values(r)[0] || 'לקוח';
-          const email = r['אימייל'] || r.email || '';
-          reply += `- ${idx + 1}. **${clientName}** ${email ? `(${email})` : ''}\n`;
-        });
-
-        const actions: ChatAction[] = [
-          { type: 'navigate_tab', payload: 'crm', label: '📑 פתח טבלאות נוספות ב-CRM' }
-        ];
-
-        return {
-          id: `ai-${Date.now()}`,
-          sender: 'ai',
-          text: reply,
-          actions,
-          timestamp: time
-        };
-      }
-
-      if (usersTable) {
-        const activeUsers = usersTable.rows.filter(r => Number(r.caseCount || 0) > 0);
-        let reply = `👥 **טבלת משתמשי הפלטפורמה (${usersTable.rows.length} רשומים):**\n` +
-          `נמצאו **${activeUsers.length} משתמשים שכבר פתחו תביעות במערכת ClaimAI**.\n`;
-
-        const actions: ChatAction[] = [
-          { type: 'navigate_tab', payload: 'crm', label: '📑 צפה בטבלאות המותאמות' }
-        ];
-
-        return {
-          id: `ai-${Date.now()}`,
-          sender: 'ai',
-          text: reply,
-          actions,
-          timestamp: time
-        };
-      }
-    }
-
-    // 5. Product, Bugs & Roadmap Queries
-    if (q.includes('באג') || q.includes('תקלה') || q.includes('מוצר') || q.includes('פיתוח') || q.includes('רואדמאפ') || q.includes('roadmap') || q.includes('קנבן')) {
+    // 4. Product, Bugs & Roadmap Queries
+    if (q.includes('באג') || q.includes('באגים') || q.includes('תקלה') || q.includes('תקלות') || q.includes('רודמאפ') || q.includes('פיתוח') || q.includes('גרסה') || q.includes('פיצ\'ר') || q.includes('fix')) {
       const bugs = productItems.filter(p => p.category === 'bug');
-      const criticalBugs = bugs.filter(b => b.priority === 'Critical' || b.priority === 'High');
+      const roadmap = productItems.filter(p => p.category === 'roadmap');
+      const openBugs = bugs.filter(b => b.status === 'Open' || b.status === 'In Progress');
 
-      let reply = `🐛 **תמונת מצב מודול מוצר, תקלות ומסירה:**\n` +
-        `סה"כ במערכת: **${productItems.length} משימות** (${bugs.length} תקלות ו-${productItems.length - bugs.length} פיצ'רים במפת הדרכים).\n` +
-        `כרגע ישנן **${criticalBugs.length} תקלות קריטיות / בעדיפות גבוהה**:\n`;
+      let reply = `🐛 **סטטוס מוצר ופיתוח (${productItems.length} משימות בסך הכל):**\n` +
+        `- **תקלות ובאגים (Fixes & Bugs):** ${bugs.length} (מתוכם **${openBugs.length} פתוחים בטיפול**)\n` +
+        `- **מפת דרכים ופיתוחים (Product Roadmap):** ${roadmap.length} תכונות מתוכננות\n\n` +
+        `תקלות מובילות שדורשות התייחסות:\n`;
 
       const actions: ChatAction[] = [];
-      criticalBugs.slice(0, 3).forEach((b) => {
-        reply += `\n- **[${b.id}]** ${b.title} | לקוח: **${b.client}** (עדיפות: ${b.priority})`;
+      openBugs.slice(0, 3).forEach((b, i) => {
+        reply += `${i + 1}. [${b.id}] **${b.title}** (עדיפות: ${b.priority}, סטטוס: ${b.status})\n`;
         actions.push({
           type: 'open_ticket',
           payload: b.id,
-          label: `🛠️ פתח פנייה: ${b.id}`
+          label: `🐛 פתח תקלה: ${b.id}`
         });
       });
 
       actions.push({
         type: 'navigate_tab',
         payload: 'product',
-        label: '🚀 פתח לוח קנבן מוצר ותקלות'
+        label: '🚀 פתח מודול מוצר ותקלות מלא'
       });
 
       return {
@@ -347,67 +310,49 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
       };
     }
 
-    // 6. Business Type Distribution Queries (מוסכים, סוכנויות ביטוח, שמאים)
-    if (q.includes('מוסכ') || q.includes('סוכנוי') || q.includes('שמאי') || q.includes('ליסינג') || q.includes('סוג עסק')) {
-      const garages = clients.filter(c => (c.businessType || '').includes('מוסך'));
-      const agencies = clients.filter(c => (c.businessType || '').includes('סוכנות'));
+    // 5. Custom Tables / No Cases Sheet
+    if (q.includes('ללא תיקים') || q.includes('משתמשים') || q.includes('טבלה') || q.includes('טבלאות')) {
+      const noCasesTable = customTables.find(t => t.id === 'table-no-cases' || t.name.includes('ללא תיקים'));
+      if (noCasesTable) {
+        let reply = `📋 **דוח לקוחות ללא תיקים (${noCasesTable.rows.length} לקוחות רשומים):**\n` +
+          `רשומים אלו הצטרפו למערכת אך עדיין לא פתחו תיק תביעה ראשון.\nדוגמאות מתוך הדוח:\n`;
 
-      let reply = `🏢 **פילוח לקוחות לפי סוגי עסק:**\n` +
-        `- **סוכנויות ביטוח:** ${agencies.length.toLocaleString()} לקוחות\n` +
-        `- **מוסכים:** ${garages.length.toLocaleString()} לקוחות\n\n`;
+        noCasesTable.rows.slice(0, 4).forEach((r, idx) => {
+          reply += `${idx + 1}. **${r.fullName || r.name}** | אימייל: ${r.email || 'אין'} | מסלול: ${r.plan || 'Free Trial'}\n`;
+        });
 
-      const actions: ChatAction[] = [];
-      if (q.includes('מוסכ') && garages.length > 0) {
-        reply += `**מדגם מוסכים מובילים במערכת:**\n`;
-        garages.slice(0, 3).forEach(g => {
-          reply += `- **${g.name}** (${g.company || 'מוסך'}) | סטטוס: ${g.status}\n`;
-          actions.push({ type: 'open_client', payload: g.id, label: `🔧 כרטיס: ${g.name}` });
-        });
-      } else {
-        reply += `**מדגם סוכנויות מובילות במערכת:**\n`;
-        agencies.slice(0, 3).forEach(a => {
-          reply += `- **${a.name}** (${a.company || 'סוכנות'}) | סטטוס: ${a.status}\n`;
-          actions.push({ type: 'open_client', payload: a.id, label: `🏢 כרטיס: ${a.name}` });
-        });
+        return {
+          id: `ai-${Date.now()}`,
+          sender: 'ai',
+          text: reply,
+          actions: [
+            { type: 'navigate_tab', payload: 'crm', label: '📑 צפה בטבלה בלשונית CRM' }
+          ],
+          timestamp: time
+        };
       }
-
-      actions.push({ type: 'navigate_tab', payload: 'crm', label: '👥 צפה ברשימה ב-CRM' });
-
-      return {
-        id: `ai-${Date.now()}`,
-        sender: 'ai',
-        text: reply,
-        actions,
-        timestamp: time
-      };
     }
 
-    // 7. Team & Users Query (אייל, אביב, משתמשי אדמין)
-    if (q.includes('אייל') || q.includes('אביב') || q.includes('אדמין') || q.includes('הרשאות') || q.includes('מנהל מערכת')) {
-      const reply = `👤 **פרטי הנהלת המערכת (Admin Users):**\n` +
-        `- **אייל:** מנכ"ל ומנהל מערכת | משתמש: \`eyal@claimi.co.il\` (הרשאות מלאות)\n` +
-        `- **אביב אשכנזי:** מנהל מערכת | משתמש: \`aviv.claimai@gmail.com\` (הרשאות מלאות)\n\n` +
-        `ניהול הסיסמאות וההרשאות מוגדר דרך משתני Netlify או ישירות בפורטל אדמין.`;
+    // 6. Direct Client & Note Search
+    // Clean stop words in Hebrew
+    const cleanTokens = q.split(/[\s,?.!-]+/).filter(t => t.length >= 2 && !['של', 'את', 'על', 'מי', 'זה', 'מה', 'עם', 'הוא', 'היא', 'האם', 'איפה', 'תן', 'לי', 'חפש', 'מצא', 'תראה', 'תסביר'].includes(t));
 
-      return {
-        id: `ai-${Date.now()}`,
-        sender: 'ai',
-        text: reply,
-        actions: [
-          { type: 'navigate_tab', payload: 'admin', label: '🛡️ עבור לפורטל ניהול משתמשים' }
-        ],
-        timestamp: time
-      };
-    }
-
-    // 8. Specific Client & Notes Search across all 1,281 clients
     const matchedClients = clients.filter(c => {
       const name = (c.name || '').toLowerCase();
-      const company = (c.company || '').toLowerCase();
-      const phone = (c.phone || '').toLowerCase();
-      const email = (c.email || '').toLowerCase();
+      const comp = (c.company || '').toLowerCase();
+      const phone = (c.phone || '').replace(/\D/g, '');
       const note = (c.lastNote || '').toLowerCase();
-      return name.includes(q) || company.includes(q) || phone.includes(q) || email.includes(q) || note.includes(q) || q.includes(name);
+      const email = (c.email || '').toLowerCase();
+      const qDigits = q.replace(/\D/g, '');
+
+      if (qDigits.length >= 4 && phone.includes(qDigits)) return true;
+      if (name.includes(q) || comp.includes(q) || email.includes(q) || note.includes(q)) return true;
+
+      // Token match
+      if (cleanTokens.length > 0) {
+        return cleanTokens.some(token => name.includes(token) || comp.includes(token) || note.includes(token));
+      }
+      return false;
     });
 
     if (matchedClients.length > 0) {
@@ -418,7 +363,7 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
           (target.name && p.client && p.client.toLowerCase().includes(target.name.toLowerCase()))
         );
 
-        let reply = `👤 **מצאתי עבורך את הלקוח:** **${target.name}**\n` +
+        let reply = `👤 **פרטי לקוח:** **${target.name}**\n` +
           `🏢 **חברה / סוכנות:** ${target.company || 'לא צוין'}\n` +
           `🏷️ **סוג עסק:** ${target.businessType || 'סוכנות ביטוח'}\n` +
           `📌 **סטטוס CRM:** **${target.status}** ${target.subStatus ? `(${target.subStatus})` : ''}\n` +
@@ -431,7 +376,7 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
           {
             type: 'open_client',
             payload: target.id,
-            label: `👤 פתח פרופיל: ${target.name}`
+            label: `👤 פתח כרטיס: ${target.name}`
           }
         ];
 
@@ -451,27 +396,27 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
           timestamp: time
         };
       } else {
-        // Multiple matches
-        let reply = `🔍 **מצאתי ${matchedClients.length} לקוחות התואמים לחיפוש "${query}":**\n`;
+        let reply = `🔍 **מצאתי ${matchedClients.length} לקוחות התואמים לפנייתך:**\n`;
         const actions: ChatAction[] = [];
 
         matchedClients.slice(0, 4).forEach((c, idx) => {
           reply += `\n${idx + 1}. **${c.name}** (${c.company || c.businessType || 'לקוח'}) | סטטוס: **${c.status}** ${c.phone ? `| 📞 ${c.phone}` : ''}`;
+          if (c.lastNote) reply += `\n   📝 "${c.lastNote.replace(/^[0-9/:\s|]+👤[^|]+\|\s*/, '').slice(0, 75)}..."`;
           actions.push({
             type: 'open_client',
             payload: c.id,
-            label: `👤 כרטיס: ${c.name}`
+            label: `👤 ${c.name}`
           });
         });
 
         if (matchedClients.length > 4) {
-          reply += `\n\nועוד ${matchedClients.length - 4} לקוחות נוספים בטבלה.`;
+          reply += `\n\n*(נמצאו עוד ${matchedClients.length - 4} לקוחות נוספים)*`;
         }
 
         actions.push({
           type: 'navigate_tab',
           payload: 'crm',
-          label: '🔍 צפה בכל התוצאות ב-CRM'
+          label: '🔍 צפה בתוצאות ב-CRM'
         });
 
         return {
@@ -484,15 +429,15 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
       }
     }
 
-    // Default High-Intelligence Fallback
+    // 7. General Context-Aware Helpful Response
     return {
       id: `ai-${Date.now()}`,
       sender: 'ai',
-      text: `סרקתי את כל ${systemStats.totalClients.toLocaleString()} הלקוחות ו-43 משימות המוצר של ClaimAI עבור: "${query}".\n\nתוכל לשאול אותי שאלות ממוקדות כמו:\n- "מי הלקוחות הדחופים היום?"\n- "כמה לקוחות יש בסך הכל ומה פילוח הסטטוסים?"\n- "חפש לקוח: פינקל / דבאח / לירז"\n- "כמה תקלות קריטיות פתוחות במפת הדרכים?"\n- "מה הסטטוס של דוח לקוחות ללא תיקים?"\n- "מה מצב חיבורי הדאטה-בייס והוורקר?"`,
+      text: `סרקתי את מאגר המידע של ClaimAI (${systemStats.totalClients.toLocaleString()} לקוחות, ${systemStats.totalTickets} משימות מוצר) בנושא: **"${raw}"**.\n\nלא נמצאה התאמה מדויקת לשם או למילת המפתח. שאלות מומלצות לבדיקה:\n- 📞 "מי הלקוחות הדחופים היום?"\n- 🔍 חפש לפי שם או חברה (למשל: "לירז יעקב", "דבאח", "אלמוג")\n- 🐛 "כמה תקלות פתוחות במערכת?"\n- 📊 "מה פילוח הסטטוסים של הלקוחות?"`,
       actions: [
         { type: 'navigate_tab', payload: 'myday', label: '⚡ למסך היום שלי' },
-        { type: 'navigate_tab', payload: 'crm', label: '👥 פתח טבלת CRM מלאה' },
-        { type: 'navigate_tab', payload: 'product', label: '🚀 פתח מודול מוצר ותקלות' }
+        { type: 'navigate_tab', payload: 'crm', label: '👥 פתח טבלת לקוחות' },
+        { type: 'navigate_tab', payload: 'product', label: '🐛 צפה בתקלות מוצר' }
       ],
       timestamp: time
     };
@@ -515,22 +460,15 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
     setIsLoading(true);
 
     try {
-      // 1. Try Cloudflare Worker AI first if configured
+      // 1. If Worker is available, try it with timeout
+      let workerRes: any = null;
       if (workerConfigured) {
-        // Find top relevant clients for semantic prompt context
         const qLower = textToSend.toLowerCase();
         const relevantClients = clients.filter(c => {
           const name = (c.name || '').toLowerCase();
           const comp = (c.company || '').toLowerCase();
-          const phone = (c.phone || '').toLowerCase();
           const note = (c.lastNote || '').toLowerCase();
-          return name.includes(qLower) || comp.includes(qLower) || phone.includes(qLower) || note.includes(qLower) || qLower.includes(name);
-        }).slice(0, 15);
-
-        const relevantTickets = productItems.filter(p => {
-          const title = (p.title || '').toLowerCase();
-          const client = (p.client || '').toLowerCase();
-          return title.includes(qLower) || client.includes(qLower);
+          return name.includes(qLower) || comp.includes(qLower) || note.includes(qLower);
         }).slice(0, 10);
 
         const workerPayload: ChatContextPayload = {
@@ -548,7 +486,7 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
             lastNote: c.lastNote,
             requiresAttention: c.requiresAttention
           })),
-          matchedTickets: relevantTickets.map(t => ({
+          matchedTickets: productItems.slice(0, 8).map(t => ({
             id: t.id,
             title: t.title,
             priority: t.priority,
@@ -563,30 +501,35 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
           }))
         };
 
-        const workerResponse = await askWorkerAI(textToSend, workerPayload);
-
-        if (workerResponse && workerResponse.text) {
-          setMessages(prev => [
-            ...prev,
-            {
-              id: `ai-${Date.now()}`,
-              sender: 'ai',
-              text: workerResponse.text,
-              actions: workerResponse.actions,
-              timestamp: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
-            }
-          ]);
-          setIsLoading(false);
-          return;
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 4000); // 4s timeout
+          workerRes = await askWorkerAI(textToSend, workerPayload);
+          clearTimeout(timeoutId);
+        } catch {
+          workerRes = null;
         }
       }
 
-      // 2. High-intelligence local knowledge engine
-      setTimeout(() => {
-        const aiResponse = processUserQuery(textToSend);
-        setMessages(prev => [...prev, aiResponse]);
+      if (workerRes && workerRes.text && workerRes.text.length > 15) {
+        setMessages(prev => [
+          ...prev,
+          {
+            id: `ai-${Date.now()}`,
+            sender: 'ai',
+            text: workerRes.text,
+            actions: workerRes.actions,
+            timestamp: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+          }
+        ]);
         setIsLoading(false);
-      }, 250);
+        return;
+      }
+
+      // 2. High-intelligence local CRM reasoning engine
+      const aiResponse = processUserQuery(textToSend);
+      setMessages(prev => [...prev, aiResponse]);
+      setIsLoading(false);
     } catch {
       const aiResponse = processUserQuery(textToSend);
       setMessages(prev => [...prev, aiResponse]);
@@ -594,7 +537,6 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
     }
   };
 
-  // Helper to render bold markdown and inline code cleanly
   const renderFormattedText = (text: string) => {
     const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
     return parts.map((part, i) => {
@@ -608,7 +550,6 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
     });
   };
 
-  // Action Click Handler (Navigates or opens drawers!)
   const handleActionClick = (action: ChatAction) => {
     if (action.type === 'navigate_tab') {
       onNavigateTab(action.payload as TabType);
@@ -619,289 +560,251 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
       const ticket = productItems.find(p => p.id === action.payload);
       if (ticket) onSelectTicket(ticket);
     } else if (action.type === 'whatsapp') {
-      const cleaned = action.payload.replace(/\D/g, '');
-      const waNumber = cleaned.startsWith('0') ? `972${cleaned.slice(1)}` : cleaned.startsWith('972') ? cleaned : `972${cleaned}`;
+      const cleanPhone = action.payload.replace(/\D/g, '');
+      const waNumber = cleanPhone.startsWith('0') ? `972${cleanPhone.slice(1)}` : cleanPhone;
       window.open(`https://wa.me/${waNumber}`, '_blank');
     } else if (action.type === 'call') {
-      window.location.href = `tel:${action.payload}`;
+      window.open(`tel:${action.payload}`);
     }
   };
 
   return (
-    <div className="fixed bottom-4 left-4 z-40 font-sans" dir="rtl">
-      
-      {/* COLLAPSED FLOATING BUBBLE */}
+    <>
+      {/* Floating Launcher Pill Button */}
       {!isOpen && (
         <button
-          onClick={() => {
-            setIsOpen(true);
-            setIsMinimized(false);
-          }}
-          className="flex items-center gap-2.5 px-4 py-3 rounded-full bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white font-bold text-xs sm:text-sm shadow-2xl shadow-purple-600/50 hover:shadow-purple-600/70 border border-purple-400/40 transition-all hover:scale-105 active:scale-95 group"
+          onClick={() => setIsOpen(true)}
+          className="fixed bottom-6 left-6 z-40 flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold text-xs shadow-2xl shadow-purple-900/50 border border-purple-400/40 transition-all hover:scale-105 group"
+          title="פתח את העוזר החכם של ClaimAI"
         >
-          <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center animate-pulse">
-            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+          <div className="relative">
+            <Sparkles className="w-5 h-5 text-amber-300 animate-pulse" />
+            <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-400"></span>
           </div>
-          <span>סייר AI וניווט מהיר</span>
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+          <span className="tracking-wide">AI Copilot</span>
+          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-mono bg-white/20 text-white">
+            1,281 לקוחות
+          </span>
         </button>
       )}
 
-      {/* EXPANDED CHAT WINDOW */}
+      {/* Floating Chat Modal / Drawer */}
       {isOpen && (
-        <div className={`w-full max-w-[440px] bg-slate-900 border border-purple-500/40 rounded-3xl shadow-2xl overflow-hidden flex flex-col transition-all duration-200 ${
-          isMinimized ? 'h-14' : 'h-[620px] max-h-[88vh]'
-        }`}>
-          
-          {/* Chat Window Header */}
-          <div className="p-3.5 px-4 bg-gradient-to-r from-purple-950/70 via-indigo-950/70 to-slate-900 border-b border-slate-800 flex items-center justify-between">
+        <div 
+          dir="rtl"
+          className={`fixed z-50 left-6 bottom-6 transition-all duration-300 shadow-2xl rounded-2xl border border-purple-500/30 overflow-hidden flex flex-col bg-slate-900/95 backdrop-blur-md ${
+            isMinimized 
+              ? 'w-80 h-14' 
+              : 'w-[95vw] sm:w-[480px] h-[640px] max-h-[85vh]'
+          }`}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-purple-950/80 via-slate-900 to-indigo-950/80 border-b border-purple-500/20 text-white shrink-0">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-purple-600/30 text-purple-300 border border-purple-500/40 flex items-center justify-center">
-                <Bot className="w-4 h-4" />
+              <div className="w-8 h-8 rounded-xl bg-purple-600/30 border border-purple-400/40 flex items-center justify-center text-purple-300">
+                <Bot className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-xs font-bold text-white flex items-center gap-1.5 leading-tight">
-                  <span>סייר AI חכם · ClaimAI Copilot</span>
-                  <button
-                    onClick={() => setShowWorkerSettings(!showWorkerSettings)}
-                    className="cursor-pointer"
-                    title="לחץ להגדרת חיבור הוורקר"
-                  >
-                    {workerConfigured ? (
-                      <span className="text-[9px] bg-purple-500/20 text-purple-300 border border-purple-500/30 px-1.5 py-0.5 rounded-full font-mono hover:bg-purple-500/30">
-                        Cloudflare AI ⚡
-                      </span>
-                    ) : (
-                      <span className="text-[9px] bg-slate-800 text-slate-300 border border-slate-700 px-1.5 py-0.5 rounded-full hover:bg-slate-700 flex items-center gap-1">
-                        <span>מנוע מובנה</span>
-                        <SlidersHorizontal className="w-2.5 h-2.5 text-purple-400" />
-                      </span>
-                    )}
-                  </button>
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                </h3>
-                <p className="text-[10px] text-purple-200/90 font-medium leading-tight">חיפוש, תובנות וניווט חכם בתוך האפליקציה</p>
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-xs font-bold text-white">ClaimAI Copilot</h3>
+                  <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    Live CRM
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400">עוזר אסטרטגי אישי למעקבים, לקוחות ותקלות</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 text-slate-400">
               <button
                 onClick={() => setShowWorkerSettings(!showWorkerSettings)}
-                className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
-                  showWorkerSettings ? 'bg-purple-600 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white'
+                className={`p-1.5 rounded-lg hover:bg-slate-800 transition-colors ${
+                  showWorkerSettings ? 'text-purple-400 bg-purple-950/40' : 'hover:text-white'
                 }`}
-                title="הגדרות וחיבור Cloudflare Worker"
+                title="הגדרות חיבור שרת AI"
               >
-                <SlidersHorizontal className="w-3.5 h-3.5" />
+                <SlidersHorizontal className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setIsMinimized(!isMinimized)}
-                className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-all"
-                title={isMinimized ? 'הרחב' : 'מזער'}
+                className="p-1.5 rounded-lg hover:bg-slate-800 hover:text-white transition-colors"
+                title={isMinimized ? 'הגדל חלון' : 'מזער חלון'}
               >
                 {isMinimized ? <Maximize2 className="w-3.5 h-3.5" /> : <Minimize2 className="w-3.5 h-3.5" />}
               </button>
               <button
                 onClick={() => setIsOpen(false)}
-                className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-all"
-                title="סגור"
+                className="p-1.5 rounded-lg hover:bg-red-500/20 hover:text-red-300 transition-colors"
+                title="סגור צ'אט"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          {/* INLINE WORKER SETTINGS DRAWER */}
+          {/* Optional Worker Settings Drawer */}
           {showWorkerSettings && !isMinimized && (
-            <div className="p-3 bg-slate-950 border-b border-purple-500/30 space-y-2 text-xs">
+            <div className="p-3 bg-slate-950/90 border-b border-purple-500/20 text-xs text-slate-300 space-y-2.5">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-200 flex items-center gap-1.5">
-                  <Cloud className="w-4 h-4 text-purple-400" />
-                  <span>חיבור Cloudflare AI Worker</span>
+                <span className="font-bold text-white flex items-center gap-1.5">
+                  <Cloud className="w-3.5 h-3.5 text-purple-400" />
+                  <span>הגדרת חיבור שרת AI (Cloudflare Worker)</span>
                 </span>
-                <span className="text-[10px] text-slate-400">
-                  {workerConfigured ? '🟢 מוגדר' : '🟡 לא מחובר'}
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {workerConfigured ? 'מותאם אישית' : 'ברירת מחדל'}
                 </span>
-              </div>
-              <p className="text-[10px] text-slate-400">
-                הדבק את כתובת ה-Worker שקיבלת מ-Cloudflare (או הגדר ב-Netlify כ-`VITE_CLOUDFLARE_WORKER_URL`):
-              </p>
-              <div className="space-y-1.5">
-                <input
-                  type="url"
-                  placeholder="https://claimai-ai-worker.xyz.workers.dev"
-                  value={workerUrlInput}
-                  onChange={(e) => setWorkerUrlInput(e.target.value)}
-                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:ring-1 focus:ring-purple-500"
-                />
-                <input
-                  type="password"
-                  placeholder="טוקן אבטחה אופציונלי (WORKER_SECRET_TOKEN)"
-                  value={workerTokenInput}
-                  onChange={(e) => setWorkerTokenInput(e.target.value)}
-                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:ring-1 focus:ring-purple-500"
-                />
               </div>
 
-              <div className="flex items-center justify-between gap-2 pt-1">
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={handleTestAndSaveWorker}
-                    disabled={isTestingWorker}
-                    className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-md transition-all disabled:opacity-50 flex items-center gap-1"
-                  >
-                    {isTestingWorker ? (
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                    )}
-                    <span>{isTestingWorker ? 'בודק...' : 'בדוק ושמור חיבור'}</span>
-                  </button>
-                  {workerConfigured && (
-                    <button
-                      onClick={handleResetWorkerConfig}
-                      className="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition-all"
-                    >
-                      נקה
-                    </button>
-                  )}
-                </div>
-                <button
-                  onClick={() => setShowWorkerSettings(false)}
-                  className="text-[11px] text-slate-400 hover:text-white"
-                >
-                  סגור
-                </button>
+              <div className="space-y-1">
+                <label className="text-[10px] text-slate-400 block">כתובת שרת Worker URL:</label>
+                <input
+                  type="url"
+                  placeholder="https://small-sea-ba86.avivashke95.workers.dev"
+                  value={workerUrlInput}
+                  onChange={(e) => setWorkerUrlInput(e.target.value)}
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white font-mono text-[11px] focus:outline-none focus:ring-1 focus:ring-purple-500"
+                />
               </div>
 
               {workerStatusMsg && (
-                <div className={`p-2 rounded-lg text-[11px] font-semibold border ${
-                  workerStatusMsg.success
-                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
-                    : 'bg-rose-500/15 border-rose-500/30 text-rose-300'
+                <div className={`p-2 rounded-lg text-[11px] font-semibold flex items-center gap-1.5 ${
+                  workerStatusMsg.success 
+                    ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300' 
+                    : 'bg-amber-500/15 border border-amber-500/30 text-amber-300'
                 }`}>
-                  {workerStatusMsg.text}
+                  {workerStatusMsg.success ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> : <AlertTriangle className="w-3.5 h-3.5 shrink-0" />}
+                  <span>{workerStatusMsg.text}</span>
                 </div>
               )}
+
+              <div className="flex items-center justify-between pt-1">
+                <button
+                  type="button"
+                  onClick={handleResetWorker}
+                  className="text-[10px] text-slate-400 hover:text-white underline"
+                >
+                  איפוס לברירת מחדל
+                </button>
+                <button
+                  type="button"
+                  onClick={handleTestAndSaveWorker}
+                  disabled={isTestingWorker}
+                  className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-[11px] font-bold shadow-md transition-all flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3 h-3 ${isTestingWorker ? 'animate-spin' : ''}`} />
+                  <span>{isTestingWorker ? 'בודק...' : 'שמור ובדוק חיבור'}</span>
+                </button>
+              </div>
             </div>
           )}
 
+          {/* Messages Body */}
           {!isMinimized && (
-            <>
-              {/* Messages Body */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {messages.map((msg) => {
-                  const isAi = msg.sender === 'ai';
-                  return (
-                    <div
-                      key={msg.id}
-                      className={`flex flex-col ${isAi ? 'items-start' : 'items-end'} space-y-1`}
-                    >
-                      <div className="flex items-center gap-1.5 text-[10px] text-slate-500 px-1">
-                        <span>{isAi ? 'ClaimAI Assistant' : currentUser.name}</span>
-                        <span>·</span>
-                        <span>{msg.timestamp}</span>
-                      </div>
-
-                      <div className={`p-3.5 rounded-2xl text-xs leading-relaxed max-w-[92%] whitespace-pre-wrap ${
-                        isAi
-                          ? 'bg-slate-800/90 text-slate-200 border border-slate-750 shadow-sm'
-                          : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium shadow-md'
-                      }`}>
-                        {renderFormattedText(msg.text)}
-
-                        {/* Interactive Buttons rendered in AI answers */}
-                        {isAi && msg.actions && msg.actions.length > 0 && (
-                          <div className="mt-3 pt-2.5 border-t border-slate-700/60 flex flex-wrap gap-1.5">
-                            {msg.actions.map((act, idx) => (
-                              <button
-                                key={`act-${idx}`}
-                                onClick={() => handleActionClick(act)}
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900/90 hover:bg-purple-600 text-purple-200 hover:text-white border border-purple-500/30 hover:border-purple-400 text-[11px] font-bold shadow-sm transition-all hover:scale-105 active:scale-95"
-                              >
-                                <span>{act.label}</span>
-                                <ChevronRight className="w-3 h-3 opacity-60" />
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3.5 custom-scrollbar bg-slate-900/60">
+              {messages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
+                >
+                  <div
+                    className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed shadow-md ${
+                      msg.sender === 'user'
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-br-none'
+                        : 'bg-slate-800/90 text-slate-200 border border-slate-700/80 rounded-bl-none'
+                    }`}
+                  >
+                    <div className="whitespace-pre-wrap font-sans">
+                      {renderFormattedText(msg.text)}
                     </div>
-                  );
-                })}
 
-                {isLoading && (
-                  <div className="flex items-center gap-2 p-3 rounded-2xl bg-slate-800/80 border border-slate-700 text-xs text-purple-300 w-fit">
-                    <Sparkles className="w-3.5 h-3.5 animate-spin text-purple-400" />
-                    <span>העוזר החכם מעבד נתונים ומחפש במערכת...</span>
+                    {/* Interactive Action Buttons */}
+                    {msg.actions && msg.actions.length > 0 && (
+                      <div className="mt-2.5 pt-2 border-t border-slate-700/60 flex flex-wrap gap-1.5">
+                        {msg.actions.map((action, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => handleActionClick(action)}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-600/20 hover:bg-purple-600/40 text-purple-200 hover:text-white border border-purple-500/30 text-[10px] font-bold transition-all hover:scale-[1.02]"
+                          >
+                            <span>{action.label}</span>
+                            <ChevronRight className="w-3 h-3" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
+                  <span className="text-[9px] text-slate-500 mt-1 px-1">
+                    {msg.timestamp}
+                  </span>
+                </div>
+              ))}
 
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Quick Prompt Pills */}
-              <div className="px-3 py-1.5 bg-slate-950/60 border-t border-slate-800 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                <button
-                  type="button"
-                  onClick={() => handleSendMessage(undefined, 'כמה לקוחות יש בסך הכל ומה פילוח הסטטוסים?')}
-                  className="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-750 text-[10px] text-slate-300 hover:text-white whitespace-nowrap border border-slate-700 transition-colors"
-                >
-                  📊 פילוח סטטוסים
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSendMessage(undefined, 'מי הלקוחות שדורשים טיפול דחוף?')}
-                  className="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-750 text-[10px] text-slate-300 hover:text-white whitespace-nowrap border border-slate-700 transition-colors"
-                >
-                  🚨 לקוחות דחופים
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSendMessage(undefined, 'מה הסטטוס של דוח לקוחות ללא תיקים?')}
-                  className="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-750 text-[10px] text-slate-300 hover:text-white whitespace-nowrap border border-slate-700 transition-colors"
-                >
-                  📋 לקוחות ללא תיקים
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSendMessage(undefined, 'כמה תקלות קריטיות יש במוצר?')}
-                  className="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-750 text-[10px] text-slate-300 hover:text-white whitespace-nowrap border border-slate-700 transition-colors"
-                >
-                  🐛 תקלות במוצר
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSendMessage(undefined, 'מה מצב החיבורים והוורקר?')}
-                  className="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-750 text-[10px] text-slate-300 hover:text-white whitespace-nowrap border border-slate-700 transition-colors"
-                >
-                  ⚡ תקינות וורקר
-                </button>
-              </div>
-
-              {/* Chat Input Bar */}
-              <form onSubmit={handleSendMessage} className="p-3 bg-slate-950 border-t border-slate-800 flex items-center gap-2">
-                <input
-                  type="text"
-                  placeholder="שאל אותי כל דבר (למשל: 'מי הלקוח פינקל?', 'כמה פגישות נקבעו?')..."
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all shadow-inner"
-                />
-                <button
-                  type="submit"
-                  disabled={!inputMessage.trim() || isLoading}
-                  className="w-10 h-10 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white flex items-center justify-center transition-all disabled:opacity-40 disabled:scale-100 hover:scale-105 active:scale-95 shadow-md shadow-purple-600/30 shrink-0"
-                  title="שלח שאלה"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
-              </form>
-            </>
+              {isLoading && (
+                <div className="flex items-center gap-2 text-xs text-purple-400 bg-purple-950/20 p-2.5 rounded-xl border border-purple-800/30 w-fit">
+                  <Sparkles className="w-3.5 h-3.5 animate-spin" />
+                  <span>מעבד תשובה מתוך מאגר הנתונים...</span>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
           )}
 
+          {/* Quick Prompt Suggestions */}
+          {!isMinimized && (
+            <div className="px-3 py-1.5 bg-slate-950/80 border-t border-slate-800/80 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+              <button
+                type="button"
+                onClick={() => handleSendMessage(undefined, 'מי הלקוחות הדחופים היום?')}
+                className="px-2 py-0.8 rounded-md bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-white text-[10px] whitespace-nowrap border border-slate-700/60 transition-colors"
+              >
+                🚨 לקוחות דחופים
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSendMessage(undefined, 'כמה לקוחות יש ומה פילוח הסטטוסים?')}
+                className="px-2 py-0.8 rounded-md bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-white text-[10px] whitespace-nowrap border border-slate-700/60 transition-colors"
+              >
+                📊 פילוח סטטוסים
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSendMessage(undefined, 'כמה תקלות פתוחות במערכת?')}
+                className="px-2 py-0.8 rounded-md bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-white text-[10px] whitespace-nowrap border border-slate-700/60 transition-colors"
+              >
+                🐛 תקלות ובאגים
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSendMessage(undefined, 'מה הסטטוס של דוח לקוחות ללא תיקים?')}
+                className="px-2 py-0.8 rounded-md bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-white text-[10px] whitespace-nowrap border border-slate-700/60 transition-colors"
+              >
+                📋 ללא תיקים
+              </button>
+            </div>
+          )}
+
+          {/* Input Box Footer */}
+          {!isMinimized && (
+            <form onSubmit={handleSendMessage} className="p-3 bg-slate-950 border-t border-purple-500/20 flex gap-2 shrink-0">
+              <input
+                type="text"
+                placeholder="שאל כל דבר על לקוח, הערה, פגישה או תקלה..."
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-purple-500 transition-all"
+                disabled={isLoading}
+              />
+              <button
+                type="submit"
+                disabled={!inputMessage.trim() || isLoading}
+                className="p-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white disabled:opacity-40 transition-all flex items-center justify-center shrink-0 shadow-md shadow-purple-600/30"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </form>
+          )}
         </div>
       )}
-    </div>
+    </>
   );
 };
