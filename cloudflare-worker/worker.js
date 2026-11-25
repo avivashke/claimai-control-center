@@ -60,7 +60,7 @@ export default {
           JSON.stringify({
             status: 'ok',
             service: 'ClaimAI Supercharged AI Worker',
-            version: '2.0.0',
+            version: '2.1.0',
             activeEngine,
             hasGroq: Boolean(env.GROQ_API_KEY),
             hasWorkersAI: Boolean(env.AI),
@@ -70,6 +70,53 @@ export default {
           }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
+      }
+
+      // 3.5 Direct Groq Diagnostic Endpoint (/api/test-groq)
+      if (url.pathname === '/api/test-groq' || url.pathname === '/test-groq') {
+        if (!env.GROQ_API_KEY) {
+          return new Response(JSON.stringify({ ok: false, error: 'GROQ_API_KEY secret is not set in Cloudflare' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        const apiKey = env.GROQ_API_KEY.trim().replace(/^["']|["']$/g, '').replace(/[\r\n\t]/g, '');
+        const model = env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+        try {
+          const testRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model,
+              messages: [
+                { role: 'system', content: 'You are a helpful assistant designed to output JSON.' },
+                { role: 'user', content: 'Return a JSON object: {"status":"groq_connected","message":"Groq LLaMA 3.3 is active"}' },
+              ],
+              response_format: { type: 'json_object' },
+            }),
+          });
+          const text = await testRes.text();
+          let jsonBody;
+          try { jsonBody = JSON.parse(text); } catch { jsonBody = text; }
+          return new Response(JSON.stringify({
+            ok: testRes.ok,
+            status: testRes.status,
+            model,
+            keyPrefix: apiKey.slice(0, 6) + '...' + apiKey.slice(-4),
+            response: jsonBody,
+          }), {
+            status: testRes.ok ? 200 : 502,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        } catch (e) {
+          return new Response(JSON.stringify({ ok: false, error: e.message || String(e) }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
       }
 
       // 4. POST /api/chat - AI Copilot & CRM Strategic Assistant
@@ -120,22 +167,32 @@ export default {
 // LLM Engine Dispatcher: Groq -> Cloudflare AI -> Gemini -> OpenAI
 // ========================================================
 
+let lastGroqError = null;
+
 async function callUnifiedLLM({ systemPrompt, userPrompt, env, maxTokens = 1500, temperature = 0.2 }) {
+  lastGroqError = null;
+
   // 1. Groq API (Ultra-Fast 300 t/s LPU)
   if (env.GROQ_API_KEY) {
     try {
+      const apiKey = env.GROQ_API_KEY.trim().replace(/^["']|["']$/g, '').replace(/[\r\n\t]/g, '');
       const model = env.GROQ_MODEL || 'llama-3.3-70b-versatile';
-      const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+
+      const enforcedSystemPrompt = `You are a specialized AI system that outputs valid JSON only. You must return a single valid JSON object matching the requested schema.\n\n${systemPrompt}`;
+      const enforcedUserPrompt = `${userPrompt}\n\nRespond with a valid JSON object ONLY.`;
+
+      // Attempt 1: with json_object response format
+      let groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${env.GROQ_API_KEY.trim()}`,
+          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           model,
           messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
+            { role: 'system', content: enforcedSystemPrompt },
+            { role: 'user', content: enforcedUserPrompt },
           ],
           temperature,
           max_tokens: maxTokens,
@@ -143,18 +200,60 @@ async function callUnifiedLLM({ systemPrompt, userPrompt, env, maxTokens = 1500,
         }),
       });
 
+      // Attempt 2: if 400 (some models or prompts reject response_format constraint), retry without response_format
+      if (!groqRes.ok && groqRes.status === 400) {
+        groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: enforcedSystemPrompt },
+              { role: 'user', content: enforcedUserPrompt },
+            ],
+            temperature,
+            max_tokens: maxTokens,
+          }),
+        });
+      }
+
+      // Attempt 3: if model rate limited (429) or not found (404), fallback to llama-3.1-8b-instant
+      if (!groqRes.ok && (groqRes.status === 404 || groqRes.status === 429)) {
+        groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'llama-3.1-8b-instant',
+            messages: [
+              { role: 'system', content: enforcedSystemPrompt },
+              { role: 'user', content: enforcedUserPrompt },
+            ],
+            temperature,
+            max_tokens: maxTokens,
+          }),
+        });
+      }
+
       if (groqRes.ok) {
         const groqData = await groqRes.json();
         const content = groqData.choices?.[0]?.message?.content;
         if (content) {
           const parsed = parseAIJsonOutput(content);
-          if (parsed) return { ...parsed, _source: 'groq' };
+          if (parsed) return { ...parsed, _source: 'groq', _model: model };
         }
       } else {
         const errText = await groqRes.text();
+        lastGroqError = `Groq HTTP ${groqRes.status}: ${errText}`;
         console.warn('Groq API returned error status:', groqRes.status, errText);
       }
     } catch (err) {
+      lastGroqError = `Groq fetch error: ${err.message || String(err)}`;
       console.warn('Groq fetch failed, falling back:', err);
     }
   }
@@ -243,8 +342,8 @@ async function callUnifiedLLM({ systemPrompt, userPrompt, env, maxTokens = 1500,
 // ========================================================
 
 async function handleAIChat(body, env) {
+  const query = body.query || body.message || body.prompt || '';
   const { 
-    query, 
     currentUser, 
     stats, 
     matchedClients = [], 
@@ -291,15 +390,21 @@ ${JSON.stringify(customTablesSummary, null, 2)}
 נתח את המידע, ספק תובנות מעשיות לניהול לקוחות, התייחס להערות ולסטטוסים, והצע כפתורי פעולה רלוונטיים.`;
 
   const llmResult = await callUnifiedLLM({ systemPrompt, userPrompt, env, maxTokens: 1400 });
-  if (llmResult?.text) {
+  const replyText = llmResult?.text || llmResult?.answer || llmResult?.response || llmResult?.message;
+  if (replyText) {
     return {
-      text: llmResult.text,
+      text: replyText,
       actions: Array.isArray(llmResult.actions) ? llmResult.actions : [],
+      _source: llmResult._source || 'groq',
     };
   }
 
   // Built-in intelligent fallback
-  return buildSmartFallbackResponse(query, body);
+  const fallback = buildSmartFallbackResponse(query, body);
+  if (lastGroqError) {
+    fallback._groqError = lastGroqError;
+  }
+  return fallback;
 }
 
 // ========================================================
@@ -374,11 +479,15 @@ ${JSON.stringify(openTickets, null, 2)}
 
   const llmResult = await callUnifiedLLM({ systemPrompt, userPrompt, env, maxTokens: 1600 });
   if (llmResult?.executiveSummary) {
-    return llmResult;
+    return { ...llmResult, _source: llmResult._source || 'groq' };
   }
 
   // Heuristic rule-based advisor fallback if no LLM configured
-  return generateHeuristicClientAdvice(client, openTickets);
+  const fallbackAdvice = generateHeuristicClientAdvice(client, openTickets);
+  if (lastGroqError) {
+    fallbackAdvice._groqError = lastGroqError;
+  }
+  return fallbackAdvice;
 }
 
 // Rule-based heuristic advisor fallback

@@ -8,7 +8,7 @@ export const getWorkerUrl = (): string => {
   if (custom && custom.trim().length > 5) {
     return custom.trim().replace(/\/$/, '');
   }
-  return (import.meta.env.VITE_CLOUDFLARE_WORKER_URL || '').replace(/\/$/, '');
+  return (import.meta.env.VITE_CLOUDFLARE_WORKER_URL || 'https://small-sea-ba86.avivashke95.workers.dev').replace(/\/$/, '');
 };
 
 export const getWorkerToken = (): string => {
