@@ -13,7 +13,9 @@ import {
   Layers, 
   ExternalLink,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  GripVertical,
+  RotateCcw
 } from 'lucide-react';
 import { ProductItem, ProductStatus, ProductPriority } from '../../types';
 
@@ -51,6 +53,26 @@ const ALL_STATUSES: ProductStatus[] = [
   'Overdue'
 ];
 
+interface ProductColDef {
+  key: string;
+  label: string;
+  widthClass: string;
+}
+
+const BASE_PRODUCT_COLUMNS: ProductColDef[] = [
+  { key: 'id', label: 'מזהה', widthClass: 'w-16' },
+  { key: 'type', label: 'סוג', widthClass: 'w-24' },
+  { key: 'title', label: 'כותרת המשימה', widthClass: 'min-w-[220px]' },
+  { key: 'client', label: 'לקוח / מקור', widthClass: 'min-w-[140px]' },
+  { key: 'module', label: 'מודול במערכת', widthClass: 'w-28' },
+  { key: 'priority', label: 'עדיפות', widthClass: 'w-20' },
+  { key: 'status', label: 'סטטוס מסירה', widthClass: 'w-36' },
+  { key: 'release', label: 'גרסה / יעד', widthClass: 'w-28' },
+  { key: 'actions', label: 'פעולות', widthClass: 'w-20 text-center' },
+];
+
+const PRODUCT_COL_STORAGE_KEY = 'claimai_product_column_order';
+
 const STATUS_OPTIONS: ProductStatus[] = [
   'Backlog',
   'Open',
@@ -73,6 +95,205 @@ export const ProductHub: React.FC<ProductHubProps> = ({
   const [selectedPriority, setSelectedPriority] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [localSearch, setLocalSearch] = useState('');
+
+  // Column Reordering (Drag and Drop)
+  const [productColumnOrder, setProductColumnOrder] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(PRODUCT_COL_STORAGE_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error('Failed to parse product column order:', e);
+    }
+    return BASE_PRODUCT_COLUMNS.map(c => c.key);
+  });
+
+  const [draggedColKey, setDraggedColKey] = useState<string | null>(null);
+  const [dragOverColKey, setDragOverColKey] = useState<string | null>(null);
+  const [dropSide, setDropSide] = useState<'left' | 'right' | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, key: string) => {
+    setDraggedColKey(key);
+    e.dataTransfer.setData('text/plain', key);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, key: string) => {
+    e.preventDefault();
+    if (draggedColKey === key) return;
+    e.dataTransfer.dropEffect = 'move';
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const midX = rect.left + rect.width / 2;
+    setDragOverColKey(key);
+    setDropSide(e.clientX > midX ? 'right' : 'left');
+  };
+
+  const handleDragLeave = () => {
+    setDragOverColKey(null);
+    setDropSide(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetKey: string) => {
+    e.preventDefault();
+    if (!draggedColKey || draggedColKey === targetKey) {
+      setDraggedColKey(null);
+      setDragOverColKey(null);
+      setDropSide(null);
+      return;
+    }
+
+    setProductColumnOrder(prev => {
+      const fromIdx = prev.indexOf(draggedColKey);
+      const toIdx = prev.indexOf(targetKey);
+      if (fromIdx === -1 || toIdx === -1) return prev;
+
+      const next = [...prev];
+      next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, draggedColKey);
+      try {
+        localStorage.setItem(PRODUCT_COL_STORAGE_KEY, JSON.stringify(next));
+      } catch (err) {
+        console.error('Failed to save product column order:', err);
+      }
+      return next;
+    });
+
+    setDraggedColKey(null);
+    setDragOverColKey(null);
+    setDropSide(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedColKey(null);
+    setDragOverColKey(null);
+    setDropSide(null);
+  };
+
+  const handleResetColumnOrder = () => {
+    const defaultOrder = BASE_PRODUCT_COLUMNS.map(c => c.key);
+    setProductColumnOrder(defaultOrder);
+    try {
+      localStorage.removeItem(PRODUCT_COL_STORAGE_KEY);
+    } catch {}
+  };
+
+  const activeColumns = useMemo<ProductColDef[]>(() => {
+    const colMap = new Map<string, ProductColDef>();
+    BASE_PRODUCT_COLUMNS.forEach(c => colMap.set(c.key, c));
+    const ordered: ProductColDef[] = [];
+    productColumnOrder.forEach(key => {
+      if (colMap.has(key)) {
+        ordered.push(colMap.get(key)!);
+        colMap.delete(key);
+      }
+    });
+    colMap.forEach(col => ordered.push(col));
+    return ordered;
+  }, [productColumnOrder]);
+
+  const renderProductCell = (col: ProductColDef, item: ProductItem) => {
+    switch (col.key) {
+      case 'id':
+        return (
+          <td 
+            key={`${item.id}-${col.key}`}
+            style={{ borderRight: `4px solid ${item.category === 'bug' ? '#f43f5e' : '#10b981'}` }}
+            className="py-2 px-2.5 font-mono text-[8.5px] font-bold text-blue-400"
+          >
+            {item.id}
+          </td>
+        );
+      case 'type':
+        return (
+          <td key={`${item.id}-${col.key}`} className="py-2 px-2.5">
+            <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8.5px] font-semibold border ${
+              item.category === 'bug'
+                ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+                : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+            }`}>
+              {item.category === 'bug' ? <Bug className="w-2.5 h-2.5" /> : <Compass className="w-2.5 h-2.5" />}
+              <span>{item.type}</span>
+            </span>
+          </td>
+        );
+      case 'title':
+        return (
+          <td key={`${item.id}-${col.key}`} className="py-2 px-2.5 max-w-xs">
+            <div className="font-semibold text-slate-100 group-hover:text-blue-400 transition-colors text-[9.5px] leading-tight">
+              {item.title}
+            </div>
+            {item.description && (
+              <div className="text-[8px] text-slate-400 line-clamp-1 mt-0.5">
+                {item.description}
+              </div>
+            )}
+          </td>
+        );
+      case 'client':
+        return (
+          <td key={`${item.id}-${col.key}`} className="py-2 px-2.5">
+            <span className="text-[8.5px] text-slate-200 font-medium flex items-center gap-1">
+              <Building2 className="w-2.5 h-2.5 text-slate-500" />
+              <span className="truncate max-w-xs">{item.client}</span>
+            </span>
+          </td>
+        );
+      case 'module':
+        return (
+          <td key={`${item.id}-${col.key}`} className="py-2 px-2.5">
+            <span className="px-1.5 py-0.5 rounded text-[8px] font-mono bg-slate-800 text-slate-300 border border-slate-700">
+              {item.module || 'כללי'}
+            </span>
+          </td>
+        );
+      case 'priority':
+        return (
+          <td key={`${item.id}-${col.key}`} className="py-2 px-2.5">
+            <span className={`px-1.5 py-0.5 rounded text-[8px] border font-bold uppercase ${PRIORITY_BADGES[item.priority] || 'border-slate-700'}`}>
+              {item.priority}
+            </span>
+          </td>
+        );
+      case 'status':
+        return (
+          <td key={`${item.id}-${col.key}`} className="py-2 px-2.5" onClick={(e) => e.stopPropagation()}>
+            {canEdit ? (
+              <select
+                value={item.status}
+                onChange={(e) => onUpdateTicketStatus(item.id, e.target.value as ProductStatus)}
+                className={`bg-slate-800 border border-slate-700 rounded text-[9px] py-1 px-2 text-slate-200 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500 w-full shadow-sm ${styleForStatus(item.status)}`}
+              >
+                {ALL_STATUSES.map(st => (
+                  <option key={st} value={st}>{st}</option>
+                ))}
+              </select>
+            ) : (
+              <span className={`px-2 py-0.5 rounded text-[9px] font-medium bg-slate-800 text-slate-300 border border-slate-700`}>
+                {item.status}
+              </span>
+            )}
+          </td>
+        );
+      case 'release':
+        return (
+          <td key={`${item.id}-${col.key}`} className="py-2 px-2.5 font-mono text-[9px] text-amber-400">
+            {item.release || item.targetDate || 'Q1 2027'}
+          </td>
+        );
+      case 'actions':
+        return (
+          <td key={`${item.id}-${col.key}`} className="py-2 px-2.5 text-center">
+            <button
+              onClick={() => onSelectTicket(item)}
+              className="px-2 py-1 rounded-md bg-slate-800 group-hover:bg-blue-600 group-hover:text-white border border-slate-700 text-slate-300 text-[8.5px] font-medium transition-all shadow-sm"
+            >
+              פרטים
+            </button>
+          </td>
+        );
+      default:
+        return null;
+    }
+  };
 
   const combinedSearch = (searchFilter || localSearch).trim().toLowerCase();
 
@@ -270,6 +491,21 @@ export const ProductHub: React.FC<ProductHubProps> = ({
               <option key={st} value={st}>{st}</option>
             ))}
           </select>
+
+          {/* Reset column order button & drag indicator */}
+          <button
+            type="button"
+            onClick={handleResetColumnOrder}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-300 transition-all cursor-pointer mr-auto"
+            title="איפוס סדר העמודות לברירת מחדל"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">איפוס סדר עמודות</span>
+          </button>
+          <span className="text-[11px] text-slate-400 hidden xl:inline-flex items-center gap-1">
+            <GripVertical className="w-3 h-3 text-slate-500" />
+            <span>גרור עמודות לשינוי סדר</span>
+          </span>
         </div>
       </div>
 
@@ -379,21 +615,44 @@ export const ProductHub: React.FC<ProductHubProps> = ({
               >
                 <thead style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="bg-slate-900 sticky top-[148px] z-30 shadow-md">
                   <tr style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="border-b border-slate-700 bg-slate-900">
-                    <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-[148px] z-30 bg-slate-900 shadow-sm py-2 px-2.5 w-16 text-slate-300 font-bold border-b border-slate-700">מזהה</th>
-                    <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-[148px] z-30 bg-slate-900 shadow-sm py-2 px-2.5 w-24 text-slate-300 font-bold border-b border-slate-700">סוג</th>
-                    <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-[148px] z-30 bg-slate-900 shadow-sm py-2 px-2.5 min-w-[220px] text-slate-300 font-bold border-b border-slate-700">כותרת המשימה</th>
-                    <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-[148px] z-30 bg-slate-900 shadow-sm py-2 px-2.5 min-w-[140px] text-slate-300 font-bold border-b border-slate-700">לקוח / מקור</th>
-                    <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-[148px] z-30 bg-slate-900 shadow-sm py-2 px-2.5 w-28 text-slate-300 font-bold border-b border-slate-700">מודול במערכת</th>
-                    <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-[148px] z-30 bg-slate-900 shadow-sm py-2 px-2.5 w-20 text-slate-300 font-bold border-b border-slate-700">עדיפות</th>
-                    <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-[148px] z-30 bg-slate-900 shadow-sm py-2 px-2.5 w-36 text-slate-300 font-bold border-b border-slate-700">סטטוס מסירה</th>
-                    <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-[148px] z-30 bg-slate-900 shadow-sm py-2 px-2.5 w-28 text-slate-300 font-bold border-b border-slate-700">גרסה / יעד</th>
-                    <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-[148px] z-30 bg-slate-900 shadow-sm py-2 px-2.5 text-center w-20 text-slate-300 font-bold border-b border-slate-700">פעולות</th>
+                    {activeColumns.map((col) => {
+                      const isDragging = draggedColKey === col.key;
+                      const isOver = dragOverColKey === col.key;
+
+                      return (
+                        <th
+                          key={col.key}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, col.key)}
+                          onDragOver={(e) => handleDragOver(e, col.key)}
+                          onDragLeave={handleDragLeave}
+                          onDrop={(e) => handleDrop(e, col.key)}
+                          onDragEnd={handleDragEnd}
+                          style={{ backgroundColor: 'var(--bg-th, #0f172a)' }}
+                          className={`sticky top-[148px] z-30 bg-slate-900 shadow-sm py-2 px-2.5 text-slate-300 font-bold border-b border-slate-700 select-none cursor-grab active:cursor-grabbing transition-all ${col.widthClass} ${
+                            isOver && dropSide === 'right' ? 'border-r-2 border-r-blue-400' : ''
+                          } ${
+                            isOver && dropSide === 'left' ? 'border-l-2 border-l-blue-400' : ''
+                          } ${isDragging ? 'opacity-40 bg-slate-800' : ''}`}
+                          title="גרור כדי לשנות את מיקום העמודה ימינה או שמאלה"
+                        >
+                          <div className="flex items-center justify-between gap-1 group/th">
+                            <div className="flex items-center gap-1 min-w-0">
+                              <GripVertical className="w-3 h-3 text-slate-500 opacity-40 group-hover/th:opacity-100 transition-opacity shrink-0 cursor-grab" />
+                              <span className="truncate" title={col.label}>
+                                {col.label}
+                              </span>
+                            </div>
+                          </div>
+                        </th>
+                      );
+                    })}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
                 {groupedItems.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-12 text-center text-slate-500 text-[10px]">
+                    <td colSpan={activeColumns.length} className="py-12 text-center text-slate-500 text-[10px]">
                       לא נמצאו פריטי מוצר העונים לסינון
                     </td>
                   </tr>
@@ -403,12 +662,12 @@ export const ProductHub: React.FC<ProductHubProps> = ({
                     <React.Fragment key={`group-frag-${status}`}>
                       {/* Dark background band behind each group */}
                       <tr key={`band-${status}`}>
-                        <td colSpan={9} className="h-2 bg-slate-950/40 border-0 p-0"></td>
+                        <td colSpan={activeColumns.length} className="h-2 bg-slate-950/40 border-0 p-0"></td>
                       </tr>
 
                       {/* Group header */}
                       <tr key={`group-${status}`} id={`group-${status.replace(/[^\w]/g, '')}`}>
-                        <td colSpan={9} className="py-2.5 px-4 bg-slate-800/95 text-[10px] font-bold text-slate-100 border-b border-slate-700/80 rounded-t-xl rounded-b-none shadow-sm">
+                        <td colSpan={activeColumns.length} className="py-2.5 px-4 bg-slate-800/95 text-[10px] font-bold text-slate-100 border-b border-slate-700/80 rounded-t-xl rounded-b-none shadow-sm">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <span
@@ -427,103 +686,17 @@ export const ProductHub: React.FC<ProductHubProps> = ({
                           onClick={() => onSelectTicket(item)}
                           className="monday-table-row transition-all group cursor-pointer"
                         >
-                            {/* ID */}
-                            <td 
-                              style={{ borderRight: `4px solid ${item.category === 'bug' ? '#f43f5e' : '#10b981'}` }}
-                              className="py-2 px-2.5 font-mono text-[8.5px] font-bold text-blue-400"
-                            >
-                              {item.id}
-                            </td>
-
-                            {/* Category Badge */}
-                            <td className="py-2 px-2.5">
-                              <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8.5px] font-semibold border ${
-                                item.category === 'bug'
-                                  ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
-                                  : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-                              }`}>
-                                {item.category === 'bug' ? <Bug className="w-2.5 h-2.5" /> : <Compass className="w-2.5 h-2.5" />}
-                                <span>{item.type}</span>
-                              </span>
-                            </td>
-
-                            {/* Title & Description */}
-                            <td className="py-2 px-2.5 max-w-xs">
-                              <div className="font-semibold text-slate-100 group-hover:text-blue-400 transition-colors text-[9.5px] leading-tight">
-                                {item.title}
-                              </div>
-                              {item.description && (
-                                <div className="text-[8px] text-slate-400 line-clamp-1 mt-0.5">
-                                  {item.description}
-                                </div>
-                              )}
-                            </td>
-
-                            {/* Client */}
-                            <td className="py-2 px-2.5">
-                              <span className="text-[8.5px] text-slate-200 font-medium flex items-center gap-1">
-                                <Building2 className="w-2.5 h-2.5 text-slate-500" />
-                                <span className="truncate max-w-xs">{item.client}</span>
-                              </span>
-                            </td>
-
-                            {/* Module */}
-                            <td className="py-2 px-2.5">
-                              <span className="px-1.5 py-0.5 rounded text-[8px] font-mono bg-slate-800 text-slate-300 border border-slate-700">
-                                {item.module || 'כללי'}
-                              </span>
-                            </td>
-
-                            {/* Priority */}
-                            <td className="py-2 px-2.5">
-                              <span className={`px-1.5 py-0.5 rounded text-[8px] border font-bold uppercase ${PRIORITY_BADGES[item.priority] || 'border-slate-700'}`}>
-                                {item.priority}
-                              </span>
-                            </td>
-
-                            {/* Status */}
-                            <td className="py-2 px-2.5" onClick={(e) => e.stopPropagation()}>
-                              {canEdit ? (
-                                <select
-                                  value={item.status}
-                                  onChange={(e) => onUpdateTicketStatus(item.id, e.target.value as ProductStatus)}
-                                  className={`bg-slate-800 border border-slate-700 rounded text-[9px] py-1 px-2 text-slate-200 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500 w-full shadow-sm ${styleForStatus(item.status)}`}
-                                >
-                                  {ALL_STATUSES.map(st => (
-                                    <option key={st} value={st}>{st}</option>
-                                  ))}
-                                </select>
-                              ) : (
-                                <span className={`px-2 py-0.5 rounded text-[9px] font-medium bg-slate-800 text-slate-300 border border-slate-700`}>
-                                  {item.status}
-                                </span>
-                              )}
-                            </td>
-
-                            {/* Release / Target */}
-                            <td className="py-2 px-2.5 font-mono text-[9px] text-amber-400">
-                              {item.release || item.targetDate || 'Q1 2027'}
-                            </td>
-
-                            {/* Actions */}
-                            <td className="py-2 px-2.5 text-center">
-                              <button
-                                onClick={() => onSelectTicket(item)}
-                                className="px-2 py-1 rounded-md bg-slate-800 group-hover:bg-blue-600 group-hover:text-white border border-slate-700 text-slate-300 text-[8.5px] font-medium transition-all shadow-sm"
-                              >
-                                פרטים
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                        {/* Dark background band below each group */}
-                        <tr key={`band-bottom-${status}`}>
-                          <td colSpan={9} className="h-3 bg-slate-950/30 border-0 p-0"></td>
+                          {activeColumns.map(col => renderProductCell(col, item))}
                         </tr>
-                      </React.Fragment>
-                    ))}
-                  </>
-                )}
+                      ))}
+                      {/* Dark background band below each group */}
+                      <tr key={`band-bottom-${status}`}>
+                        <td colSpan={activeColumns.length} className="h-3 bg-slate-950/30 border-0 p-0"></td>
+                      </tr>
+                    </React.Fragment>
+                  ))}
+                </>
+              )}
                 </tbody>
               </table>
             </div>

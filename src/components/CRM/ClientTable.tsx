@@ -30,6 +30,8 @@ import {
   Trash2,
   Calendar,
   Tag,
+  GripVertical,
+  RotateCcw,
   X
 } from 'lucide-react';
 import { Client, CustomTable, CrmCustomColumn } from '../../types';
@@ -184,6 +186,423 @@ export const ClientTable: React.FC<ClientTableProps> = ({
       localStorage.setItem('claimai_crm_custom_columns', JSON.stringify(updated));
     } catch (e) {
       console.error('Failed to save crm custom columns:', e);
+    }
+  };
+
+  // CRM Table Column Reordering (Drag and Drop)
+  interface CrmColDef {
+    key: string;
+    label: string;
+    minWidth: string;
+    isCustom?: boolean;
+    customCol?: CrmCustomColumn;
+  }
+
+  const BASE_CRM_COLUMNS: CrmColDef[] = [
+    { key: 'contact', label: 'איש קשר / חברה', minWidth: 'min-w-[150px]' },
+    { key: 'businessType', label: 'סוג עסק', minWidth: 'min-w-[140px]' },
+    { key: 'status', label: 'סטטוס CRM', minWidth: 'min-w-[180px]' },
+    { key: 'contactDetails', label: 'פרטי התקשרות', minWidth: 'min-w-[160px]' },
+    { key: 'lastNote', label: 'הערה אחרונה', minWidth: 'min-w-[200px]' },
+  ];
+
+  const CRM_COL_STORAGE_KEY = 'claimai_crm_column_order';
+
+  const [crmColumnOrder, setCrmColumnOrder] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(CRM_COL_STORAGE_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error('Failed to parse crm column order:', e);
+    }
+    return ['contact', 'businessType', 'status', 'contactDetails', 'lastNote', 'actions'];
+  });
+
+  const [draggedColKey, setDraggedColKey] = useState<string | null>(null);
+  const [dragOverColKey, setDragOverColKey] = useState<string | null>(null);
+  const [dropSide, setDropSide] = useState<'left' | 'right' | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, key: string) => {
+    setDraggedColKey(key);
+    e.dataTransfer.setData('text/plain', key);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, key: string) => {
+    e.preventDefault();
+    if (draggedColKey === key) return;
+    e.dataTransfer.dropEffect = 'move';
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const midX = rect.left + rect.width / 2;
+    setDragOverColKey(key);
+    setDropSide(e.clientX > midX ? 'right' : 'left');
+  };
+
+  const handleDragLeave = () => {
+    setDragOverColKey(null);
+    setDropSide(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetKey: string) => {
+    e.preventDefault();
+    if (!draggedColKey || draggedColKey === targetKey) {
+      setDraggedColKey(null);
+      setDragOverColKey(null);
+      setDropSide(null);
+      return;
+    }
+
+    setCrmColumnOrder(prev => {
+      const fromIdx = prev.indexOf(draggedColKey);
+      const toIdx = prev.indexOf(targetKey);
+      if (fromIdx === -1 || toIdx === -1) return prev;
+
+      const next = [...prev];
+      next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, draggedColKey);
+      try {
+        localStorage.setItem(CRM_COL_STORAGE_KEY, JSON.stringify(next));
+      } catch (err) {
+        console.error('Failed to save crm column order:', err);
+      }
+      return next;
+    });
+
+    setDraggedColKey(null);
+    setDragOverColKey(null);
+    setDropSide(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedColKey(null);
+    setDragOverColKey(null);
+    setDropSide(null);
+  };
+
+  const handleResetColumnOrder = () => {
+    const defaultOrder = ['contact', 'businessType', 'status', 'contactDetails', 'lastNote', ...crmCustomColumns.map(c => c.id), 'actions'];
+    setCrmColumnOrder(defaultOrder);
+    try {
+      localStorage.removeItem(CRM_COL_STORAGE_KEY);
+    } catch {}
+  };
+
+  const activeColumns = useMemo<CrmColDef[]>(() => {
+    const colMap = new Map<string, CrmColDef>();
+    BASE_CRM_COLUMNS.forEach(c => colMap.set(c.key, c));
+    crmCustomColumns.forEach(c => {
+      colMap.set(c.id, {
+        key: c.id,
+        label: c.label,
+        minWidth: 'min-w-[130px]',
+        isCustom: true,
+        customCol: c
+      });
+    });
+    colMap.set('actions', { key: 'actions', label: 'פעולות', minWidth: 'w-20 text-center' });
+
+    const ordered: CrmColDef[] = [];
+    crmColumnOrder.forEach(key => {
+      if (colMap.has(key)) {
+        ordered.push(colMap.get(key)!);
+        colMap.delete(key);
+      }
+    });
+    colMap.forEach(col => {
+      if (col.key === 'actions') {
+        ordered.push(col);
+      } else {
+        const actIdx = ordered.findIndex(c => c.key === 'actions');
+        if (actIdx !== -1) {
+          ordered.splice(actIdx, 0, col);
+        } else {
+          ordered.push(col);
+        }
+      }
+    });
+    return ordered;
+  }, [crmColumnOrder, crmCustomColumns]);
+
+  const renderColCell = (
+    col: CrmColDef,
+    client: Client,
+    style: { bg: string; text: string; border: string },
+    waNumber: string | null,
+    accentColor: string
+  ) => {
+    switch (col.key) {
+      case 'contact':
+        return (
+          <td 
+            key={`${client.id}-${col.key}`}
+            style={{ borderRight: `4px solid ${accentColor}` }}
+            className="py-2 px-2.5 min-w-[170px]"
+            onClick={(e) => {
+              if (editingClientId === client.id) {
+                e.stopPropagation();
+              }
+            }}
+          >
+            {editingClientId === client.id ? (
+              <div className="flex items-center gap-1.5 min-w-[210px] w-full" onClick={(e) => e.stopPropagation()}>
+                <input
+                  type="text"
+                  autoFocus
+                  value={editingClientName}
+                  onChange={(e) => setEditingClientName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSaveInlineName(client, editingClientName);
+                    } else if (e.key === 'Escape') {
+                      setEditingClientId(null);
+                    }
+                  }}
+                  onBlur={() => handleSaveInlineName(client, editingClientName)}
+                  className="flex-1 text-[11px] font-semibold bg-slate-850 text-white border border-blue-500 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-inner"
+                  placeholder="שם לקוח"
+                />
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    handleSaveInlineName(client, editingClientName);
+                  }}
+                  className="p-1 rounded bg-blue-600 hover:bg-blue-500 text-white shrink-0 shadow-sm transition-transform active:scale-95"
+                  title="שמור שינוי (Enter)"
+                >
+                  <Check className="w-3 h-3" />
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setEditingClientId(null);
+                  }}
+                  className="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 shrink-0 transition-transform active:scale-95"
+                  title="בטל (Esc)"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between group/name gap-1.5">
+                <div 
+                  className="font-semibold text-slate-100 group-hover:text-blue-400 transition-colors text-[10px] leading-tight truncate flex-1"
+                >
+                  {client.name || 'ללא שם'}
+                </div>
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingClientId(client.id);
+                      setEditingClientName(client.name || '');
+                    }}
+                    className="opacity-30 group-hover:opacity-100 hover:opacity-100 p-0.5 rounded hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-all shrink-0"
+                    title="ערוך שם לקוח"
+                  >
+                    <Pencil className="w-2.5 h-2.5" />
+                  </button>
+                )}
+              </div>
+            )}
+            {client.company && client.company !== client.name && (
+              <div className="text-[8px] text-slate-400 flex items-center gap-0.5 mt-0.5">
+                <Building className="w-2 h-2 text-slate-500" />
+                <span className="truncate">{client.company}</span>
+              </div>
+            )}
+            {client.requiresAttention && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (canEdit && onUpdateClient) {
+                    onUpdateClient({
+                      ...client,
+                      requiresAttention: false,
+                      status: client.status === 'Urgent' ? 'Follow-Up' : client.status
+                    });
+                  }
+                }}
+                className="inline-flex items-center gap-1 text-[8px] text-rose-300 font-semibold mt-0.5 px-1.5 py-0.5 rounded bg-rose-500/20 hover:bg-rose-500/40 border border-rose-500/30 cursor-pointer transition-all group/badge"
+                title="לחץ להסרה משולחן הדחוף וסימון כטופל"
+              >
+                <AlertCircle className="w-2 h-2 text-rose-400" />
+                <span>דחוף</span>
+                <span className="text-[7.5px] text-rose-300 group-hover/badge:text-white underline">✕ הסר</span>
+              </button>
+            )}
+          </td>
+        );
+
+      case 'businessType':
+        return (
+          <td key={`${client.id}-${col.key}`} className="py-2 px-2.5 min-w-[140px]">
+            {canEdit ? (
+              renderBusinessTypeCell(client)
+            ) : (
+              <span className="px-1.5 py-0.5 rounded text-[8.5px] font-medium bg-slate-800 text-slate-300 border border-slate-700 block max-w-xs truncate" title={client.businessType || ''}>
+                {client.businessType || '-'}
+              </span>
+            )}
+          </td>
+        );
+
+      case 'status':
+        return (
+          <td key={`${client.id}-${col.key}`} className="py-2 px-2.5 min-w-[180px]" onClick={(e) => e.stopPropagation()}>
+            {canEdit ? (
+              <select
+                value={client.status}
+                onChange={(e) => onUpdateClientStatus(client.id, e.target.value)}
+                className={`text-[9.5px] font-semibold px-2 py-0.5 rounded-md border focus:outline-none transition-all cursor-pointer shadow-sm ${style.bg} ${style.text} ${style.border} w-full`}
+              >
+                {ALL_STATUSES.map(s => (
+                  <option key={s} value={s} className="bg-slate-900 text-slate-200 truncate">
+                    {s}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span className={`text-[9.5px] font-semibold px-2 py-0.5 rounded-md border inline-block shadow-sm ${style.bg} ${style.text} ${style.border}`}>
+                {client.status}
+              </span>
+            )}
+            {client.subStatus && (
+              <div className="text-[8px] text-slate-400 mt-0.5">
+                {client.subStatus}
+              </div>
+            )}
+          </td>
+        );
+
+      case 'contactDetails':
+        return (
+          <td key={`${client.id}-${col.key}`} className="py-2 px-2.5" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-1">
+              {client.phone && (
+                <>
+                  <a
+                    href={`tel:${client.phone}`}
+                    title={`חייג: ${client.phone}`}
+                    className="w-5 h-5 rounded-lg bg-slate-800 hover:bg-blue-600/30 border border-slate-700 hover:border-blue-500/50 text-slate-300 hover:text-blue-300 flex items-center justify-center transition-all"
+                  >
+                    <Phone className="w-2.5 h-2.5" />
+                  </a>
+                  {waNumber && (
+                    <a
+                      href={`https://wa.me/${waNumber}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={`שלח הודעת וואטסאפ ל-${client.phone}`}
+                      className="w-5 h-5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/30 text-emerald-300 flex items-center justify-center transition-all"
+                    >
+                      <MessageSquare className="w-2.5 h-2.5" />
+                    </a>
+                  )}
+                  <span className="font-mono text-[8px] text-slate-300 truncate max-w-xs">
+                    {client.phone}
+                  </span>
+                </>
+              )}
+              {!client.phone && (
+                <span className="text-slate-600 text-[8px]">אין טלפון</span>
+              )}
+              {client.email && (
+                <a
+                  href={`mailto:${client.email}`}
+                  title={client.email}
+                  className="w-5 h-5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-all mr-0.5"
+                >
+                  <Mail className="w-2.5 h-2.5" />
+                </a>
+              )}
+            </div>
+          </td>
+        );
+
+      case 'lastNote':
+        return (
+          <td key={`${client.id}-${col.key}`} className="py-2 px-2.5 max-w-xs">
+            {(() => {
+              const hasLastNote = !!client.lastNote?.trim();
+              const hasGeneralNotes = !!client.generalNotes?.trim();
+              if (!hasLastNote && !hasGeneralNotes) {
+                return <span className="text-[8px] text-slate-600">אין הערות</span>;
+              }
+
+              // Check if current search keywords matched specifically inside notes
+              const searchTerms = combinedSearch ? combinedSearch.split(/\s+/).filter(Boolean) : [];
+              const notesContent = `${client.lastNote || ''} ${client.generalNotes || ''}`.toLowerCase();
+              const matchedInNotes = searchTerms.length > 0 && searchTerms.some(term => notesContent.includes(term));
+
+              return (
+                <div 
+                  className="space-y-1" 
+                  title={`${hasLastNote ? `הערה אחרונה:\n${client.lastNote}\n\n` : ''}${hasGeneralNotes ? `הערות כלליות:\n${client.generalNotes}` : ''}`}
+                >
+                  {matchedInNotes && (
+                    <span className="inline-flex items-center gap-0.5 text-[7.5px] font-bold text-amber-300 bg-amber-500/20 px-1.5 py-0.2 rounded border border-amber-500/30">
+                      🔍 נמצא בהערות
+                    </span>
+                  )}
+
+                  {hasLastNote && (
+                    <div>
+                      {client.lastNote!.includes('👤') && (
+                        <span className="inline-flex items-center gap-0.5 text-[8px] font-bold text-blue-400 bg-blue-500/10 px-1 py-0.5 rounded border border-blue-500/20 mb-0.5">
+                          {client.lastNote!.match(/👤\s*([^|\n]+)/)?.[0] || '👤 הערה חתומה'}
+                        </span>
+                      )}
+                      <p className="text-[8.5px] text-slate-300 line-clamp-2">
+                        {client.lastNote!.replace(/^[0-9/:\s|]+👤[^|]+\|\s*/, '')}
+                      </p>
+                    </div>
+                  )}
+
+                  {hasGeneralNotes && (!hasLastNote || matchedInNotes) && (
+                    <div className={`${hasLastNote ? 'pt-0.5 border-t border-slate-800/60' : ''}`}>
+                      {hasLastNote && (
+                        <span className="text-[7.5px] font-semibold text-purple-400 block">הערות כלליות:</span>
+                      )}
+                      <p className="text-[8.5px] text-slate-400 line-clamp-2">
+                        {client.generalNotes}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </td>
+        );
+
+      case 'actions':
+        return (
+          <td key={`${client.id}-${col.key}`} className="py-2 px-2.5 text-center">
+            <button
+              onClick={() => onSelectClient(client)}
+              className="px-2 py-1 rounded-md bg-slate-800/80 group-hover:bg-blue-600 group-hover:text-white border border-slate-700/80 group-hover:border-blue-500 text-slate-300 text-[8.5px] font-semibold transition-all shadow-sm"
+            >
+              פרופיל
+            </button>
+          </td>
+        );
+
+      default:
+        if (col.isCustom && col.customCol) {
+          return (
+            <td
+              key={`${client.id}-${col.key}`}
+              className="py-2 px-2.5 min-w-[130px]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {renderCustomCell(client, col.customCol)}
+            </td>
+          );
+        }
+        return null;
     }
   };
 
@@ -681,6 +1100,19 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                 <Download className="w-3.5 h-3.5" />
                 <span>ייצוא CSV</span>
               </button>
+              <button
+                type="button"
+                onClick={handleResetColumnOrder}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-300 transition-all cursor-pointer"
+                title="איפוס סדר העמודות לברירת מחדל"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">איפוס סדר עמודות</span>
+              </button>
+              <span className="text-[11px] text-slate-400 hidden xl:inline-flex items-center gap-1 mr-1">
+                <GripVertical className="w-3 h-3 text-slate-500" />
+                <span>גרור עמודות לשינוי סדר</span>
+              </span>
               {canEdit && (
                 <button
                   type="button"
@@ -766,44 +1198,59 @@ export const ClientTable: React.FC<ClientTableProps> = ({
               <table style={{ tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0 }} className="w-full border-separate border-spacing-0 text-right text-[9px]">
                 <thead style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="bg-slate-900 sticky top-0 z-20">
                   <tr style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="border-b border-slate-700 bg-slate-900">
-                    <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-0 z-20 bg-slate-900 shadow-sm py-1.5 px-2 min-w-[150px]">איש קשר / חברה</th>
-                    <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-0 z-20 bg-slate-900 shadow-sm py-1.5 px-2 min-w-[140px]">סוג עסק</th>
-                    <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-0 z-20 bg-slate-900 shadow-sm py-1.5 px-2 min-w-[180px]">סטטוס CRM</th>
-                    <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-0 z-20 bg-slate-900 shadow-sm py-1.5 px-2">פרטי התקשרות</th>
-                    <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-0 z-20 bg-slate-900 shadow-sm py-1.5 px-2">הערה אחרונה</th>
-                    {crmCustomColumns.map((col) => (
-                      <th
-                        key={col.id}
-                        style={{ backgroundColor: 'var(--bg-th, #0f172a)' }}
-                        className="sticky top-0 z-20 bg-slate-900 shadow-sm py-1.5 px-2 min-w-[130px]"
-                      >
-                        <div className="flex items-center justify-between gap-1.5">
-                          <span className="truncate font-bold text-white" title={col.label}>{col.label}</span>
-                          {canEdit && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (confirm(`האם אתה בטוח שברצונך להסיר את העמודה "${col.label}"?`)) {
-                                  handleDeleteCrmColumn(col.id);
-                                }
-                              }}
-                              className="text-slate-400 hover:text-rose-400 p-0.5 rounded transition-colors cursor-pointer"
-                              title="מחק עמודה זו"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          )}
-                        </div>
-                      </th>
-                    ))}
-                    <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-0 z-20 bg-slate-900 shadow-sm py-1.5 px-2 text-center w-20">פעולות</th>
+                    {activeColumns.map((col) => {
+                      const isDragging = draggedColKey === col.key;
+                      const isOver = dragOverColKey === col.key;
+
+                      return (
+                        <th
+                          key={col.key}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, col.key)}
+                          onDragOver={(e) => handleDragOver(e, col.key)}
+                          onDragLeave={handleDragLeave}
+                          onDrop={(e) => handleDrop(e, col.key)}
+                          onDragEnd={handleDragEnd}
+                          style={{ backgroundColor: 'var(--bg-th, #0f172a)' }}
+                          className={`sticky top-0 z-20 bg-slate-900 shadow-sm py-1.5 px-2 select-none cursor-grab active:cursor-grabbing transition-all ${col.minWidth} ${
+                            isOver && dropSide === 'right' ? 'border-r-2 border-r-blue-400' : ''
+                          } ${
+                            isOver && dropSide === 'left' ? 'border-l-2 border-l-blue-400' : ''
+                          } ${isDragging ? 'opacity-40 bg-slate-800' : ''}`}
+                          title="גרור כדי לשנות את מיקום העמודה ימינה או שמאלה"
+                        >
+                          <div className="flex items-center justify-between gap-1 group/th">
+                            <div className="flex items-center gap-1 min-w-0">
+                              <GripVertical className="w-3 h-3 text-slate-500 opacity-40 group-hover/th:opacity-100 transition-opacity shrink-0 cursor-grab" />
+                              <span className="truncate font-bold text-slate-200 group-hover/th:text-white" title={col.label}>
+                                {col.label}
+                              </span>
+                            </div>
+                            {col.isCustom && canEdit && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (confirm(`האם אתה בטוח שברצונך להסיר את העמודה "${col.label}"?`)) {
+                                    handleDeleteCrmColumn(col.key);
+                                  }
+                                }}
+                                className="text-slate-400 hover:text-rose-400 p-0.5 rounded transition-colors cursor-pointer"
+                                title="מחק עמודה זו"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
+                        </th>
+                      );
+                    })}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
                   {groupedClients.length === 0 ? (
                     <tr>
-                      <td colSpan={6 + crmCustomColumns.length} className="py-12 text-center text-slate-500 text-[10px]">
+                      <td colSpan={activeColumns.length} className="py-12 text-center text-slate-500 text-[10px]">
                         לא נמצאו רשומות העונות לסינון המבוקש
                       </td>
                     </tr>
@@ -818,12 +1265,12 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                           <React.Fragment key={`group-frag-${status}`}>
                             {/* Dark background band behind each group */}
                             <tr key={`band-${status}`}>
-                              <td colSpan={6 + crmCustomColumns.length} className="h-2 bg-slate-950/40 border-0 p-0"></td>
+                              <td colSpan={activeColumns.length} className="h-2 bg-slate-950/40 border-0 p-0"></td>
                             </tr>
 
                             {/* Group header */}
                             <tr key={`group-${status}`} id={`group-${status.replace(/[^\w]/g, '')}`}>
-                              <td colSpan={6 + crmCustomColumns.length} className="py-2.5 px-4 bg-slate-800/95 text-[10px] font-bold text-slate-100 border-b border-slate-700/80 rounded-t-xl rounded-b-none shadow-sm">
+                              <td colSpan={activeColumns.length} className="py-2.5 px-4 bg-slate-800/95 text-[10px] font-bold text-slate-100 border-b border-slate-700/80 rounded-t-xl rounded-b-none shadow-sm">
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-2">
                                     <span
@@ -852,262 +1299,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                                 className="monday-table-row transition-all group cursor-pointer"
                                 onClick={() => onSelectClient(client)}
                               >
-                                {/* Name & Company */}
-                                <td 
-                                  style={{ borderRight: `4px solid ${accentColor}` }}
-                                  className="py-2 px-2.5 min-w-[170px]"
-                                  onClick={(e) => {
-                                    if (editingClientId === client.id) {
-                                      e.stopPropagation();
-                                    }
-                                  }}
-                                >
-                                  {editingClientId === client.id ? (
-                                    <div className="flex items-center gap-1.5 min-w-[210px] w-full" onClick={(e) => e.stopPropagation()}>
-                                      <input
-                                        type="text"
-                                        autoFocus
-                                        value={editingClientName}
-                                        onChange={(e) => setEditingClientName(e.target.value)}
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter') {
-                                            handleSaveInlineName(client, editingClientName);
-                                          } else if (e.key === 'Escape') {
-                                            setEditingClientId(null);
-                                          }
-                                        }}
-                                        onBlur={() => handleSaveInlineName(client, editingClientName)}
-                                        className="flex-1 text-[11px] font-semibold bg-slate-850 text-white border border-blue-500 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-inner"
-                                        placeholder="שם לקוח"
-                                      />
-                                      <button
-                                        type="button"
-                                        onMouseDown={(e) => {
-                                          e.preventDefault();
-                                          handleSaveInlineName(client, editingClientName);
-                                        }}
-                                        className="p-1 rounded bg-blue-600 hover:bg-blue-500 text-white shrink-0 shadow-sm transition-transform active:scale-95"
-                                        title="שמור שינוי (Enter)"
-                                      >
-                                        <Check className="w-3 h-3" />
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onMouseDown={(e) => {
-                                          e.preventDefault();
-                                          setEditingClientId(null);
-                                        }}
-                                        className="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 shrink-0 transition-transform active:scale-95"
-                                        title="בטל (Esc)"
-                                      >
-                                        <X className="w-3 h-3" />
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <div className="flex items-center justify-between group/name gap-1.5">
-                                      <div 
-                                        className="font-semibold text-slate-100 group-hover:text-blue-400 transition-colors text-[10px] leading-tight truncate flex-1"
-                                      >
-                                        {client.name || 'ללא שם'}
-                                      </div>
-                                      {canEdit && (
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setEditingClientId(client.id);
-                                            setEditingClientName(client.name || '');
-                                          }}
-                                          className="opacity-30 group-hover:opacity-100 hover:opacity-100 p-0.5 rounded hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-all shrink-0"
-                                          title="ערוך שם לקוח"
-                                        >
-                                          <Pencil className="w-2.5 h-2.5" />
-                                        </button>
-                                      )}
-                                    </div>
-                                  )}
-                                  {client.company && client.company !== client.name && (
-                                    <div className="text-[8px] text-slate-400 flex items-center gap-0.5 mt-0.5">
-                                      <Building className="w-2 h-2 text-slate-500" />
-                                      <span className="truncate">{client.company}</span>
-                                    </div>
-                                  )}
-                                  {client.requiresAttention && (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (canEdit && onUpdateClient) {
-                                          onUpdateClient({
-                                            ...client,
-                                            requiresAttention: false,
-                                            status: client.status === 'Urgent' ? 'Follow-Up' : client.status
-                                          });
-                                        }
-                                      }}
-                                      className="inline-flex items-center gap-1 text-[8px] text-rose-300 font-semibold mt-0.5 px-1.5 py-0.5 rounded bg-rose-500/20 hover:bg-rose-500/40 border border-rose-500/30 cursor-pointer transition-all group/badge"
-                                      title="לחץ להסרה משולחן הדחוף וסימון כטופל"
-                                    >
-                                      <AlertCircle className="w-2 h-2 text-rose-400" />
-                                      <span>דחוף</span>
-                                      <span className="text-[7.5px] text-rose-300 group-hover/badge:text-white underline">✕ הסר</span>
-                                    </button>
-                                  )}
-                                </td>
-
-                                {/* Business Type */}
-                                <td className="py-2 px-2.5 min-w-[140px]">
-                                  {canEdit ? (
-                                    renderBusinessTypeCell(client)
-                                  ) : (
-                                    <span className="px-1.5 py-0.5 rounded text-[8.5px] font-medium bg-slate-800 text-slate-300 border border-slate-700 block max-w-xs truncate" title={client.businessType || ''}>
-                                      {client.businessType || '-'}
-                                    </span>
-                                  )}
-                                </td>
-
-                                {/* Status */}
-                                <td className="py-2 px-2.5 min-w-[180px]" onClick={(e) => e.stopPropagation()}>
-                                  {canEdit ? (
-                                    <select
-                                      value={client.status}
-                                      onChange={(e) => onUpdateClientStatus(client.id, e.target.value)}
-                                      className={`text-[9.5px] font-semibold px-2 py-0.5 rounded-md border focus:outline-none transition-all cursor-pointer shadow-sm ${style.bg} ${style.text} ${style.border} w-full`}
-                                    >
-                                      {ALL_STATUSES.map(s => (
-                                        <option key={s} value={s} className="bg-slate-900 text-slate-200 truncate">
-                                          {s}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  ) : (
-                                    <span className={`text-[9.5px] font-semibold px-2 py-0.5 rounded-md border inline-block shadow-sm ${style.bg} ${style.text} ${style.border}`}>
-                                      {client.status}
-                                    </span>
-                                  )}
-                                  {client.subStatus && (
-                                    <div className="text-[8px] text-slate-400 mt-0.5">
-                                      {client.subStatus}
-                                    </div>
-                                  )}
-                                </td>
-
-                                {/* Contact Channels */}
-                                <td className="py-2 px-2.5" onClick={(e) => e.stopPropagation()}>
-                                  <div className="flex items-center gap-1">
-                                    {client.phone && (
-                                      <>
-                                        <a
-                                          href={`tel:${client.phone}`}
-                                          title={`חייג: ${client.phone}`}
-                                          className="w-5 h-5 rounded-lg bg-slate-800 hover:bg-blue-600/30 border border-slate-700 hover:border-blue-500/50 text-slate-300 hover:text-blue-300 flex items-center justify-center transition-all"
-                                        >
-                                          <Phone className="w-2.5 h-2.5" />
-                                        </a>
-                                        {waNumber && (
-                                          <a
-                                            href={`https://wa.me/${waNumber}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            title={`שלח הודעת וואטסאפ ל-${client.phone}`}
-                                            className="w-5 h-5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/30 text-emerald-300 flex items-center justify-center transition-all"
-                                          >
-                                            <MessageSquare className="w-2.5 h-2.5" />
-                                          </a>
-                                        )}
-                                        <span className="font-mono text-[8px] text-slate-300 truncate max-w-xs">
-                                          {client.phone}
-                                        </span>
-                                      </>
-                                    )}
-                                    {!client.phone && (
-                                      <span className="text-slate-600 text-[8px]">אין טלפון</span>
-                                    )}
-                                    {client.email && (
-                                      <a
-                                        href={`mailto:${client.email}`}
-                                        title={client.email}
-                                        className="w-5 h-5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-all mr-0.5"
-                                      >
-                                        <Mail className="w-2.5 h-2.5" />
-                                      </a>
-                                    )}
-                                  </div>
-                                </td>
-
-                                {/* Notes & Highlights */}
-                                <td className="py-2 px-2.5 max-w-xs">
-                                  {(() => {
-                                    const hasLastNote = !!client.lastNote?.trim();
-                                    const hasGeneralNotes = !!client.generalNotes?.trim();
-                                    if (!hasLastNote && !hasGeneralNotes) {
-                                      return <span className="text-[8px] text-slate-600">אין הערות</span>;
-                                    }
-
-                                    // Check if current search keywords matched specifically inside notes
-                                    const searchTerms = combinedSearch ? combinedSearch.split(/\s+/).filter(Boolean) : [];
-                                    const notesContent = `${client.lastNote || ''} ${client.generalNotes || ''}`.toLowerCase();
-                                    const matchedInNotes = searchTerms.length > 0 && searchTerms.some(term => notesContent.includes(term));
-
-                                    return (
-                                      <div 
-                                        className="space-y-1" 
-                                        title={`${hasLastNote ? `הערה אחרונה:\n${client.lastNote}\n\n` : ''}${hasGeneralNotes ? `הערות כלליות:\n${client.generalNotes}` : ''}`}
-                                      >
-                                        {matchedInNotes && (
-                                          <span className="inline-flex items-center gap-0.5 text-[7.5px] font-bold text-amber-300 bg-amber-500/20 px-1.5 py-0.2 rounded border border-amber-500/30">
-                                            🔍 נמצא בהערות
-                                          </span>
-                                        )}
-
-                                        {hasLastNote && (
-                                          <div>
-                                            {client.lastNote!.includes('👤') && (
-                                              <span className="inline-flex items-center gap-0.5 text-[8px] font-bold text-blue-400 bg-blue-500/10 px-1 py-0.5 rounded border border-blue-500/20 mb-0.5">
-                                                {client.lastNote!.match(/👤\s*([^|\n]+)/)?.[0] || '👤 הערה חתומה'}
-                                              </span>
-                                            )}
-                                            <p className="text-[8.5px] text-slate-300 line-clamp-2">
-                                              {client.lastNote!.replace(/^[0-9/:\s|]+👤[^|]+\|\s*/, '')}
-                                            </p>
-                                          </div>
-                                        )}
-
-                                        {hasGeneralNotes && (!hasLastNote || matchedInNotes) && (
-                                          <div className={`${hasLastNote ? 'pt-0.5 border-t border-slate-800/60' : ''}`}>
-                                            {hasLastNote && (
-                                              <span className="text-[7.5px] font-semibold text-purple-400 block">הערות כלליות:</span>
-                                            )}
-                                            <p className="text-[8.5px] text-slate-400 line-clamp-2">
-                                              {client.generalNotes}
-                                            </p>
-                                          </div>
-                                        )}
-                                      </div>
-                                    );
-                                  })()}
-                                </td>
-
-                                {/* Custom CRM Columns */}
-                                {crmCustomColumns.map((col) => (
-                                  <td
-                                    key={col.id}
-                                    className="py-2 px-2.5 min-w-[130px]"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    {renderCustomCell(client, col)}
-                                  </td>
-                                ))}
-
-                                {/* Profile Action */}
-                                <td className="py-2 px-2.5 text-center">
-                                  <button
-                                    onClick={() => onSelectClient(client)}
-                                    className="px-2 py-1 rounded-md bg-slate-800/80 group-hover:bg-blue-600 group-hover:text-white border border-slate-700/80 group-hover:border-blue-500 text-slate-300 text-[8.5px] font-semibold transition-all shadow-sm"
-                                  >
-                                    פרופיל
-                                  </button>
-                                </td>
+                                {activeColumns.map(col => renderColCell(col, client, style, waNumber, accentColor))}
                               </tr>
                             );
                           })}
@@ -1115,7 +1307,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                           {/* Per-group expander button if there are more than current limit */}
                           {hasMore && (
                             <tr key={`expand-${status}`}>
-                              <td colSpan={6 + crmCustomColumns.length} className="py-3 px-4 bg-slate-900/90 border-b border-slate-800 text-center">
+                              <td colSpan={activeColumns.length} className="py-3 px-4 bg-slate-900/90 border-b border-slate-800 text-center">
                                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3 text-xs">
                                   <span className="text-slate-400">
                                     מוצגים <strong className="text-white font-semibold">{visibleInGroup.length}</strong> מתוך <strong className="text-white font-semibold">{groupClients.length}</strong> לקוחות בסטטוס {status}
@@ -1143,7 +1335,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
 
                           {/* Dark background band below each group */}
                           <tr key={`band-bottom-${status}`}>
-                            <td colSpan={6 + crmCustomColumns.length} className="h-3 bg-slate-950/30 border-0 p-0"></td>
+                            <td colSpan={activeColumns.length} className="h-3 bg-slate-950/30 border-0 p-0"></td>
                           </tr>
                         </React.Fragment>
                       );
@@ -1151,7 +1343,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
 
                     {/* Overall Summary Row */}
                     <tr>
-                      <td colSpan={6 + crmCustomColumns.length} className="py-3 px-4 bg-slate-900/60 border-t border-slate-800/80 text-center text-xs text-slate-400">
+                      <td colSpan={activeColumns.length} className="py-3 px-4 bg-slate-900/60 border-t border-slate-800/80 text-center text-xs text-slate-400">
                         סה״כ נמצאו <strong className="text-slate-200 font-bold">{filteredClients.length}</strong> לקוחות המסודרים לפי <strong className="text-slate-200 font-bold">{groupedClients.length}</strong> קבוצות סטטוס (כל הנתונים מגובים ומסונכרנים עם גוגל שיטס)
                       </td>
                     </tr>

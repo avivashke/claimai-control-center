@@ -24,7 +24,8 @@ import {
   AlertCircle,
   HelpCircle,
   Edit2,
-  Save
+  Save,
+  GripVertical
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { CustomTable, CustomTableColumn, Client } from '../../types';
@@ -83,6 +84,66 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
   // Inline editing state
   const [editingCell, setEditingCell] = useState<{ rowId: string; colKey: string } | null>(null);
   const [editCellValue, setEditCellValue] = useState<string>('');
+
+  // Column Reordering (Drag and Drop)
+  const [draggedColKey, setDraggedColKey] = useState<string | null>(null);
+  const [dragOverColKey, setDragOverColKey] = useState<string | null>(null);
+  const [dropSide, setDropSide] = useState<'left' | 'right' | null>(null);
+
+  const handleColDragStart = (e: React.DragEvent, key: string) => {
+    setDraggedColKey(key);
+    e.dataTransfer.setData('text/plain', key);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleColDragOver = (e: React.DragEvent, key: string) => {
+    e.preventDefault();
+    if (draggedColKey === key) return;
+    e.dataTransfer.dropEffect = 'move';
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const midX = rect.left + rect.width / 2;
+    setDragOverColKey(key);
+    setDropSide(e.clientX > midX ? 'right' : 'left');
+  };
+
+  const handleColDragLeave = () => {
+    setDragOverColKey(null);
+    setDropSide(null);
+  };
+
+  const handleColDrop = (e: React.DragEvent, targetKey: string) => {
+    e.preventDefault();
+    if (!currentTable || !draggedColKey || draggedColKey === targetKey) {
+      setDraggedColKey(null);
+      setDragOverColKey(null);
+      setDropSide(null);
+      return;
+    }
+
+    const fromIdx = currentTable.columns.findIndex(c => c.key === draggedColKey);
+    const toIdx = currentTable.columns.findIndex(c => c.key === targetKey);
+    if (fromIdx !== -1 && toIdx !== -1) {
+      const nextCols = [...currentTable.columns];
+      const [removed] = nextCols.splice(fromIdx, 1);
+      nextCols.splice(toIdx, 0, removed);
+
+      onUpdateTable({
+        ...currentTable,
+        columns: nextCols,
+        updatedAt: new Date().toISOString().slice(0, 10)
+      });
+    }
+
+    setDraggedColKey(null);
+    setDragOverColKey(null);
+    setDropSide(null);
+  };
+
+  const handleColDragEnd = () => {
+    setDraggedColKey(null);
+    setDragOverColKey(null);
+    setDropSide(null);
+  };
 
   // Row deduplication matches cache
   const rowMatches = useMemo(() => {
@@ -434,6 +495,11 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
             <span className="text-xs text-slate-400 font-mono">
               מציג {filteredAndSortedRows.length} מתוך {currentTable.rows.length} שורות
             </span>
+
+            <span className="text-[11px] text-slate-400 hidden xl:inline-flex items-center gap-1 border-r border-slate-700/60 pr-2 mr-1">
+              <GripVertical className="w-3 h-3 text-slate-500" />
+              <span>גרור עמודות לשינוי סדר</span>
+            </span>
           </div>
         </div>
 
@@ -466,29 +532,48 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
                 </th>
 
                 {/* Custom Dynamic Column Headers */}
-                {currentTable.columns.map(col => (
-                  <th 
-                    key={col.key}
-                    onClick={() => handleToggleSort(col.key)}
-                    style={{ 
-                      minWidth: col.type === 'email' || col.label.includes('חברה') ? '180px' : '150px',
-                      backgroundColor: 'var(--bg-th, #0f172a)'
-                    }}
-                    className="sticky top-0 z-20 bg-slate-900 shadow-sm py-2 px-3 whitespace-nowrap cursor-pointer hover:bg-slate-800 transition-colors group select-none border-b border-slate-700"
-                  >
-                    <div className="flex items-center justify-between gap-1">
-                      <span className="font-bold text-slate-200 group-hover:text-white">
-                        {col.label}
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <span className="text-[9px] font-mono text-purple-400 font-normal">
-                          ({col.type})
-                        </span>
-                        <ArrowUpDown className="w-3 h-3 text-slate-500 group-hover:text-slate-300" />
+                {currentTable.columns.map(col => {
+                  const isDragging = draggedColKey === col.key;
+                  const isOver = dragOverColKey === col.key;
+
+                  return (
+                    <th 
+                      key={col.key}
+                      draggable
+                      onDragStart={(e) => handleColDragStart(e, col.key)}
+                      onDragOver={(e) => handleColDragOver(e, col.key)}
+                      onDragLeave={handleColDragLeave}
+                      onDrop={(e) => handleColDrop(e, col.key)}
+                      onDragEnd={handleColDragEnd}
+                      onClick={() => handleToggleSort(col.key)}
+                      style={{ 
+                        minWidth: col.type === 'email' || col.label.includes('חברה') ? '180px' : '150px',
+                        backgroundColor: 'var(--bg-th, #0f172a)'
+                      }}
+                      className={`sticky top-0 z-20 bg-slate-900 shadow-sm py-2 px-3 whitespace-nowrap select-none cursor-grab active:cursor-grabbing hover:bg-slate-800 transition-all group border-b border-slate-700 ${
+                        isOver && dropSide === 'right' ? 'border-r-2 border-r-purple-400' : ''
+                      } ${
+                        isOver && dropSide === 'left' ? 'border-l-2 border-l-purple-400' : ''
+                      } ${isDragging ? 'opacity-40 bg-slate-800' : ''}`}
+                      title="גרור לשינוי סדר העמודה ימינה או שמאלה (לחץ למיון)"
+                    >
+                      <div className="flex items-center justify-between gap-1.5">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <GripVertical className="w-3 h-3 text-slate-500 opacity-40 group-hover:opacity-100 transition-opacity shrink-0 cursor-grab" />
+                          <span className="font-bold text-slate-200 group-hover:text-white truncate" title={col.label}>
+                            {col.label}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className="text-[9px] font-mono text-purple-400 font-normal">
+                            ({col.type})
+                          </span>
+                          <ArrowUpDown className="w-3 h-3 text-slate-500 group-hover:text-slate-300" />
+                        </div>
                       </div>
-                    </div>
-                  </th>
-                ))}
+                    </th>
+                  );
+                })}
 
                 {/* Actions Header */}
                 <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-0 z-20 bg-slate-900 shadow-sm py-2 px-3 w-16 text-center text-slate-400 border-b border-slate-700 transition-colors">
