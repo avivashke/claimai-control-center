@@ -1051,7 +1051,12 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
-                      handleAddNoteDirect(newNote);
+                      e.stopPropagation();
+                      const noteText = newNote.trim();
+                      if (noteText) {
+                        setNewNote('');
+                        handleAddNoteDirect(noteText);
+                      }
                     }
                   }}
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
