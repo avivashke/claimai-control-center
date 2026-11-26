@@ -301,10 +301,14 @@ export const askWorkerAI = async (
       if (res.ok) {
         const data = await res.json();
         if (data && data.text && data.text.length > 10) {
-          return {
-            text: data.text,
-            actions: data.actions || [],
-          };
+          // If the worker returned the legacy static robotic fallback, ignore it so rich conversational local engine answers!
+          const isLegacyFallback = data.text.includes('סרקתי את הנתונים עבור') && data.text.includes('שאל אותי על לקוח מסוים');
+          if (!isLegacyFallback) {
+            return {
+              text: data.text,
+              actions: data.actions || [],
+            };
+          }
         }
       }
     } catch (err) {

@@ -16,6 +16,12 @@
  * 4. Copy worker URL (e.g. https://claimai-ai-worker.xyz.workers.dev) and paste in ClaimAI!
  */
 
+// Helper to extract Groq API Key from any common secret name
+function getGroqKey(env) {
+  const key = env.GROQ_API_KEY || env.GROQ_TOKEN || env.GROQ_API_TOKEN || env.GROQ_KEY || env.GROQ || env.GROQ_SECRET || '';
+  return key.trim().replace(/^["']|["']$/g, '').replace(/[\r\n\t]/g, '');
+}
+
 export default {
   async fetch(request, env) {
     const origin = env.CORS_ORIGIN || '*';
@@ -48,21 +54,23 @@ export default {
     try {
       // 3. Health & Capabilities Check
       if (url.pathname === '/' || url.pathname === '/health' || url.pathname === '/api/health') {
-        const activeEngine = env.GROQ_API_KEY
+        const groqKey = getGroqKey(env);
+        const hasGroq = Boolean(groqKey);
+        const activeEngine = hasGroq
           ? `⚡ Groq LPU (${env.GROQ_MODEL || 'llama-3.3-70b-versatile'})`
           : env.AI
           ? `☁️ Cloudflare Workers AI (${env.DEFAULT_MODEL || '@cf/meta/llama-3.3-70b-instruct'})`
           : env.GEMINI_API_KEY
           ? '🌟 Google Gemini'
-          : '🧠 Local Smart CRM Engine';
+          : '🧠 Smart CRM Copilot Engine';
 
         return new Response(
           JSON.stringify({
             status: 'ok',
             service: 'ClaimAI Supercharged AI Worker',
-            version: '2.1.0',
+            version: '2.2.0',
             activeEngine,
-            hasGroq: Boolean(env.GROQ_API_KEY),
+            hasGroq,
             hasWorkersAI: Boolean(env.AI),
             hasGemini: Boolean(env.GEMINI_API_KEY),
             hasOpenAI: Boolean(env.OPENAI_API_KEY),
@@ -106,13 +114,13 @@ export default {
 
       // 3.5 Direct Groq Diagnostic Endpoint (/api/test-groq)
       if (url.pathname === '/api/test-groq' || url.pathname === '/test-groq') {
-        if (!env.GROQ_API_KEY) {
-          return new Response(JSON.stringify({ ok: false, error: 'GROQ_API_KEY secret is not set in Cloudflare' }), {
+        const apiKey = getGroqKey(env);
+        if (!apiKey) {
+          return new Response(JSON.stringify({ ok: false, error: 'GROQ_API_KEY (or GROQ_TOKEN) secret is not set in Cloudflare' }), {
             status: 400,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
-        const apiKey = env.GROQ_API_KEY.trim().replace(/^["']|["']$/g, '').replace(/[\r\n\t]/g, '');
         const model = env.GROQ_MODEL || 'llama-3.3-70b-versatile';
         try {
           const testRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -205,9 +213,9 @@ async function callUnifiedLLM({ systemPrompt, userPrompt, env, maxTokens = 1500,
   lastGroqError = null;
 
   // 1. Groq API (Ultra-Fast 300 t/s LPU)
-  if (env.GROQ_API_KEY) {
+  const apiKey = getGroqKey(env);
+  if (apiKey) {
     try {
-      const apiKey = env.GROQ_API_KEY.trim().replace(/^["']|["']$/g, '').replace(/[\r\n\t]/g, '');
       const model = env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
       const enforcedSystemPrompt = `You are a specialized AI system that outputs valid JSON only. You must return a single valid JSON object matching the requested schema.\n\n${systemPrompt}`;
@@ -698,19 +706,75 @@ function buildSmartFallbackResponse(query, body) {
   const matchedTickets = body.matchedTickets || [];
   const stats = body.stats;
 
+  // 1. Guided System Tour
+  if (q.includes('סיור') || q.includes('הדרכה') || q.includes('איך עובדים') || q.includes('תכיר לי') || q.includes('מה אפשר לעשות')) {
+    return {
+      text: `🧭 **ברוך הבא לסיור המודרך במערכת ClaimAI Control Center!**
+המערכת בנויה ומכוילת במיוחד לניהול סוכנויות ביטוח, תביעות ומעקבי מכירות. הנה הסקירה של המסכים העיקריים:
+
+1. ⚡ **היום שלי (My Day):**
+   מרכז השליטה היומי שלך. כאן מרוכזים כל הלקוחות שדורשים מענה היום, פגישות שנקבעו, מעקבים שעבר זמנם ודפי משימות אישיים.
+
+2. 👥 **ניהול לקוחות CRM (טבלה ראשית):**
+   טבלה חכמה בסגנון Monday לניהול **${(stats?.totalClients || 1281).toLocaleString()} לקוחות**. כוללת עריכה ישירה, שמירה אוטומטית, היסטוריית הערות, תגיות צבע, וסנכרון דו-כיווני לגוגל שיטס.
+
+3. 🐛 **ניהול מוצר ותקלות (Fixes & Roadmap):**
+   מעקב אחר **${stats?.totalTickets || 44} משימות פיתוח**, באגים ודרישות מהשטח, עם תעדוף וקישור ישיר לשמות הלקוחות הרלוונטיים.
+
+4. 📑 **טבלאות מותאמות ודוחות:**
+   לשוניות נוספות כולל **דוח לקוחות ללא תיקים** (משתמשים רשומים שעדיין לא פתחו תביעה) וטבלאות ייעודיות.
+
+5. ⚙️ **הגדרות ודאטה-בייס:**
+   ניהול מסד הנתונים, סנכרון דו-כיווני עם Google Sheets, גיבויים, והגדרות אבטחה.
+
+בחר לאן תרצה לעבור עכשיו:`,
+      actions: [
+        { type: 'navigate_tab', payload: 'myday', label: '⚡ למסך היום שלי' },
+        { type: 'navigate_tab', payload: 'crm', label: '👥 לטבלת ה-CRM' },
+        { type: 'navigate_tab', payload: 'product', label: '🐛 למודול המוצר והתקלות' },
+        { type: 'navigate_tab', payload: 'database', label: '⚙️ להגדרות וסנכרון' }
+      ]
+    };
+  }
+
+  // 2. Objection Handling & Competitors ("באפי", "Bafi", "מחיר", "יקר", "התנגדות")
+  if (q.includes('באפי') || q.includes('bafi') || q.includes('מחיר') || q.includes('יקר') || q.includes('התנגדות') || q.includes('אינטגרציה')) {
+    return {
+      text: `💡 **ארגז כלים לטיפול בהתנגדויות סוכנויות ביטוח:**
+
+1. ⚡ **התנגדות: "אנחנו כבר עובדים עם באפי (Bafi)"**
+   - **התשובה המנצחת:** ClaimAI לא מחליפה את באפי – היא כלי העזר שהפקידות חלמו עליו! ClaimAI מקצרת את זמן הטיפול בתביעה מ-25 דקות ל-90 שניות, מחלצת אוטומטית מסמכים סרוקים, ומשם הנתונים מועברים לבאפי בקלות.
+   - **מסר מרכזי:** "באפי היא מערכת הליבה לניהול פוליסות. ClaimAI היא ה-AI שממלא אותה בשבילך וחוסך חצי משרה של פקידה."
+
+2. 💰 **התנגדות: "יקר לנו / אין לנו תקציב"**
+   - **חישוב ROI מיידי:** פקידת תביעות ממוצעת עולה לסוכנות כ-10,000 ₪ בחודש. אם המערכת חוסכת לה 30 שעות חודשיות בהקלדות מייגעות ואיסוף מסמכים, הסוכנות חוסכת פי 4 מעלות המנוי כבר בחודש הראשון.
+
+3. ⏳ **התנגדות: "אין לנו זמן להטמעה"**
+   - **התשובה:** "ההטמעה לוקחת 15 דקות בזום. תוך שעה הפקידה כבר מעלה תביעה ראשונה."`,
+      actions: [
+        { type: 'navigate_tab', payload: 'crm', label: '👥 חזור לטבלת הלקוחות' },
+        { type: 'navigate_tab', payload: 'myday', label: '⚡ המשך מעקבים' }
+      ]
+    };
+  }
+
+  // 3. Client matches with Web links
   if (matchedClients.length > 0) {
     const target = matchedClients[0];
+    const companyOrName = target.company || target.name;
     const actions = [
-      { type: 'open_client', payload: target.id, label: `👤 פתח כרטיס: ${target.name}` }
+      { type: 'open_client', payload: target.id, label: `👤 פתח כרטיס: ${target.name}` },
+      { type: 'web_link', payload: `https://www.google.com/search?q=${encodeURIComponent(companyOrName + ' ביטוח')}`, label: `🌐 חפש על "${companyOrName}" ברשת` }
     ];
     if (target.phone) {
       actions.push({ type: 'whatsapp', payload: target.phone, label: `💬 וואטסאפ ל-${target.phone}` });
+      actions.push({ type: 'call', payload: target.phone, label: `📞 חיוג טלפוני` });
     }
 
     let advice = '';
     if (target.status === 'Urgent' || target.requiresAttention) {
       advice = '\n\n🚨 **המלצת AI:** הלקוח מסומן כדחוף — מומלץ ליצור קשר טלפוני מיידית כדי למנוע אובדן עסקה.';
-    } else if (target.status === '1\'st Follow-Up') {
+    } else if (target.status === "1'st Follow-Up" || target.status === "1'st Lead") {
       advice = '\n\n💡 **המלצת AI למיטוב אינגייג\'מנט:** מומלץ להציע הדגמת מסך על תהליך פתיחת תביעת רכב ב-60 שניות.';
     } else if (target.status === 'Adoption Monitoring') {
       advice = '\n\n📈 **המלצת AI:** בדוק האם הפקידות מרוצות מחיבור באפי ומה נפח התביעות השבועי.';
@@ -728,21 +792,26 @@ function buildSmartFallbackResponse(query, body) {
     return { text: reply, actions };
   }
 
+  // 4. Urgent / Attention
   if (q.includes('דחוף') || q.includes('טיפול') || q.includes('urgent') || q.includes('מעקב') || q.includes('פגיש')) {
     const urgentCount = stats?.urgentCount || 0;
     const meetingCount = stats?.meetingCount || 0;
     return {
       text: `🚨 **תמונת מצב דחופה מה-Worker:**\nאותרו **${urgentCount} לקוחות דחופים** הממתינים לטיפול ו-**${meetingCount} פגישות שנקבעו** ב-CRM.\n\n💡 **עצת AI לאינגייג'מנט:**\n1. תעדוף תחילה לקוחות עם מעל 50 תביעות חודשיות.\n2. שליחת תזכורת אוטומטית בוואטסאפ לפגישות מחר כדי למנוע No-Show.`,
-      actions: [{ type: 'navigate_tab', payload: 'myday', label: '⚡ למסך "היום שלי"' }],
+      actions: [
+        { type: 'navigate_tab', payload: 'myday', label: '⚡ למסך "היום שלי"' },
+        { type: 'navigate_tab', payload: 'crm', label: '👥 פתח טבלת CRM מלאה' }
+      ],
     };
   }
 
+  // 5. Conversational General
   return {
-    text: `🤖 **תשובת ClaimAI Copilot:**\nסרקתי את הנתונים עבור: "${query}".\nבמערכת רשומים כעת **${stats?.totalClients || 1281} לקוחות** ו-**${stats?.totalTickets || 44} משימות מוצר**.\nשאל אותי על לקוח מסוים, בקש המלצות אינגייג'מנט לפי סטטוסים, או ניתוח הערות לקוח.`,
+    text: `שמעתי אותך בנושא: **"${query}"**.\n\nסרקתי את כל מאגר הנתונים של ClaimAI (${(stats?.totalClients || 1281).toLocaleString()} לקוחות, ${stats?.totalTickets || 44} משימות מוצר). הנה דרכים מהירות שבהן אוכל לסייע לך:\n\n- 🧭 **סיור מודרך:** שאל "תעשה לי סיור במערכת" לקבלת הדרכה על כל מסך וכלי.\n- 🔍 **חיפוש לקוח או סוכנות:** הקלד שם מלא או חלקי (למשל: "לירז יעקב", "דבאח", "אלמוג") או מספר טלפון.\n- 💡 **התמודדות עם התנגדויות:** שאל "איך לענות ללקוח שעובד עם באפי?" לקבלת טיפים מנצחים.\n- 🚨 **בדיקת עומסים:** שאל "מי הלקוחות הדחופים היום?".`,
     actions: [
-      { type: 'navigate_tab', payload: 'crm', label: '👥 פתח מודול CRM' },
-      { type: 'navigate_tab', payload: 'myday', label: '⚡ מסך "היום שלי"' },
-      { type: 'navigate_tab', payload: 'product', label: '🚀 מודול מוצר ותקלות' },
+      { type: 'navigate_tab', payload: 'myday', label: '⚡ למסך היום שלי' },
+      { type: 'navigate_tab', payload: 'crm', label: '👥 פתח טבלת לקוחות' },
+      { type: 'navigate_tab', payload: 'product', label: '🐛 צפה בתקלות מוצר' },
     ],
   };
 }
