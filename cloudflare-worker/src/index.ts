@@ -2,6 +2,10 @@ export interface Env {
   AI?: any; // Cloudflare Workers AI Binding
   CORS_ORIGIN?: string;
   DEFAULT_MODEL?: string;
+  GROQ_API_KEY?: string;
+  GROQ_TOKEN?: string;
+  GROQ_KEY?: string;
+  GROQ_MODEL?: string;
   GEMINI_API_KEY?: string;
   OPENAI_API_KEY?: string;
   WORKER_SECRET_TOKEN?: string;
@@ -181,7 +185,46 @@ ${matchedTickets.length > 0 ? JSON.stringify(matchedTickets, null, 2) : JSON.str
 📁 טבלאות מותאמות ודוחות נוספים:
 ${JSON.stringify(customTablesSummary, null, 2)}`;
 
-  // 1. Try Cloudflare Workers AI
+  // 1. Try Groq LPU (Ultra-fast llama-3.3-70b-versatile)
+  const groqKey = (env.GROQ_API_KEY || env.GROQ_TOKEN || env.GROQ_KEY || (env as any).GROQ || '').trim().replace(/^["']|["']$/g, '');
+  if (groqKey) {
+    try {
+      const model = env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+      const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${groqKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: `${systemPrompt}\n\nRespond with valid JSON matching the schema only.` },
+            { role: 'user', content: userContext },
+          ],
+          temperature: 0.3,
+          max_tokens: 1500,
+          response_format: { type: 'json_object' }
+        })
+      });
+
+      if (groqRes.ok) {
+        const groqData: any = await groqRes.json();
+        const content = groqData.choices?.[0]?.message?.content;
+        const parsed = parseAIJsonOutput(content);
+        if (parsed?.text) {
+          return {
+            text: parsed.text,
+            actions: Array.isArray(parsed.actions) ? parsed.actions : [],
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('Groq API call in worker failed, falling back:', e);
+    }
+  }
+
+  // 2. Try Cloudflare Workers AI
   if (env.AI) {
     try {
       const model = env.DEFAULT_MODEL || '@cf/meta/llama-3.3-70b-instruct';

@@ -218,33 +218,250 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
     };
   }, [clients, productItems]);
 
-  // Comprehensive Hebrew Natural Language CRM Processor
+  const [lastReferencedClientId, setLastReferencedClientId] = useState<string | null>(null);
+
+  // Highly Conversational Natural Hebrew CRM & Copilot Intelligence Engine
   const processUserQuery = (query: string): ChatMessage => {
     const raw = query.trim();
     const q = raw.toLowerCase();
     const time = new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+    const userFirstName = currentUser.name ? currentUser.name.split(' ')[0] : 'שם';
 
-    // 1. Guided System Tour ("סיור", "איך עובדים", "תכיר לי", "מה אפשר לעשות", "עזרה", "הדרכה")
+    // Helper: format single client card with rich details and actionable buttons
+    const buildSingleClientResponse = (target: Client, customContextTitle?: string): ChatMessage => {
+      setLastReferencedClientId(target.id);
+      const linkedTickets = productItems.filter(p => 
+        (target.company && p.client && p.client.toLowerCase().includes(target.company.toLowerCase())) ||
+        (target.name && p.client && p.client.toLowerCase().includes(target.name.toLowerCase()))
+      );
+
+      const companyOrName = target.company || target.name;
+      const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(companyOrName + ' ביטוח')}`;
+      const titleHeader = customContextTitle || `👤 מצאתי את כרטיס הלקוח: **${target.name}**`;
+
+      let reply = `${titleHeader}\n\n` +
+        `🏢 **חברה / סוכנות:** ${target.company || 'לא צוין'}\n` +
+        `🏷️ **סוג עסק:** ${target.businessType || 'סוכנות ביטוח'}\n` +
+        `📌 **סטטוס CRM:** **${target.status}** ${target.subStatus ? `(${target.subStatus})` : ''}\n` +
+        `📞 **טלפון:** ${target.phone || 'לא הוזן'}\n` +
+        `✉️ **אימייל:** ${target.email || 'לא הוזן'}\n` +
+        `${target.location ? `📍 **מיקום / כתובת:** ${target.location}\n` : ''}` +
+        `${target.monthlyClaims ? `📊 **היקף תביעות חודשי:** ${target.monthlyClaims}\n` : ''}` +
+        `${target.nextFollowUpDate ? `⏰ **פגישה / מעקב קרוב:** ${target.nextFollowUpDate}\n` : ''}` +
+        `${linkedTickets.length > 0 ? `\n✨ **משימות פיתוח מקושרות (${linkedTickets.length}):** ${linkedTickets.map(t => `[${t.id}] ${t.title}`).join(', ')}\n` : ''}` +
+        `${target.lastNote ? `\n📝 **הערה אחרונה מהשטח:**\n"${target.lastNote.replace(/^[0-9/:\s|]+👤[^|]+\|\s*/, '')}"` : ''}`;
+
+      // Contextual Smart Advice
+      if (target.requiresAttention || target.status === 'Urgent') {
+        reply += `\n\n🚨 **המלצה מיידית:** הלקוח סומן כדחוף! מומלץ ליצור קשר בהקדם כדי למנוע עיכוב תביעות או נטישה.`;
+      } else if (target.status === "1'st Lead" || target.status === "1'st Follow-Up") {
+        reply += `\n\n💡 **המלצה אופרטיבית:** הלקוח בשלב חם. כדאי להציע הדגמה קצרה בת 10 דקות של חילוץ תביעה אוטומטי תוך 60 שניות.`;
+      } else if (target.status === "Meeting Scheduled") {
+        reply += `\n\n📅 **המלצה לפגישה:** פגישה מתואמת. וודא הכנת דוגמה מותאמת לפוליסות הנפוצות ביותר אצלם.`;
+      }
+
+      const actions: ChatAction[] = [
+        {
+          type: 'open_client',
+          payload: target.id,
+          label: `👤 פתח כרטיס מלא: ${target.name}`
+        },
+        {
+          type: 'web_link',
+          payload: searchUrl,
+          label: `🌐 חפש על "${companyOrName}" ברשת`
+        }
+      ];
+
+      if (target.phone) {
+        actions.push({
+          type: 'whatsapp',
+          payload: target.phone,
+          label: `💬 וואטסאפ ל-${target.phone}`
+        });
+        actions.push({
+          type: 'call',
+          payload: target.phone,
+          label: `📞 חיוג טלפוני ישיר`
+        });
+      }
+
+      return {
+        id: `ai-${Date.now()}`,
+        sender: 'ai',
+        text: reply,
+        actions,
+        timestamp: time
+      };
+    };
+
+    // 1. Pronoun / Follow-Up Reference ("מה איתו", "מה הטלפון שלו", "מה ההערות עליו", "פתח כרטיס שלו", "ספר לי עליו")
+    if (lastReferencedClientId && (q.includes('איתו') || q.includes('שלו') || q.includes('עליו') || q.includes('אותו') || q.includes('הלקוח הזה') || q.includes('הלקוח הקודם'))) {
+      const prevClient = clients.find(c => c.id === lastReferencedClientId);
+      if (prevClient) {
+        if (q.includes('טלפון') || q.includes('מספר') || q.includes('לחייג') || q.includes('וואטסאפ')) {
+          return {
+            id: `ai-${Date.now()}`,
+            sender: 'ai',
+            text: `📞 פרטי ההתקשרות של **${prevClient.name}**:\n- **טלפון:** ${prevClient.phone || 'אין טלפון מוגדר'}\n- **אימייל:** ${prevClient.email || 'אין אימייל'}\n- **חברה:** ${prevClient.company || 'לא צוין'}`,
+            actions: [
+              ...(prevClient.phone ? [
+                { type: 'whatsapp' as const, payload: prevClient.phone, label: `💬 וואטסאפ: ${prevClient.phone}` },
+                { type: 'call' as const, payload: prevClient.phone, label: `📞 חיוג` }
+              ] : []),
+              { type: 'open_client' as const, payload: prevClient.id, label: `👤 פתח כרטיס` }
+            ],
+            timestamp: time
+          };
+        }
+        if (q.includes('הערה') || q.includes('הערות') || q.includes('יומן') || q.includes('נאמר')) {
+          return {
+            id: `ai-${Date.now()}`,
+            sender: 'ai',
+            text: `📝 **ההערות המתועדות עבור ${prevClient.name}:**\n\n${prevClient.lastNote || prevClient.generalNotes || 'אין הערות מתועדות עדיין עבור לקוח זה.'}`,
+            actions: [
+              { type: 'open_client' as const, payload: prevClient.id, label: `👤 פתח כרטיס לעדכון` }
+            ],
+            timestamp: time
+          };
+        }
+        return buildSingleClientResponse(prevClient, `בהמשך לשאלתך על **${prevClient.name}**: הנה הפרטים המלאים שלו:`);
+      }
+    }
+
+    // 2. Greetings, Warm Check-ins & Small Talk
+    const isGreeting = /^(היי|שלום|אהלן|היוש|בוקר טוב|ערב טוב|צהריים טובים|מה נשמע|מה קורה|מה המצב|איך הולך|איך אתה|מה שלומך|שבוע טוב|שבת שלום)\b/i.test(q) ||
+      ['היי', 'שלום', 'אהלן', 'מה קורה', 'מה נשמע', 'מה המצב', 'מי אתה', 'איך קוראים לך', 'איך אתה יכול לעזור'].includes(q);
+
+    if (isGreeting) {
+      const greetingResponses = [
+        `אהלן ${userFirstName}! הכל מעולה אצלי, תמיד שמח לשוחח. כל המערכת רצה חלק ומסונכרנת עם גוגל שיטס בזמן אמת.`,
+        `היי ${userFirstName}! יום מצוין לעשות עסקים. אני כאן איתך – מחובר לכל **${systemStats.totalClients.toLocaleString()} הלקוחות** ו-**${systemStats.totalTickets} משימות המוצר**.`,
+        `שלום ${userFirstName}! כיף לשמוע ממך. אני מוכן לעזור בכל שאלה חופשית, ניתוח לקוחות, איתור שיחות או פתיחת כרטיסים.`
+      ];
+      const randomGreeting = greetingResponses[Math.floor(Math.random() * greetingResponses.length)];
+
+      const statusSummary = `\n\n📊 **דופק מהיר של המערכת הבוקר:**\n` +
+        `- 🚨 **לקוחות שדורשים מענה מיידי:** ${systemStats.urgentCount}\n` +
+        `- 📅 **פגישות דמו והדרכה ביומן:** ${systemStats.meetingCount}\n` +
+        `- ⭐ **לקוחות חשובים במעקב:** ${systemStats.importantCount}\n\n` +
+        `תוכל לדבר איתי בחופשיות על כל נושא — לבקש ממני למצוא לקוח, לשאול על התנגדויות, לקבל סיכום יומי או סתם לפתח שיחה. במה נתמקד?`;
+
+      return {
+        id: `ai-${Date.now()}`,
+        sender: 'ai',
+        text: randomGreeting + statusSummary,
+        actions: [
+          { type: 'navigate_tab', payload: 'myday', label: '⚡ למסך היום שלי' },
+          { type: 'navigate_tab', payload: 'crm', label: '👥 פתח טבלת לקוחות' },
+          { type: 'navigate_tab', payload: 'product', label: '🚀 תקלות ומוצר' }
+        ],
+        timestamp: time
+      };
+    }
+
+    // 3. Humor, Jokes & Casual Banter
+    if (q.includes('בדיחה') || q.includes('מצחיק') || q.includes('משעמם') || q.includes('ספר לי משהו')) {
+      const jokes = [
+        `😄 **הנה בדיחה מסורתית של סוכני ביטוח:**\n\nסוכן ביטוח עולה לשמיים ומגיע לשערי גן עדן. המלאך גבריאל מסתכל בספר הגדול ואומר: "שלום עליך! לפי שעות העבודה שדיווחת עליהן בתביעות — אתה בן 148!" 👴📈\n\n*מוסר השכל: טוב שיש את ClaimAI שסוגרת תביעה תוך דקה במקום לבלות עליה יום שלם!*`,
+        `😄 **בדיחה קלאסית מעולם התביעות:**\n\nלקוח מתקשר בבהלה לסוכן הביטוח שלו: "הבית שלי נשרף כליל! מתי אני מקבל את הכסף מחברת הביטוח?!"\nהסוכן עונה בנחת: "אנחנו לא משלמים כסף. אנחנו שולחים לך בית בדיוק באותו גודל ומצב."\nהלקוח חושב רגע ושואל: "באמת?! ואם ביטחתי את אשתי?!" 😅`,
+        `🤖 שואלים אותי לפעמים: "תגיד, AI כמוך לא מתעייף מלעקוב אחרי 1,480 לקוחות ביטוח בבת אחת?"\nעניתי: "להתעייף? תראה את הפקידה בסוכנות שממלאת 30 טפסי באפי ביום ידנית... היא הגיבורה האמיתית, אני כאן רק להציל אותה!" 🦸‍♀️⚡`
+      ];
+      const joke = jokes[Math.floor(Math.random() * jokes.length)];
+      return {
+        id: `ai-${Date.now()}`,
+        sender: 'ai',
+        text: `${joke}\n\nתמיד כיף לצחוק בין פגישה לפגישה. במה עוד אוכל לעזור לך עכשיו?`,
+        actions: [
+          { type: 'navigate_tab', payload: 'myday', label: '⚡ חזור למעקבים' },
+          { type: 'navigate_tab', payload: 'crm', label: '👥 לטבלת ה-CRM' }
+        ],
+        timestamp: time
+      };
+    }
+
+    // 4. Gratitude & Friendly Closings ("תודה", "מעולה", "אחלה", "תותח", "יופי", "ביי", "להתראות")
+    if (q.includes('תודה') || q.includes('מעולה') || q.includes('אחלה') || q.includes('תותח') || q.includes('סבבה') || q.includes('נהדר') || q.includes('מצוין') || q === 'ביי' || q === 'להתראות') {
+      return {
+        id: `ai-${Date.now()}`,
+        sender: 'ai',
+        text: `בשמחה רבה ${userFirstName}! 🙌 שמחתי לעזור. אני נשאר כאן ברקע וממשיך לעקוב אחרי כל תנועה במערכת. אם תצטרך כל שאלה, ניתוח או עצה — אני במרחק לחיצה אחת. שיהיה המשך יום פורה ומוצלח!`,
+        actions: [
+          { type: 'navigate_tab', payload: 'myday', label: '⚡ למסך היום שלי' },
+          { type: 'navigate_tab', payload: 'crm', label: '👥 פתח טבלת לקוחות' }
+        ],
+        timestamp: time
+      };
+    }
+
+    // 5. Daily Briefing & Priorities ("מה לעשות היום", "איפה להתחיל", "סדר לי את היום", "מה על הפרק", "תקציר בוקר", "בריפינג", "עדיפויות")
+    if (q.includes('מה לעשות') || q.includes('איפה להתחיל') || q.includes('סדר לי') || q.includes('על הפרק') || q.includes('תקציר') || q.includes('בריפינג') || q.includes('עדיפויות') || q.includes('מה המצב הבוקר')) {
+      const urgentList = clients.filter(c => c.requiresAttention || c.status === 'Urgent');
+      const meetingList = clients.filter(c => c.status === 'Meeting Scheduled');
+      const firstFollowUps = clients.filter(c => c.status === "1'st Follow-Up" || c.status === "1'st Lead");
+
+      let briefing = `📋 **בריפינג מנהלים יומי עבור ${currentUser.name}:**\n\n`;
+      briefing += `הנה תוכנית הפעולה המומלצת שלך להיום לפי ניתוח עומסים ודחיפות:\n\n`;
+
+      briefing += `1. 🚨 **עדיפות עליונה – טיפול בחריגות ומענים דחופים (${urgentList.length} לקוחות):**\n`;
+      if (urgentList.length > 0) {
+        urgentList.slice(0, 3).forEach((c, idx) => {
+          briefing += `   - **${c.name}** (${c.company || 'סוכנות'}) | סטטוס: **${c.status}** ${c.phone ? `| 📞 ${c.phone}` : ''}\n`;
+        });
+      } else {
+        briefing += `   - הכל נקי! אין כרגע לקוחות שסומנו בדחיפות עליונה.\n`;
+      }
+
+      briefing += `\n2. 📅 **פגישות דמו והדרכה שנקבעו (${meetingList.length} פגישות):**\n`;
+      if (meetingList.length > 0) {
+        meetingList.slice(0, 2).forEach(m => {
+          briefing += `   - **${m.name}** (${m.company || 'לקוח'}) | מועד: ${m.nextFollowUpDate || 'מעקב יומי'}\n`;
+        });
+      } else {
+        briefing += `   - אין פגישות שנקבעו להיום — מומלץ לתאם שיחות דמו ללידים חמים.\n`;
+      }
+
+      briefing += `\n3. ⚡ **קידום לידים בשלבים ראשוניים (${firstFollowUps.length} סוכנויות):**\n`;
+      briefing += `   - סוכנויות שממתינות לשיחת פתיחה או הדגמה קצרה.\n\n`;
+      briefing += `💡 **המלצת זהב:** התחל תמיד בשיחות ללקוחות הדחופים בבוקר, והשאר את שעות הצהריים להדגמות ופולו-אפים שקטים.`;
+
+      const actions: ChatAction[] = [
+        { type: 'navigate_tab', payload: 'myday', label: '⚡ למסך "היום שלי" הממוקד' },
+        { type: 'navigate_tab', payload: 'crm', label: '👥 עבור לטבלת CRM' }
+      ];
+
+      if (urgentList.length > 0) {
+        actions.unshift({
+          type: 'open_client',
+          payload: urgentList[0].id,
+          label: `🚨 פתח דחוף: ${urgentList[0].name}`
+        });
+      }
+
+      return {
+        id: `ai-${Date.now()}`,
+        sender: 'ai',
+        text: briefing,
+        actions,
+        timestamp: time
+      };
+    }
+
+    // 6. Guided System Tour & Navigation Help
     if (q.includes('סיור') || q.includes('הדרכה') || q.includes('איך עובדים') || q.includes('תכיר לי') || q.includes('מה אפשר לעשות') || q.includes('איך להשתמש')) {
-      const tourText = `🧭 **ברוך הבא לסיור המודרך במערכת ClaimAI Control Center!**
-המערכת בנויה ומכוילת במיוחד לניהול סוכנויות ביטוח, תביעות ומעקבי מכירות. הנה הסקירה של המסכים העיקריים:
-
-1. ⚡ **היום שלי (My Day):**
-   מרכז השליטה היומי שלך. כאן מרוכזים כל הלקוחות שדורשים מענה היום, פגישות שנקבעו, מעקבים שעבר זמנם ודפי משימות אישיים.
-
-2. 👥 **ניהול לקוחות CRM (טבלה ראשית):**
-   טבלה חכמה בסגנון Monday לניהול **${systemStats.totalClients.toLocaleString()} לקוחות**. כוללת עריכה ישירה, שמירה אוטומטית, היסטוריית הערות, תגיות צבע, וסנכרון דו-כיווני לגוגל שיטס.
-
-3. 🐛 **ניהול מוצר ותקלות (Fixes & Roadmap):**
-   מעקב אחר **${systemStats.totalTickets} משימות פיתוח**, באגים ודרישות מהשטח, עם תעדוף וקישור ישיר לשמות הלקוחות הרלוונטיים.
-
-4. 📑 **טבלאות מותאמות ודוחות:**
-   לשוניות נוספות כולל **דוח לקוחות ללא תיקים** (משתמשים רשומים שעדיין לא פתחו תביעה) וטבלאות ייעודיות.
-
-5. ⚙️ **הגדרות ודאטה-בייס:**
-   ניהול מסד הנתונים, סנכרון דו-כיווני עם Google Sheets, גיבויים, והגדרות אבטחה.
-
-בחר לאן תרצה לעבור עכשיו:`;
+      const tourText = `🧭 **סיור מודרך מקיף ב-ClaimAI Control Center:**\n` +
+        `המערכת תוכננה בקפידה כדי לתת לך שליטה מלאה בלקוחות, במוצר ובסנכרונים. הנה המסכים המרכזיים:\n\n` +
+        `1. ⚡ **מסך "היום שלי" (My Day):**\n` +
+        `   המוקד היומי שלך. מרכז את כל הלקוחות הדחופים, הפגישות של היום, והמשימות האישיות שמחייבות טיפול לפני סוף היום.\n\n` +
+        `2. 👥 **ניהול לקוחות CRM (טבלה ראשית בסגנון Monday/Excel):**\n` +
+        `   ניהול של **${systemStats.totalClients.toLocaleString()} לקוחות**. כל תא ניתן לעריכה בלחיצה (שמירה ב-Enter!), אפשר לגרור רוחב עמודות כמו באקסל, לסדר עמודות, ולראות היסטוריית הערות מלאה.\n\n` +
+        `3. 📑 **טבלאות מותאמות אישית ודוחות (למשל: דוח ללא תיקים):**\n` +
+        `   משתמשים רשומים שעדיין לא פתחו תביעה. בלחיצה על כל שורה נפתח כרטיס הלקוח המלא עם סנכרון דו-כיווני אוטומטי ל-CRM.\n\n` +
+        `4. 🐛 **בקרת מוצר ותקלות (Fixes & Roadmap):**\n` +
+        `   ניהול **${systemStats.totalTickets} באגים ומשימות פיתוח**, מקושרים ישירות לשמות הסוכנויות שהעלו את הצורך.\n\n` +
+        `5. ⚙️ **הגדרות, אדמין וסנכרון Google Sheets:**\n` +
+        `   סנכרון דו-כיווני אוטומטי עם גליון הגוגל שיטס המרכזי שלך, ניהול משתמשים והרשאות.\n\n` +
+        `לאן תרצה שאקח אותך עכשיו?`;
 
       return {
         id: `ai-${Date.now()}`,
@@ -252,110 +469,178 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
         text: tourText,
         actions: [
           { type: 'navigate_tab', payload: 'myday', label: '⚡ למסך היום שלי' },
-          { type: 'navigate_tab', payload: 'crm', label: '👥 לטבלת ה-CRM' },
-          { type: 'navigate_tab', payload: 'product', label: '🐛 למודול המוצר והתקלות' },
+          { type: 'navigate_tab', payload: 'crm', label: '👥 לטבלת ה-CRM הראשית' },
+          { type: 'navigate_tab', payload: 'product', label: '🐛 לבקרת מוצר ותקלות' },
           { type: 'navigate_tab', payload: 'database', label: '⚙️ להגדרות וסנכרון' }
         ],
         timestamp: time
       };
     }
 
-    // 2. Greetings and Conversational check-in ("היי", "שלום", "בוקר טוב", "ערב טוב", "מה נשמע", "מי אתה", "מה קורה", "מה המצב")
-    if (q === 'היי' || q === 'שלום' || q.startsWith('בוקר טוב') || q.startsWith('ערב טוב') || q.includes('מה נשמע') || q.includes('מה קורה') || q.includes('מה המצב') || q.includes('מי אתה') || q.includes('היי אייל') || q.includes('שלום עליכם')) {
-      const greeting = `שלום ${currentUser.name}! אני העוזר האישי החכם שלך ב-ClaimAI. 
-אני עוקב באופן שוטף אחרי כל הפעילות במערכת, ויכול לעזור לך לייעל את יום העבודה, לנתח שיחות ולנווט בלחיצה אחת.
+    // 7. System Features & How-To Questions ("איך עובד הסנכרון", "איך עורכים", "גוגל שיטס", "משתמשים", "אדמין")
+    if (q.includes('איך עובד') || q.includes('איך לערוך') || q.includes('איך להוסיף') || q.includes('סנכרון') || q.includes('שיטס') || q.includes('אדמין') || q.includes('הרשאות') || q.includes('משתמשים') || q.includes('עמודה')) {
+      if (q.includes('שיטס') || q.includes('סנכרון') || q.includes('google')) {
+        return {
+          id: `ai-${Date.now()}`,
+          sender: 'ai',
+          text: `🔄 **כיצד עובד הסנכרון הדו-כיווני מול Google Sheets:**\n\n` +
+            `- **סנכרון הערות ולידים חדשים:** המערכת מחוברת ישירות לגליון "Copy of CRM+PM" שלך, לשונית "לידים חדשים". כל הערה שנכתבת במערכת או בגליון מסתנכרנת באופן אוטומטי כולל חתימת שם המשתמש והשעה.\n` +
+            `- **עדכון מיידי:** בכל פעם שאתה עורך שדה (שם, טלפון, תאריך השארת פרטים, הערה) המערכת מעבירה את השינוי לגליון בענן.\n` +
+            `- **בדיקת תקינות:** תמיד אפשר לעבור ללשונית "דאטה-בייס וסנכרון" ולהפעיל בדיקת סנכרון בלחיצת כפתור.`,
+          actions: [
+            { type: 'navigate_tab', payload: 'database', label: '⚙️ פתח מסך הגדרות וסנכרון' },
+            { type: 'web_link', payload: 'https://docs.google.com/spreadsheets/d/1DaEDKKsRVSuQxI7RNv8pMLMZII6KrnDMQj18FYosxpU/edit', label: '📊 פתח את גליון Google Sheets' }
+          ],
+          timestamp: time
+        };
+      }
 
-📊 **סטטוס עדכני במערכת:**
-- 🚨 **לקוחות הדורשים מענה מיידי:** ${systemStats.urgentCount} לקוחות
-- 📅 **פגישות דמו / הדרכה שנקבעו:** ${systemStats.meetingCount} לקוחות
-- 🐛 **באגים קריטיים פתוחים:** ${systemStats.criticalBugsCount} תקלות
+      if (q.includes('ערוך') || q.includes('עריכ') || q.includes('עמודה') || q.includes('אנטר')) {
+        return {
+          id: `ai-${Date.now()}`,
+          sender: 'ai',
+          text: `✏️ **עריכת תאים ושינוי עמודות בסגנון Excel:**\n\n` +
+            `1. **עריכה ישירה בכל טבלה:** לוחצים על כל תא (שם, חברה, טלפון, הערה, תאריך) ומקלידים ישירות.\n` +
+            `2. **שמירה ב-Enter:** לחיצה על מקש **Enter** שומרת את הערך מיד! לחיצה על **Escape** מבטלת.\n` +
+            `3. **שינוי רוחב עמודות:** בדיוק כמו באקסל — גוררים את הגבול שבין כותרות העמודות ימינה או שמאלה. הרוחב החדש נשמר אוטומטית בדפדפן שלך.\n` +
+            `4. **סנכרון בין טבלאות:** אם שינית שדה בטבלה מותאמת אישית של לקוח קיים — השינוי מסתנכרן מיד גם לכרטיס הלקוח הראשי ב-CRM!`,
+          actions: [
+            { type: 'navigate_tab', payload: 'crm', label: '👥 פתח טבלת CRM לניסוי' }
+          ],
+          timestamp: time
+        };
+      }
 
-במה אוכל לסייע לך עכשיו?`;
+      if (q.includes('משתמש') || q.includes('אדמין') || q.includes('הרשא')) {
+        return {
+          id: `ai-${Date.now()}`,
+          sender: 'ai',
+          text: `🔐 **ניהול משתמשים והרשאות בפורטל האדמין:**\n\n` +
+            `- מנהלים (Admins) יכולים להוסיף משתמשים חדשים, להגדיר סיסמאות אישיות, ולשנות תפקידים.\n` +
+            `- **תפקידי מערכת:** מנהל מערכת (Admin) עם גישה מלאה, עורך (Editor) לעריכת לקוחות ומשימות, וצופה (Viewer) לקריאה בלבד.\n` +
+            `- המעבר לניהול מתבצע בלשונית "ניהול משתמשים" בסרגל העליון.`,
+          actions: [
+            { type: 'navigate_tab', payload: 'admin', label: '👥 פתח פורטל ניהול משתמשים' }
+          ],
+          timestamp: time
+        };
+      }
+    }
+
+    // 8. Sales Coaching & Objection Handling ("באפי", "Bafi", "מחיר", "יקר", "התנגדות", "איך לסגור", "תסריט")
+    if (q.includes('באפי') || q.includes('bafi') || q.includes('מחיר') || q.includes('יקר') || q.includes('התנגדות') || q.includes('איך לסגור') || q.includes('איך לשכנע') || q.includes('תסריט') || q.includes('טיפ') || q.includes('טיפים')) {
+      const salesAdvice = `💼 **ארגז כלים מנצח לטיפול בהתנגדויות סוכנויות ביטוח:**\n\n` +
+        `1. ⚡ **התנגדות: "אנחנו כבר עובדים עם באפי (Bafi)"**\n` +
+        `   - **התשובה שמפילה את ההתנגדות:** "מעולה שאתם בבאפי! ClaimAI לא מחליפה את באפי אלא משלימה אותה בדיוק איפה שהפקידות קורסות. באפי היא תוכנת הלינה לפוליסות, אבל את מסמכי התביעות והתמונות הפקידה צריכה להקליד ידנית 25 דקות. ClaimAI מחלצת הכל אוטומטית תוך 60 שניות — ומשם הנתונים עוברים לבאפי בלחיצה אחת."\n` +
+        `   - **המסר:** חוסך חצי משרה של פקידה בריכוז תביעות.\n\n` +
+        `2. 💰 **התנגדות: "יקר לנו / אין תקציב עכשיו"**\n` +
+        `   - **חשבון פשוט מול הסוכן:** פקידת תביעות ממוצעת עולה לסוכנות כ-10,000-12,000 ₪ בחודש. אם המערכת חוסכת לה 30-40 שעות בחודש על פתיחת תיקים ומעקבים, החזרתם פי 4 מעלות המנוי כבר בחודש הראשון.\n\n` +
+        `3. ⏳ **התנגדות: "אין לנו זמן להטמעה מסובכת"**\n` +
+        `   - **התשובה:** "ההטמעה אצלנו לוקחת בדיוק 15 דקות בזום. לא מתקינים כלום על המחשב, ובאותו יום הפקידה כבר מעלה תביעה ראשונה ומרוצה."\n\n` +
+        `4. 📲 **הצעת פולו-אפ מהירה בוואטסאפ:**\n` +
+        `   *"היי [שם הסוכן], רציתי לשלוח לך סרטון קצר של 40 שניות שמראה איך המערכת ממלאת כתב תביעה שלם מסריקת וואטסאפ אחת. מתי נוח שנקפוץ לזום של 10 דקות השבוע?"*`;
 
       return {
         id: `ai-${Date.now()}`,
         sender: 'ai',
-        text: greeting,
+        text: salesAdvice,
         actions: [
-          { type: 'navigate_tab', payload: 'myday', label: '🚨 צפה בלקוחות דחופים' },
-          { type: 'navigate_tab', payload: 'crm', label: '👥 פתח טבלת CRM מלאה' },
-          { type: 'navigate_tab', payload: 'product', label: '🐛 צפה בתקלות קריטיות' }
+          { type: 'navigate_tab', payload: 'myday', label: '⚡ חזור למעקב היום שלי' },
+          { type: 'navigate_tab', payload: 'crm', label: '👥 פתח טבלת לקוחות' }
         ],
         timestamp: time
       };
     }
 
-    // 3. Database & Sync Health Status
-    if (q.includes('דאטה') || q.includes('בסיס נתונים') || q.includes('סופבייס') || q.includes('בלובס') || q.includes('שיטס') || q.includes('גיבוי') || q.includes('וורקר') || q.includes('סנכרון')) {
-      const workerUrl = getWorkerUrl();
-      const directKey = getDirectAIKey();
-      const dbText = `📊 **תמונת מצב שירותי הנתונים, הגיבוי והסנכרון של ClaimAI:**
-- **Google Sheets Two-Way Sync:** 🟢 מחובר ומסונכרן (ראשי + דוח ללא תיקים + Fixes & Bugs + Roadmap)
-- **דאטה-בייס מקומי (IndexedDB):** 🟢 פעיל עם ${clients.length.toLocaleString()} לקוחות, ${productItems.length} משימות ו-${customTables.length} טבלאות מותאמות
-- **מנוע שיחה אינטראקטיבי:** ${directKey ? `🟢 מודל LLM ישיר פעיל (${getAIProvider()})` : (workerConfigured ? `🟢 וורקר מחובר (${workerUrl})` : '🔵 מנוע AI מקומי מובנה פעיל')}
-- **Supabase Cloud:** ${supabaseConnected ? '🟢 מחובר' : '🟡 Offline-first פעיל'}`;
-
-      return {
-        id: `ai-${Date.now()}`,
-        sender: 'ai',
-        text: dbText,
-        actions: [
-          { type: 'navigate_tab', payload: 'database', label: '⚙️ פתח מסך הגדרות וסנכרון' }
-        ],
-        timestamp: time
-      };
+    // 9. Location & City Queries ("מי מתל אביב", "סוכנויות בירושלים", "צפון", "דרום", "חיפה", "מרכז")
+    const cities = ['תל אביב', 'ירושלים', 'חיפה', 'פתח תקווה', 'ראשון לציון', 'אשדוד', 'באר שבע', 'נתניה', 'חולון', 'רמת גן', 'הרצליה', 'רעננה', 'כפר סבא', 'מודיעין', 'צפון', 'דרום', 'מרכז'];
+    const matchedCity = cities.find(city => q.includes(city));
+    if (matchedCity) {
+      const cityClients = clients.filter(c => (c.location || '').toLowerCase().includes(matchedCity) || (c.company || '').toLowerCase().includes(matchedCity));
+      if (cityClients.length > 0) {
+        let reply = `📍 **איתרתי ${cityClients.length} לקוחות / סוכנויות באזור ${matchedCity}:**\n\n`;
+        const actions: ChatAction[] = [];
+        cityClients.slice(0, 4).forEach((c, idx) => {
+          reply += `${idx + 1}. **${c.name}** (${c.company || 'סוכנות'}) | סטטוס: **${c.status}** ${c.phone ? `| 📞 ${c.phone}` : ''}\n`;
+          actions.push({
+            type: 'open_client',
+            payload: c.id,
+            label: `👤 ${c.name}`
+          });
+        });
+        if (cityClients.length > 4) {
+          reply += `\n*(ועוד ${cityClients.length - 4} לקוחות נוספים באזור)*\n`;
+        }
+        actions.push({
+          type: 'navigate_tab',
+          payload: 'crm',
+          label: `🔍 צפה בכולם ב-CRM`
+        });
+        return {
+          id: `ai-${Date.now()}`,
+          sender: 'ai',
+          text: reply,
+          actions,
+          timestamp: time
+        };
+      }
     }
 
-    // 4. Statistics & Status Breakdown
-    if (q.includes('כמה לקוחות') || q.includes('סטטיסטיקה') || q.includes('פילוח') || q.includes('חלוקת סטטוסים') || q.includes('כל הסטטוסים') || q.includes('תמונת מצב')) {
-      const sortedStatuses = Object.entries(systemStats.statusDistribution).sort((a, b) => b[1] - a[1]);
-      let statsText = `📈 **תמונת מצב מלאה של לקוחות ה-CRM (${systemStats.totalClients.toLocaleString()} לקוחות):**\n\n`;
-      statsText += `🚨 **דחוף / חריגות מענה:** ${systemStats.urgentCount} לקוחות\n`;
-      statsText += `📅 **פגישות שנקבעו:** ${systemStats.meetingCount} לקוחות\n`;
-      statsText += `⭐ **חשוב / לשמירת קשר:** ${systemStats.importantCount} לקוחות\n\n`;
-      statsText += `📊 **פילוח לפי סטטוסים מובילים:**\n`;
+    // 10. High Volume / VIP Clients ("מי הלקוחות הכי גדולים", "מי מגיש הכי הרבה תביעות", "נפח תביעות", "תביעות חודשיות")
+    if (q.includes('הכי גדול') || q.includes('הכי הרבה תביעות') || q.includes('נפח תביעות') || q.includes('תביעות חודשי') || q.includes('גדולים ביותר')) {
+      const parsedClaims = clients.map(c => {
+        const val = parseInt(String(c.monthlyClaims || '0').replace(/\D/g, ''), 10) || 0;
+        return { client: c, claims: val };
+      }).sort((a, b) => b.claims - a.claims);
 
-      sortedStatuses.slice(0, 7).forEach(([st, count]) => {
-        const pct = ((count / (systemStats.totalClients || 1)) * 100).toFixed(1);
-        statsText += `- **${st}:** ${count.toLocaleString()} לקוחות (${pct}%)\n`;
-      });
-
-      return {
-        id: `ai-${Date.now()}`,
-        sender: 'ai',
-        text: statsText,
-        actions: [
-          { type: 'navigate_tab', payload: 'crm', label: '👥 פתח טבלת לקוחות' },
-          { type: 'navigate_tab', payload: 'myday', label: '⚡ מעקבים דחופים (היום שלי)' }
-        ],
-        timestamp: time
-      };
+      const topClients = parsedClaims.filter(p => p.claims > 0).slice(0, 5);
+      if (topClients.length > 0) {
+        let reply = `🏆 **הסוכנויות המובילות לפי היקף תביעות חודשי מדווח:**\n\n`;
+        const actions: ChatAction[] = [];
+        topClients.forEach((item, idx) => {
+          const c = item.client;
+          reply += `${idx + 1}. **${c.name}** (${c.company || 'סוכנות'}) — **${item.claims} תביעות/חודש** | סטטוס: **${c.status}**\n`;
+          actions.push({
+            type: 'open_client',
+            payload: c.id,
+            label: `👤 ${c.name} (${item.claims})`
+          });
+        });
+        reply += `\n💡 **תובנה:** לקוחות עם מעל 50 תביעות חודשיות הם בעלי ה-LTV הגבוה ביותר. שווה להשקיע בליווי אישי שבועי כדי להבטיח שימוש רציף.`;
+        return {
+          id: `ai-${Date.now()}`,
+          sender: 'ai',
+          text: reply,
+          actions,
+          timestamp: time
+        };
+      }
     }
 
-    // 5. Urgent / Attention / Follow-up queries
-    if (q.includes('דחוף') || q.includes('טיפול') || q.includes('urgent') || q.includes('עדיפות עליונה') || q.includes('מעקבים') || q.includes('חריגות')) {
+    // 11. Overdue / Meetings / Urgent Queries
+    if (q.includes('דחוף') || q.includes('טיפול') || q.includes('urgent') || q.includes('עדיפות עליונה') || q.includes('מעקבים') || q.includes('חריגות') || q.includes('מי ממתין')) {
       const urgentClients = clients.filter(c => c.requiresAttention || c.status === 'Urgent');
       const meetings = clients.filter(c => c.status === 'Meeting Scheduled');
 
-      let reply = `🚨 **איתרתי ${urgentClients.length} לקוחות בעדיפות עליונה ו-${meetings.length} פגישות שנקבעו:**\n`;
+      let reply = `🚨 **איתרתי ${urgentClients.length} לקוחות בעדיפות עליונה ו-${meetings.length} פגישות שנקבעו:**\n\n`;
       const actions: ChatAction[] = [];
 
       urgentClients.slice(0, 4).forEach((c, i) => {
-        reply += `\n${i + 1}. **${c.name}** (${c.company || 'ללא חברה'}) - סטטוס: **${c.status}**`;
+        reply += `${i + 1}. **${c.name}** (${c.company || 'ללא חברה'}) | סטטוס: **${c.status}**`;
         if (c.phone) reply += ` | 📞 ${c.phone}`;
-        if (c.lastNote) reply += `\n   📝 "${c.lastNote.replace(/^[0-9/:\s|]+👤[^|]+\|\s*/, '').slice(0, 90)}..."`;
+        if (c.lastNote) reply += `\n   📝 "${c.lastNote.replace(/^[0-9/:\s|]+👤[^|]+\|\s*/, '').slice(0, 85)}..."\n`;
         
         actions.push({
           type: 'open_client',
           payload: c.id,
-          label: `👤 כרטיס: ${c.name}`
+          label: `🚨 כרטיס: ${c.name}`
         });
       });
 
       if (meetings.length > 0) {
-        reply += `\n\n📅 **פגישות דמו והדרכה קרובות:**\n`;
+        reply += `\n📅 **פגישות דמו והדרכה ביומן:**\n`;
         meetings.slice(0, 3).forEach((m, idx) => {
-          reply += `- **${m.name}** (${m.company || 'סוכנות'}) | ${m.nextFollowUpDate || 'מעקב פתוח'}\n`;
+          reply += `- **${m.name}** (${m.company || 'סוכנות'}) | מועד: ${m.nextFollowUpDate || 'מעקב יומי'}\n`;
         });
       }
 
@@ -374,43 +659,17 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
       };
     }
 
-    // 6. Objection Handling & Competitors ("באפי", "Bafi", "מחיר", "יקר", "התנגדות")
-    if (q.includes('באפי') || q.includes('bafi') || q.includes('מחיר') || q.includes('יקר') || q.includes('התנגדות') || q.includes('אינטגרציה')) {
-      const bafiText = `💡 **ארגז כלים לטיפול בהתנגדויות סוכנויות ביטוח:**
-
-1. ⚡ **התנגדות: "אנחנו כבר עובדים עם באפי (Bafi)"**
-   - **התשובה המנצחת:** ClaimAI לא מחליפה את באפי – היא כלי העזר שהפקידות חלמו עליו! ClaimAI מקצרת את זמן הטיפול בתביעה מ-25 דקות ל-90 שניות, מחלצת אוטומטית מסמכים סרוקים, ומשם הנתונים מועברים לבאפי בקלות.
-   - **מסר מרכזי:** "באפי היא מערכת הליבה לניהול פוליסות. ClaimAI היא ה-AI שממלא אותה בשבילך וחוסך חצי משרה של פקידה."
-
-2. 💰 **התנגדות: "יקר לנו / אין לנו תקציב"**
-   - **חישוב ROI מיידי:** פקידת תביעות ממוצעת עולה לסוכנות כ-10,000 ₪ בחודש. אם המערכת חוסכת לה 30 שעות חודשיות בהקלדות מייגעות ואיסוף מסמכים, הסוכנות חוסכת פי 4 מעלות המנוי כבר בחודש הראשון.
-
-3. ⏳ **התנגדות: "אין לנו זמן להטמעה"**
-   - **התשובה:** "ההטמעה לוקחת 15 דקות בזום. תוך שעה הפקידה כבר מעלה תביעה ראשונה."`;
-
-      return {
-        id: `ai-${Date.now()}`,
-        sender: 'ai',
-        text: bafiText,
-        actions: [
-          { type: 'navigate_tab', payload: 'crm', label: '👥 חזור לטבלת הלקוחות' },
-          { type: 'navigate_tab', payload: 'myday', label: '⚡ המשך מעקבים' }
-        ],
-        timestamp: time
-      };
-    }
-
-    // 7. Product & Bugs queries
+    // 12. Product, Bugs & Roadmap Queries
     if (q.includes('תקלה') || q.includes('תקלות') || q.includes('באג') || q.includes('מוצר') || q.includes('פיתוח') || q.includes('גרסה') || q.includes('ticket') || q.includes('roadmap')) {
       const openTickets = productItems.filter(p => p.status !== 'Done');
       const bugs = openTickets.filter(p => p.category === 'bug');
       const roadmapItems = openTickets.filter(p => p.category === 'roadmap');
 
-      let reply = `🐛 **תמונת מצב מודול מוצר ותקלות (Fixes & Roadmap):**\n` +
+      let reply = `🐛 **תמונת מצב מודול מוצר ותקלות (Fixes & Roadmap):**\n\n` +
         `- סה"כ משימות פעילות: **${openTickets.length}** מתוך ${productItems.length}\n` +
         `- באגים פתוחים: **${bugs.length}** (מתוכם ${systemStats.criticalBugsCount} קריטיים)\n` +
-        `- תוכניות ופיצ'רים ב-Roadmap: **${roadmapItems.length}**\n\n` +
-        `🚨 **תקלות בעדיפות גבוהה:**\n`;
+        `- פיצ'רים ופיתוחים ב-Roadmap: **${roadmapItems.length}**\n\n` +
+        `🚨 **תקלות בעדיפות גבוהה שמחכות לטיפול:**\n`;
 
       const actions: ChatAction[] = [];
       const criticalBugs = bugs.filter(b => b.priority === 'Critical' || b.priority === 'High').slice(0, 3);
@@ -419,7 +678,7 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
         actions.push({
           type: 'open_ticket',
           payload: b.id,
-          label: `🐛 פתח: ${b.title.slice(0, 22)}...`
+          label: `🐛 ${b.title.slice(0, 22)}...`
         });
       });
 
@@ -438,117 +697,59 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
       };
     }
 
-    // 8. Custom Tables / No Cases Sheet
-    if (q.includes('ללא תיקים') || q.includes('משתמשים') || q.includes('טבלה') || q.includes('טבלאות')) {
-      const noCasesTable = customTables.find(t => t.id === 'table-no-cases' || t.name.includes('ללא תיקים'));
-      if (noCasesTable) {
-        let reply = `📋 **דוח לקוחות ללא תיקים (${noCasesTable.rows.length} לקוחות רשומים):**\n` +
-          `רשומים אלו הצטרפו למערכת אך עדיין לא פתחו תיק תביעה ראשון.\nדוגמאות מתוך הדוח:\n`;
+    // 13. Smart Entity Resolution: Search for specific Client Name, Company or Phone
+    // Only search clients if digits exist, or if user explicitly mentions "לקוח" / "סוכנות" / "הערה", or query has specific tokens that match a client's NAME or COMPANY (not just common dictionary words)
+    const phoneDigits = q.replace(/\D/g, '');
+    const isExplicitClientSearch = q.includes('לקוח') || q.includes('סוכנות') || q.includes('כרטיס') || q.includes('חפש') || q.includes('מצא') || q.includes('הערות של') || q.includes('טלפון של') || phoneDigits.length >= 7;
 
-        noCasesTable.rows.slice(0, 4).forEach((r, idx) => {
-          reply += `${idx + 1}. **${r.fullName || r.name}** | אימייל: ${r.email || 'אין'} | מסלול: ${r.plan || 'Free Trial'}\n`;
-        });
+    const stopWords = new Set([
+      'של', 'את', 'על', 'מי', 'זה', 'מה', 'עם', 'הוא', 'היא', 'הם', 'אנחנו', 'אתה', 'אתם', 
+      'רוצה', 'אפשר', 'צריך', 'כדאי', 'מומלץ', 'תמליץ', 'ספר', 'תגיד', 'תסביר', 'בבקשה', 
+      'תודה', 'היי', 'שלום', 'אהלן', 'הכל', 'כל', 'יותר', 'פחות', 'בדיקה', 'טסט', 'חדש', 
+      'ישן', 'קודם', 'הבא', 'אחרון', 'שאלות', 'שאלה', 'תשובה', 'עזרה', 'איך', 'לעזור', 
+      'יכול', 'היום', 'שיחה', 'שיחות', 'עבודה', 'עסקים', 'ביטוח', 'בוקר', 'ערב', 'צהריים', 
+      'טוב', 'למה', 'איפה', 'מתי', 'כמה', 'למי'
+    ]);
 
-        return {
-          id: `ai-${Date.now()}`,
-          sender: 'ai',
-          text: reply,
-          actions: [
-            { type: 'navigate_tab', payload: 'crm', label: '📑 צפה בטבלה בלשונית CRM' }
-          ],
-          timestamp: time
-        };
-      }
+    const meaningfulTokens = q.split(/[\s,?.!-]+/).filter(t => t.length >= 2 && !stopWords.has(t));
+
+    let matchedClients: Client[] = [];
+
+    if (phoneDigits.length >= 7) {
+      matchedClients = clients.filter(c => (c.phone || '').replace(/\D/g, '').includes(phoneDigits));
+    } else if (isExplicitClientSearch || meaningfulTokens.length > 0) {
+      // Prioritize name and company exact/substring matches
+      matchedClients = clients.filter(c => {
+        const name = (c.name || '').toLowerCase();
+        const comp = (c.company || '').toLowerCase();
+        const email = (c.email || '').toLowerCase();
+
+        // Direct full phrase match in name or company
+        if (meaningfulTokens.length >= 1 && (name.includes(q) || comp.includes(q) || email.includes(q))) {
+          return true;
+        }
+
+        // Token match against name or company specifically (NOT arbitrary note text!)
+        if (meaningfulTokens.length > 0) {
+          return meaningfulTokens.some(tok => name.includes(tok) || comp.includes(tok));
+        }
+
+        return false;
+      });
     }
-
-    // 9. Direct Client & Note Search
-    const cleanTokens = q.split(/[\s,?.!-]+/).filter(t => t.length >= 2 && !['של', 'את', 'על', 'מי', 'זה', 'מה', 'עם', 'הוא', 'היא', 'האם', 'איפה', 'תן', 'לי', 'חפש', 'מצא', 'תראה', 'תסביר'].includes(t));
-
-    const matchedClients = clients.filter(c => {
-      const name = (c.name || '').toLowerCase();
-      const comp = (c.company || '').toLowerCase();
-      const phone = (c.phone || '').replace(/\D/g, '');
-      const note = (c.lastNote || '').toLowerCase();
-      const email = (c.email || '').toLowerCase();
-      const qDigits = q.replace(/\D/g, '');
-
-      if (qDigits.length >= 4 && phone.includes(qDigits)) return true;
-      if (name.includes(q) || comp.includes(q) || email.includes(q) || note.includes(q)) return true;
-
-      // Token match
-      if (cleanTokens.length > 0) {
-        return cleanTokens.some(token => name.includes(token) || comp.includes(token) || note.includes(token));
-      }
-      return false;
-    });
 
     if (matchedClients.length > 0) {
       if (matchedClients.length === 1) {
-        const target = matchedClients[0];
-        const linkedTickets = productItems.filter(p => 
-          (target.company && p.client && p.client.toLowerCase().includes(target.company.toLowerCase())) ||
-          (target.name && p.client && p.client.toLowerCase().includes(target.name.toLowerCase()))
-        );
-
-        const companyOrName = target.company || target.name;
-        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(companyOrName + ' ביטוח')}`;
-
-        let reply = `👤 **כרטיס לקוח מזוהה:** **${target.name}**\n` +
-          `🏢 **חברה / סוכנות:** ${target.company || 'לא צוין'}\n` +
-          `🏷️ **סוג עסק:** ${target.businessType || 'סוכנות ביטוח'}\n` +
-          `📌 **סטטוס CRM:** **${target.status}** ${target.subStatus ? `(${target.subStatus})` : ''}\n` +
-          `📞 **טלפון:** ${target.phone || 'אין'}\n` +
-          `✉️ **אימייל:** ${target.email || 'אין'}\n` +
-          `${linkedTickets.length > 0 ? `\n✨ **משימות פיתוח מקושרות (${linkedTickets.length}):** ${linkedTickets.map(t => `[${t.id}] ${t.title}`).join(', ')}` : ''}` +
-          `${target.lastNote ? `\n📝 **הערה אחרונה:** "${target.lastNote.replace(/^[0-9/:\s|]+👤[^|]+\|\s*/, '')}"` : ''}`;
-
-        // Add tailored advice
-        if (target.status === "1'st Lead" || target.status === "1'st Follow-Up") {
-          reply += `\n\n💡 **המלצת Copilot להמשך טיפול:** הלקוח בתחילת התהליך. שלח לו וואטסאפ קצר המציע שיחת הדגמה בת 10 דקות, או בדוק עליו מידע נוסף ברשת לפני השיחה.`;
-        } else if (target.status === "Meeting Scheduled") {
-          reply += `\n\n💡 **המלצת Copilot להמשך טיפול:** נקבעה פגישה! וודא ששלחת תזכורת והכן דמו ממוקד למודול התביעות.`;
-        }
-
-        const actions: ChatAction[] = [
-          {
-            type: 'open_client',
-            payload: target.id,
-            label: `👤 פתח כרטיס מלא: ${target.name}`
-          },
-          {
-            type: 'web_link',
-            payload: searchUrl,
-            label: `🌐 חפש על "${companyOrName}" ברשת`
-          }
-        ];
-
-        if (target.phone) {
-          actions.push({
-            type: 'whatsapp',
-            payload: target.phone,
-            label: `💬 וואטסאפ: ${target.phone}`
-          });
-          actions.push({
-            type: 'call',
-            payload: target.phone,
-            label: `📞 חיוג טלפוני`
-          });
-        }
-
-        return {
-          id: `ai-${Date.now()}`,
-          sender: 'ai',
-          text: reply,
-          actions,
-          timestamp: time
-        };
+        return buildSingleClientResponse(matchedClients[0]);
       } else {
-        let reply = `🔍 **איתרתי ${matchedClients.length} לקוחות התואמים לחיפוש "${raw}":**\n`;
+        let reply = `🔍 **איתרתי ${matchedClients.length} לקוחות התואמים לשאלתך:**\n\n`;
         const actions: ChatAction[] = [];
 
         matchedClients.slice(0, 4).forEach((c, idx) => {
-          reply += `\n${idx + 1}. **${c.name}** (${c.company || c.businessType || 'לקוח'}) | סטטוס: **${c.status}** ${c.phone ? `| 📞 ${c.phone}` : ''}`;
-          if (c.lastNote) reply += `\n   📝 "${c.lastNote.replace(/^[0-9/:\s|]+👤[^|]+\|\s*/, '').slice(0, 75)}..."`;
+          reply += `${idx + 1}. **${c.name}** (${c.company || 'סוכנות'}) | סטטוס: **${c.status}** ${c.phone ? `| 📞 ${c.phone}` : ''}\n`;
+          if (c.lastNote) {
+            reply += `   📝 "${c.lastNote.replace(/^[0-9/:\s|]+👤[^|]+\|\s*/, '').slice(0, 70)}..."\n`;
+          }
           actions.push({
             type: 'open_client',
             payload: c.id,
@@ -557,16 +758,15 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
         });
 
         if (matchedClients.length > 4) {
-          reply += `\n\n*(קיימים עוד ${matchedClients.length - 4} לקוחות נוספים במאגר)*`;
+          reply += `\n*(נמצאו עוד ${matchedClients.length - 4} לקוחות נוספים במאגר)*\n`;
         }
 
-        // Web search for the first result
-        const topClient = matchedClients[0];
-        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent((topClient.company || topClient.name) + ' ביטוח')}`;
+        const top = matchedClients[0];
+        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent((top.company || top.name) + ' ביטוח')}`;
         actions.push({
           type: 'web_link',
           payload: searchUrl,
-          label: `🌐 חפש ברשת על ${topClient.company || topClient.name}`
+          label: `🌐 חפש ברשת: ${top.company || top.name}`
         });
 
         actions.push({
@@ -585,15 +785,25 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
       }
     }
 
-    // 10. General Conversational Fallback - Contextual, Engaging and Helpful
+    // 14. Conversational Catch-All Dialogue (Natural, Friendly & Context-Aware)
+    // Instead of robotic fallback, engages with the user's thought and provides helpful insights
+    const conversationalReply = `הבנתי אותך! לגבי **"${raw}"** — \n\n` +
+      `כסוכן ה-AI האישי שלך ב-ClaimAI, אני מחובר בזמן אמת לכל מאגר המידע (${systemStats.totalClients.toLocaleString()} לקוחות, ${systemStats.totalTickets} משימות מוצר) וזמין לסייע לך לקדם את הפעילות:\n\n` +
+      `🎯 **הנה כמה דברים שתוכל לעשות איתי מיד:**\n` +
+      `- **לבדוק עומסים:** שאל "מה לעשות היום?" או "מי הלקוחות הדחופים?".\n` +
+      `- **ייעוץ מכירות והתנגדויות:** שאל "איך לענות ללקוח שטוען שהוא כבר עובד עם באפי?" או "איך לטפל בהתנגדות מחיר?".\n` +
+      `- **איתור מהיר של סוכנות:** הקלד שם של סוכן, סוכנות או מספר טלפון.\n` +
+      `- **הדרכה וסיור במערכת:** בקש "תעשה לי סיור במערכת" לסקירה על כל מסך.\n\n` +
+      `איך תרצה שנתקדם?`;
+
     return {
       id: `ai-${Date.now()}`,
       sender: 'ai',
-      text: `שמעתי אותך בנושא: **"${raw}"**.\n\nסרקתי את כל מאגר הנתונים של ClaimAI (${systemStats.totalClients.toLocaleString()} לקוחות, ${systemStats.totalTickets} משימות מוצר). הנה דרכים מהירות שבהן אוכל לסייע לך:\n\n- 🔍 **חיפוש לקוח או סוכנות:** הקלד שם מלא או חלקי (למשל: "לירז יעקב", "דבאח", "אלמוג") או מספר טלפון.\n- 🚨 **בדיקת עומסים:** בקש "מי הלקוחות הדחופים היום?" או "כמה פגישות נקבעו?".\n- 🧭 **סיור מלא:** שאל "תעשה לי סיור במערכת" לקבלת הדרכה מקיפה.\n- 💡 **שיחה פתוחה עם מודל שפה חכם (ChatGPT/Llama):** לחץ על גלגל ההגדרות למעלה וחבר מפתח חינמי לשיחה חופשית ללא מגבלות!`,
+      text: conversationalReply,
       actions: [
         { type: 'navigate_tab', payload: 'myday', label: '⚡ למסך היום שלי' },
         { type: 'navigate_tab', payload: 'crm', label: '👥 פתח טבלת לקוחות' },
-        { type: 'navigate_tab', payload: 'product', label: '🐛 צפה בתקלות מוצר' }
+        { type: 'navigate_tab', payload: 'product', label: '🐛 תקלות ומוצר' }
       ],
       timestamp: time
     };
