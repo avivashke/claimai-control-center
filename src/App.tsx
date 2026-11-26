@@ -235,7 +235,7 @@ export const App: React.FC = () => {
         return [updatedClient, ...prev];
       }
     });
-    setSelectedClient(updatedClient);
+    setSelectedClient(prev => (prev?.id === updatedClient.id ? updatedClient : prev));
     triggerGoogleSheetsAutoSync();
 
     // Also update any matching row in custom tables (e.g. "דוח לקוחות ללא תיקים")
