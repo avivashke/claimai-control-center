@@ -195,11 +195,7 @@ export const App: React.FC = () => {
       statusSince: new Date().toISOString().slice(0, 10),
       updatedDate: new Date().toISOString().slice(0, 10)
     };
-    await saveClient(updated);
-    setClients(prev => prev.map(c => c.id === clientId ? updated : c));
-    if (selectedClient?.id === clientId) {
-      setSelectedClient(updated);
-    }
+    await handleSaveClient(updated);
   };
 
   const handleUpdateClientBusinessType = async (clientId: string, newBusinessType: string) => {
@@ -211,11 +207,7 @@ export const App: React.FC = () => {
       businessType: newBusinessType,
       updatedDate: new Date().toISOString().slice(0, 10)
     };
-    await saveClient(updated);
-    setClients(prev => prev.map(c => c.id === clientId ? updated : c));
-    if (selectedClient?.id === clientId) {
-      setSelectedClient(updated);
-    }
+    await handleSaveClient(updated);
   };
 
   const handleToggleUrgent = async (clientId: string, isUrgent: boolean, newStatus?: string) => {

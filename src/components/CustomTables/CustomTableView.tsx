@@ -837,12 +837,13 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
                         if (isEditingThis) {
                           return (
                             <td key={col.key} style={cellStyle} className="py-1 px-2" onClick={(e) => e.stopPropagation()}>
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
                                 <input
                                   type={col.type === 'number' ? 'number' : 'text'}
                                   value={editCellValue}
                                   onChange={(e) => setEditCellValue(e.target.value)}
                                   onKeyDown={(e) => {
+                                    e.stopPropagation();
                                     if (e.key === 'Enter') handleSaveInlineCell(row.id, col.key);
                                     else if (e.key === 'Escape') setEditingCell(null);
                                   }}
@@ -851,15 +852,17 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
                                 />
                                 <button
                                   type="button"
-                                  onClick={() => handleSaveInlineCell(row.id, col.key)}
-                                  className="p-1 rounded bg-emerald-600 text-white hover:bg-emerald-500 transition-colors shrink-0"
+                                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSaveInlineCell(row.id, col.key); }}
+                                  className="p-1 rounded bg-emerald-600 text-white hover:bg-emerald-500 transition-colors shrink-0 shadow-sm"
                                   title="שמור שינוי (Enter)"
                                 >
                                   <Check className="w-3 h-3" />
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => setEditingCell(null)}
+                                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingCell(null); }}
                                   className="p-1 rounded bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors shrink-0"
                                   title="בטל (Esc)"
                                 >

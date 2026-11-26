@@ -428,13 +428,14 @@ export const ClientTable: React.FC<ClientTableProps> = ({
             }}
           >
             {isEditingName ? (
-              <div className="flex items-center gap-1.5 w-full" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-1.5 w-full" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
                 <input
                   type="text"
                   autoFocus
                   value={editingCrmValue}
                   onChange={(e) => setEditingCrmValue(e.target.value)}
                   onKeyDown={(e) => {
+                    e.stopPropagation();
                     if (e.key === 'Enter') handleSaveCrmCell(client, 'name');
                     else if (e.key === 'Escape') setEditingCrmCell(null);
                   }}
@@ -444,7 +445,8 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                 />
                 <button
                   type="button"
-                  onMouseDown={(e) => { e.preventDefault(); handleSaveCrmCell(client, 'name'); }}
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSaveCrmCell(client, 'name'); }}
                   className="p-1 rounded bg-blue-600 hover:bg-blue-500 text-white shrink-0 shadow-sm"
                   title="שמור (Enter)"
                 >
@@ -452,7 +454,8 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                 </button>
                 <button
                   type="button"
-                  onMouseDown={(e) => { e.preventDefault(); setEditingCrmCell(null); }}
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingCrmCell(null); }}
                   className="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 shrink-0"
                   title="בטל (Esc)"
                 >
@@ -475,13 +478,14 @@ export const ClientTable: React.FC<ClientTableProps> = ({
             )}
 
             {isEditingCompany ? (
-              <div className="flex items-center gap-1.5 w-full mt-1" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-1.5 w-full mt-1" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
                 <input
                   type="text"
                   autoFocus
                   value={editingCrmValue}
                   onChange={(e) => setEditingCrmValue(e.target.value)}
                   onKeyDown={(e) => {
+                    e.stopPropagation();
                     if (e.key === 'Enter') handleSaveCrmCell(client, 'company');
                     else if (e.key === 'Escape') setEditingCrmCell(null);
                   }}
@@ -491,7 +495,8 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                 />
                 <button
                   type="button"
-                  onMouseDown={(e) => { e.preventDefault(); handleSaveCrmCell(client, 'company'); }}
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSaveCrmCell(client, 'company'); }}
                   className="p-1 rounded bg-blue-600 hover:bg-blue-500 text-white shrink-0 shadow-sm"
                   title="שמור (Enter)"
                 >
@@ -499,7 +504,8 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                 </button>
                 <button
                   type="button"
-                  onMouseDown={(e) => { e.preventDefault(); setEditingCrmCell(null); }}
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingCrmCell(null); }}
                   className="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 shrink-0"
                   title="בטל (Esc)"
                 >
@@ -594,13 +600,14 @@ export const ClientTable: React.FC<ClientTableProps> = ({
         if (isEditingPhone) {
           return (
             <td key={`${client.id}-${col.key}`} style={cellStyle} className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center gap-1 w-full">
+              <div className="flex items-center gap-1 w-full" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
                 <input
                   type="text"
                   autoFocus
                   value={editingCrmValue}
                   onChange={(e) => setEditingCrmValue(e.target.value)}
                   onKeyDown={(e) => {
+                    e.stopPropagation();
                     if (e.key === 'Enter') handleSaveCrmCell(client, 'phone');
                     else if (e.key === 'Escape') setEditingCrmCell(null);
                   }}
@@ -610,15 +617,19 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                 />
                 <button
                   type="button"
-                  onMouseDown={(e) => { e.preventDefault(); handleSaveCrmCell(client, 'phone'); }}
-                  className="p-1 rounded bg-blue-600 hover:bg-blue-500 text-white shrink-0"
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSaveCrmCell(client, 'phone'); }}
+                  className="p-1 rounded bg-blue-600 hover:bg-blue-500 text-white shrink-0 shadow-sm"
+                  title="שמור"
                 >
                   <Check className="w-2.5 h-2.5" />
                 </button>
                 <button
                   type="button"
-                  onMouseDown={(e) => { e.preventDefault(); setEditingCrmCell(null); }}
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingCrmCell(null); }}
                   className="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 shrink-0"
+                  title="בטל"
                 >
                   <X className="w-2.5 h-2.5" />
                 </button>
@@ -630,13 +641,14 @@ export const ClientTable: React.FC<ClientTableProps> = ({
         if (isEditingEmail) {
           return (
             <td key={`${client.id}-${col.key}`} style={cellStyle} className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center gap-1 w-full">
+              <div className="flex items-center gap-1 w-full" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
                 <input
                   type="email"
                   autoFocus
                   value={editingCrmValue}
                   onChange={(e) => setEditingCrmValue(e.target.value)}
                   onKeyDown={(e) => {
+                    e.stopPropagation();
                     if (e.key === 'Enter') handleSaveCrmCell(client, 'email');
                     else if (e.key === 'Escape') setEditingCrmCell(null);
                   }}
@@ -646,15 +658,19 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                 />
                 <button
                   type="button"
-                  onMouseDown={(e) => { e.preventDefault(); handleSaveCrmCell(client, 'email'); }}
-                  className="p-1 rounded bg-blue-600 hover:bg-blue-500 text-white shrink-0"
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSaveCrmCell(client, 'email'); }}
+                  className="p-1 rounded bg-blue-600 hover:bg-blue-500 text-white shrink-0 shadow-sm"
+                  title="שמור"
                 >
                   <Check className="w-2.5 h-2.5" />
                 </button>
                 <button
                   type="button"
-                  onMouseDown={(e) => { e.preventDefault(); setEditingCrmCell(null); }}
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingCrmCell(null); }}
                   className="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 shrink-0"
+                  title="בטל"
                 >
                   <X className="w-2.5 h-2.5" />
                 </button>
@@ -731,13 +747,14 @@ export const ClientTable: React.FC<ClientTableProps> = ({
         if (isEditingNote) {
           return (
             <td key={`${client.id}-${col.key}`} style={cellStyle} className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-start gap-1 w-full">
+              <div className="flex items-start gap-1 w-full" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
                 <textarea
                   autoFocus
                   rows={2}
                   value={editingCrmValue}
                   onChange={(e) => setEditingCrmValue(e.target.value)}
                   onKeyDown={(e) => {
+                    e.stopPropagation();
                     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleSaveCrmCell(client, 'lastNote');
                     else if (e.key === 'Escape') setEditingCrmCell(null);
                   }}
@@ -747,15 +764,17 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                 <div className="flex flex-col gap-1 shrink-0">
                   <button
                     type="button"
-                    onMouseDown={(e) => { e.preventDefault(); handleSaveCrmCell(client, 'lastNote'); }}
-                    className="p-1 rounded bg-blue-600 hover:bg-blue-500 text-white"
+                    onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSaveCrmCell(client, 'lastNote'); }}
+                    className="p-1 rounded bg-blue-600 hover:bg-blue-500 text-white shadow-sm"
                     title="שמור הערה"
                   >
                     <Check className="w-2.5 h-2.5" />
                   </button>
                   <button
                     type="button"
-                    onMouseDown={(e) => { e.preventDefault(); setEditingCrmCell(null); }}
+                    onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingCrmCell(null); }}
                     className="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300"
                     title="בטל (Esc)"
                   >
@@ -1161,7 +1180,9 @@ export const ClientTable: React.FC<ClientTableProps> = ({
     return (
       <select
         value={currentType}
+        onClick={(e) => e.stopPropagation()}
         onChange={(e) => {
+          e.stopPropagation();
           const val = e.target.value;
           if (val === '__add_new__') {
             handleAddGlobalBusinessType(client.id);
