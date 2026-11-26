@@ -43,6 +43,7 @@ import {
   pullFromGoogleSheetsWebhook, 
   getSheetsWebhookUrl 
 } from './services/googleSheetsBackupService';
+import { updateRowFromClient, findRowClientMatch } from './services/crossTableSync';
 
 export const App: React.FC = () => {
   const [theme, setTheme] = useState<AppTheme>(() => {
@@ -234,9 +235,40 @@ export const App: React.FC = () => {
   const handleSaveClient = async (updatedClient: Client) => {
     if (!canEditCrm) return;
     await saveClient(updatedClient);
-    setClients(prev => prev.map(c => c.id === updatedClient.id ? updatedClient : c));
+    setClients(prev => {
+      const exists = prev.some(c => c.id === updatedClient.id);
+      if (exists) {
+        return prev.map(c => c.id === updatedClient.id ? updatedClient : c);
+      } else {
+        return [updatedClient, ...prev];
+      }
+    });
     setSelectedClient(updatedClient);
     triggerGoogleSheetsAutoSync();
+
+    // Also update any matching row in custom tables (e.g. "דוח לקוחות ללא תיקים")
+    setCustomTables(prevTables => {
+      let anyChanged = false;
+      const nextTables = prevTables.map(tbl => {
+        let tableChanged = false;
+        const newRows = tbl.rows.map(row => {
+          const match = findRowClientMatch(row, tbl.columns, [updatedClient]);
+          if (row.id === updatedClient.id || match) {
+            tableChanged = true;
+            return updateRowFromClient(row, updatedClient, tbl.columns);
+          }
+          return row;
+        });
+        if (tableChanged) {
+          anyChanged = true;
+          const updatedTbl = { ...tbl, rows: newRows, updatedAt: new Date().toISOString().slice(0, 10) };
+          saveCustomTable(updatedTbl).catch(console.error);
+          return updatedTbl;
+        }
+        return tbl;
+      });
+      return anyChanged ? nextTables : prevTables;
+    });
   };
 
   const handleAddClient = async (newClient: Client) => {
@@ -491,6 +523,7 @@ export const App: React.FC = () => {
                 onDeleteTable={handleDeleteTable}
                 canEdit={canEditTables}
                 clients={clients}
+                onSelectClient={setSelectedClient}
                 onUpdateClient={handleSaveClient}
                 onBatchUpdateClients={async (updatedClients) => {
                   await saveMultipleClients(updatedClients);

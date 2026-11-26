@@ -25,7 +25,8 @@ import {
   HelpCircle,
   Edit2,
   Save,
-  GripVertical
+  GripVertical,
+  User
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { CustomTable, CustomTableColumn, Client } from '../../types';
@@ -33,7 +34,8 @@ import { FieldManagerModal } from './FieldManagerModal';
 import { 
   findRowClientMatch, 
   updateClientFromRow, 
-  updateRowFromClient, 
+  updateRowFromClient,
+  createClientFromRow,
   executeSeamlessSync,
   SyncResult 
 } from '../../services/crossTableSync';
@@ -49,6 +51,7 @@ interface CustomTableViewProps {
   onDeleteTable?: (tableId: string) => void;
   canEdit?: boolean;
   clients?: Client[];
+  onSelectClient?: (client: Client) => void;
   onUpdateClient?: (updatedClient: Client) => void;
   onBatchUpdateClients?: (updatedClients: Client[]) => void;
 }
@@ -64,6 +67,7 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
   onDeleteTable,
   canEdit = true,
   clients = [],
+  onSelectClient,
   onUpdateClient,
   onBatchUpdateClients
 }) => {
@@ -120,7 +124,7 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
   const totalTableWidth = useMemo(() => {
     const syncWidth = getColWidth({ key: '__crm_sync__' });
     const colsWidth = (currentTable?.columns || []).reduce((sum, col) => sum + getColWidth(col), 0);
-    return 48 + syncWidth + colsWidth + 64;
+    return 48 + syncWidth + colsWidth + 100;
   }, [currentTable?.columns, columnWidths]);
 
   const handleResizeStart = (colKey: string, initialWidth: number, e: React.MouseEvent) => {
@@ -375,6 +379,22 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
     onUpdateTable(updatedTable);
     setActiveSyncToast(`שורת הטבלה עודכנה בהצלחה מנתוני הלקוח "${match.client.name || match.client.company}"!`);
     setTimeout(() => setActiveSyncToast(null), 3500);
+  };
+
+  // Open Client Card: if matched to existing CRM client, open that client; otherwise create Client object from row
+  const handleOpenClientCard = (row: Record<string, any>) => {
+    if (!onSelectClient) return;
+
+    // Check if this row has an overlapping match with an existing client in CRM
+    const match = rowMatches.get(row.id) || findRowClientMatch(row, currentTable?.columns || [], clients);
+    if (match && match.client) {
+      onSelectClient(match.client);
+      return;
+    }
+
+    // Otherwise create a client object from this row and open card
+    const clientFromRow = createClientFromRow(row, currentTable?.columns || [], currentTable?.name);
+    onSelectClient(clientFromRow);
   };
 
   // Bulk Seamless Auto-Sync
@@ -711,7 +731,7 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
                 })}
 
                 {/* Actions Header */}
-                <th style={{ backgroundColor: 'var(--bg-th, #0f172a)', width: '64px', minWidth: '64px', maxWidth: '64px' }} className="sticky top-0 z-20 bg-slate-900 shadow-sm py-2 px-3 text-center text-slate-400 border-b border-slate-700 transition-colors">
+                <th style={{ backgroundColor: 'var(--bg-th, #0f172a)', width: '100px', minWidth: '100px', maxWidth: '100px' }} className="sticky top-0 z-20 bg-slate-900 shadow-sm py-2 px-3 text-center text-slate-400 border-b border-slate-700 transition-colors">
                   פעולות
                 </th>
               </tr>
@@ -731,9 +751,11 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
                   return (
                     <tr 
                       key={row.id || idx}
-                      className={`monday-table-row transition-all group ${
+                      onClick={() => handleOpenClientCard(row)}
+                      className={`monday-table-row transition-all group cursor-pointer hover:bg-slate-800/60 ${
                         match ? 'bg-amber-950/20' : ''
                       }`}
+                      title={match ? `לחץ לפתיחת כרטיס הלקוח "${match.client.name || match.client.company}"` : "לחץ לפתיחת כרטיס לקוח"}
                     >
                       {/* Index */}
                       <td className="py-2 px-3 font-mono text-[10px] text-slate-500 text-center">
@@ -934,16 +956,33 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
                         );
                       })}
 
-                      {/* Row Delete Action */}
-                      <td className="py-2 px-3 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteRow(row.id)}
-                          className="text-slate-600 hover:text-rose-400 transition-colors p-1"
-                          title="מחק שורה"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                      {/* Row Actions: Open Card + Delete */}
+                      <td 
+                        style={{ width: '100px', minWidth: '100px', maxWidth: '100px' }} 
+                        className="py-2 px-2 text-center" 
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenClientCard(row)}
+                            className="px-2 py-1 rounded-md bg-slate-800 hover:bg-blue-600 text-slate-200 hover:text-white border border-slate-700 hover:border-blue-500 text-[10px] font-semibold transition-all shadow-sm flex items-center gap-1 cursor-pointer"
+                            title={match ? `פתח כרטיס לקוח קיים (${match.client.name || match.client.company})` : "פתח כרטיס לקוח"}
+                          >
+                            <User className="w-3 h-3 text-blue-400 group-hover:text-white" />
+                            <span>כרטיס</span>
+                          </button>
+                          {canEdit && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteRow(row.id)}
+                              className="text-slate-500 hover:text-rose-400 p-1 rounded hover:bg-slate-800 transition-colors cursor-pointer"
+                              title="מחק שורה"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

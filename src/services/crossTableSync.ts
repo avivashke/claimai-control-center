@@ -421,6 +421,82 @@ export const updateRowFromClient = (
   return updated;
 };
 
+// 3. Create a full Client object from a Custom Table row
+export const createClientFromRow = (
+  row: Record<string, any>,
+  columns: CustomTableColumn[],
+  tableName?: string
+): Client => {
+  let name = '';
+  let company = '';
+  let phone = '';
+  let email = '';
+  let businessType = '';
+  let status = "1'st Lead";
+  let notes = '';
+  let lastContact = '';
+  const customFields: Record<string, any> = {};
+
+  columns.forEach(col => {
+    const val = row[col.key];
+    if (val === undefined || val === null || val === '') return;
+    const strVal = String(val).trim();
+    if (!strVal) return;
+
+    const mapping = getMappedClientField(col.key, col.label);
+    if (mapping) {
+      if (mapping.clientField === 'name') name = strVal;
+      else if (mapping.clientField === 'company') company = strVal;
+      else if (mapping.clientField === 'phone') phone = strVal;
+      else if (mapping.clientField === 'email') email = strVal;
+      else if (mapping.clientField === 'businessType') businessType = strVal;
+      else if (mapping.clientField === 'status') status = strVal;
+      else if (mapping.clientField === 'lastNote') notes = strVal;
+      else if (mapping.clientField === 'lastContactDate') lastContact = strVal;
+      else customFields[col.label || col.key] = strVal;
+    } else {
+      if (col.type === 'phone' || col.label.includes('טלפון')) {
+        if (!phone) phone = strVal;
+      } else if (col.type === 'email' || col.label.includes('אימייל') || col.label.includes('מייל')) {
+        if (!email) email = strVal;
+      } else if (col.label.includes('חברה')) {
+        if (!company) company = strVal;
+      } else if (col.label.includes('שם') && !col.label.includes('חברה')) {
+        if (!name) name = strVal;
+      } else if (col.label.includes('סוג עסק') || col.label.includes('תחום')) {
+        if (!businessType) businessType = strVal;
+      } else {
+        customFields[col.label || col.key] = strVal;
+      }
+    }
+  });
+
+  // Fallbacks from raw row keys if columns didn't catch them
+  if (!name) name = row.name || row.fullName || row['שם מלא'] || row['שם איש קשר'] || company || 'לקוח מטבלה';
+  if (!company) company = row.company || row['חברה / עסק'] || row['חברה'] || name;
+  if (!phone) phone = row.phone || row['טלפון'] || row.mobile || '';
+  if (!email) email = row.email || row['אימייל'] || row.mail || '';
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  return {
+    id: row.id || `client-row-${Date.now()}`,
+    name,
+    company: company || name,
+    phone,
+    email,
+    businessType: businessType || (tableName ? `מטבלת ${tableName}` : 'לקוח כללי'),
+    status: status || "1'st Lead",
+    priority: '3',
+    createdDate: row.created || row.createdDate || today,
+    lastContactDate: lastContact || today,
+    statusSince: today,
+    updatedDate: today,
+    lastNote: notes || (tableName ? `מקור: ${tableName}` : undefined),
+    customFields
+  };
+};
+
 // 3. Execute Seamless Automatic Sync across all matching records between table and CRM clients
 export const executeSeamlessSync = (
   table: CustomTable,

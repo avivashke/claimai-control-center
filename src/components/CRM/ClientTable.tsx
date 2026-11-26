@@ -1221,6 +1221,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
           }}
           canEdit={canEdit}
           clients={clients}
+          onSelectClient={onSelectClient}
           onUpdateClient={onUpdateClient}
           onBatchUpdateClients={onBatchUpdateClients}
           onOpenAiStudio={onOpenAiStudio}
