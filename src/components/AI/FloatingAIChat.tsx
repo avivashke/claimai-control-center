@@ -135,6 +135,20 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
     }
   }, [messages, isOpen, isMinimized]);
 
+  useEffect(() => {
+    if (clients.length > 0) {
+      setMessages(prev => {
+        if (prev.length === 1 && prev[0].id === 'msg-welcome') {
+          return [{
+            ...prev[0],
+            text: `שלום ${currentUser.name}! אני ה-Copilot החכם של ClaimAI Control Center 🤖. \n\nאני מחובר בזמן אמת לכל מאגר המידע: **${clients.length.toLocaleString()} לקוחות**, **${productItems.length} משימות מוצר ותקלות**, ודוחות הפעילות. \n\nתוכל לבקש ממני:\n- 🧭 **"תעשה לי סיור במערכת"** – הדרכה מלאה על כל מסך וכלי\n- 🚨 **"מי הלקוחות הדחופים היום?"** – מעקב וטיפול מיידי\n- 🔍 **חיפוש לקוח לפי שם, חברה או טלפון** – עם קישורי רשת וואטסאפ\n- 💡 **טיפים לשיחה והתמודדות עם התנגדויות** ("באפי", מחיר וכו')`
+          }];
+        }
+        return prev;
+      });
+    }
+  }, [clients.length, productItems.length, currentUser.name]);
+
   // Handle Saving Direct Key
   const handleSaveDirectKey = () => {
     setDirectAIKey(directKeyInput, aiProviderInput);
@@ -330,8 +344,10 @@ export const FloatingAIChat: React.FC<FloatingAIChatProps> = ({
     }
 
     // 2. Greetings, Warm Check-ins & Small Talk
-    const isGreeting = /^(היי|שלום|אהלן|היוש|בוקר טוב|ערב טוב|צהריים טובים|מה נשמע|מה קורה|מה המצב|איך הולך|איך אתה|מה שלומך|שבוע טוב|שבת שלום)\b/i.test(q) ||
-      ['היי', 'שלום', 'אהלן', 'מה קורה', 'מה נשמע', 'מה המצב', 'מי אתה', 'איך קוראים לך', 'איך אתה יכול לעזור'].includes(q);
+    const isGreeting = q.includes('היי') || q.includes('שלום') || q.includes('אהלן') || q.includes('היוש') ||
+      q.includes('מה קורה') || q.includes('מה נשמע') || q.includes('מה המצב') || q.includes('איך הולך') ||
+      q.includes('איך אתה') || q.includes('מה שלומך') || q.includes('בוקר טוב') || q.includes('ערב טוב') ||
+      q.includes('מי אתה') || q.includes('איך קוראים לך') || q.includes('איך אתה יכול לעזור');
 
     if (isGreeting) {
       const greetingResponses = [
