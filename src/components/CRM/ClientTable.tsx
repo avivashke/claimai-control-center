@@ -37,6 +37,7 @@ import {
   X
 } from 'lucide-react';
 import { Client, CustomTable, CrmCustomColumn } from '../../types';
+import { formatLeadDate } from '../../services/googleSheetsBackupService';
 import { CustomTableView } from '../CustomTables/CustomTableView';
 import { UploadTableModal } from '../CustomTables/UploadTableModal';
 import { CrmColumnManagerModal } from './CrmColumnManagerModal';
@@ -858,7 +859,8 @@ export const ClientTable: React.FC<ClientTableProps> = ({
 
       case 'createdDate': {
         const isEditingCreatedDate = editingCrmCell?.clientId === client.id && editingCrmCell.field === 'createdDate';
-        const displayCreatedDate = client.createdDate || client.customFields?.leadDate || '';
+        const rawCreatedDate = client.createdDate || client.customFields?.leadDate || '';
+        const displayCreatedDate = formatLeadDate(rawCreatedDate);
 
         if (isEditingCreatedDate) {
           return (

@@ -33,6 +33,28 @@ export const getLastSheetsPullTime = (): string | null => {
   return localStorage.getItem(LAST_PULL_STORAGE_KEY);
 };
 
+export const formatLeadDate = (val?: string): string => {
+  if (!val) return '';
+  const trimmed = val.trim();
+  if (trimmed.includes('T') && (trimmed.endsWith('Z') || trimmed.includes('+'))) {
+    try {
+      const d = new Date(trimmed);
+      if (!isNaN(d.getTime())) {
+        const day = d.getDate();
+        const month = d.getMonth() + 1;
+        const year = d.getFullYear();
+        const hours = d.getHours();
+        const minutes = d.getMinutes();
+        if (hours === 0 && minutes === 0) {
+          return `${day}.${month}.${year}`;
+        }
+        return `${day}.${month}.${year} ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+      }
+    } catch {}
+  }
+  return trimmed;
+};
+
 // Exact column headers matching Claimai_CRM spreadsheet - Sheet 'ראשי'
 export const CRM_EXACT_HEADERS = [
   'ID',
@@ -587,11 +609,33 @@ export const pullFromGoogleSheetsWebhook = async (customUrl?: string): Promise<{
 
     // 2. Process 'ראשי' sheet rows (includes notes)
     if (data.clients && Array.isArray(data.clients) && data.clients.length > 0) {
+      const currentClients = await db.clients.toArray();
+      const currentMap = new Map<string, Client>();
+      currentClients.forEach(c => currentMap.set(c.id, c));
+
       const incomingClients: Client[] = [];
       for (const row of data.clients) {
         const client = mapSheetRowToClient(row);
         if (client) {
-          incomingClients.push(client);
+          const existing = currentMap.get(client.id);
+          if (existing) {
+            incomingClients.push({
+              ...existing,
+              ...client,
+              createdDate: formatLeadDate(client.createdDate || existing.createdDate),
+              nextFollowUpDate: client.nextFollowUpDate || existing.nextFollowUpDate,
+              lastNote: client.lastNote || existing.lastNote,
+              generalNotes: client.generalNotes || existing.generalNotes,
+              location: client.location || existing.location,
+              teamContacts: client.teamContacts || existing.teamContacts,
+              itContact: client.itContact || existing.itContact
+            });
+          } else {
+            incomingClients.push({
+              ...client,
+              createdDate: formatLeadDate(client.createdDate)
+            });
+          }
         }
       }
 

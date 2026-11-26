@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { Client, ProductItem, AppUser, ProductPriority, ProductItemCategory } from '../../types';
 import { getClientSmartAdvice, ClientEngagementAdvice } from '../../services/aiWorkerService';
+import { formatLeadDate } from '../../services/googleSheetsBackupService';
 
 interface ClientDrawerProps {
   client: Client | null;
@@ -574,7 +575,7 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
                 <label className="block text-xs text-slate-400 mb-1">מועד השארת פרטים</label>
                 <input
                   type="text"
-                  value={formData.createdDate || (formData.customFields as any)?.leadDate || ''}
+                  value={formatLeadDate(formData.createdDate || (formData.customFields as any)?.leadDate || '')}
                   onChange={(e) => setFormData({ ...formData, createdDate: e.target.value })}
                   placeholder="למשל: 4.1.2026"
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
