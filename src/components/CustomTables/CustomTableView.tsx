@@ -330,15 +330,14 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
     onUpdateTable(updatedTable);
   };
 
-  // Save inline cell edit
+  // Save inline cell edit with automatic cross-table sync!
   const handleSaveInlineCell = (rowId: string, colKey: string) => {
     if (!currentTable) return;
-    const updatedRows = currentTable.rows.map(r => {
-      if (r.id === rowId) {
-        return { ...r, [colKey]: editCellValue };
-      }
-      return r;
-    });
+    const targetRow = currentTable.rows.find(r => r.id === rowId);
+    if (!targetRow) return;
+
+    const newRow = { ...targetRow, [colKey]: editCellValue };
+    const updatedRows = currentTable.rows.map(r => r.id === rowId ? newRow : r);
 
     const updatedTable: CustomTable = {
       ...currentTable,
@@ -348,6 +347,15 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
 
     onUpdateTable(updatedTable);
     setEditingCell(null);
+
+    // Two-way cross-table sync: If this row overlaps with a client in CRM (or another table), sync it automatically!
+    const match = rowMatches.get(rowId) || findRowClientMatch(targetRow, currentTable.columns, clients);
+    if (match && match.client && onUpdateClient) {
+      const updatedClient = updateClientFromRow(match.client, newRow, currentTable.columns);
+      onUpdateClient(updatedClient);
+      setActiveSyncToast(`השינוי עודכן וסונכרן אוטומטית מול כרטיס הלקוח "${updatedClient.name || updatedClient.company}"!`);
+      setTimeout(() => setActiveSyncToast(null), 3000);
+    }
   };
 
   // Single Row: Update Client in Main Table from this Row
@@ -828,26 +836,32 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
 
                         if (isEditingThis) {
                           return (
-                            <td key={col.key} style={cellStyle} className="py-1 px-2">
+                            <td key={col.key} style={cellStyle} className="py-1 px-2" onClick={(e) => e.stopPropagation()}>
                               <div className="flex items-center gap-1">
                                 <input
                                   type={col.type === 'number' ? 'number' : 'text'}
                                   value={editCellValue}
                                   onChange={(e) => setEditCellValue(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleSaveInlineCell(row.id, col.key);
+                                    else if (e.key === 'Escape') setEditingCell(null);
+                                  }}
                                   autoFocus
-                                  className="w-full bg-slate-950 border border-purple-500 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none"
+                                  className="w-full bg-slate-950 border border-purple-500 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none shadow-inner"
                                 />
                                 <button
                                   type="button"
                                   onClick={() => handleSaveInlineCell(row.id, col.key)}
-                                  className="p-1 rounded bg-emerald-600 text-white hover:bg-emerald-500"
+                                  className="p-1 rounded bg-emerald-600 text-white hover:bg-emerald-500 transition-colors shrink-0"
+                                  title="שמור שינוי (Enter)"
                                 >
                                   <Check className="w-3 h-3" />
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => setEditingCell(null)}
-                                  className="p-1 rounded bg-slate-700 text-slate-300"
+                                  className="p-1 rounded bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors shrink-0"
+                                  title="בטל (Esc)"
                                 >
                                   <X className="w-3 h-3" />
                                 </button>
@@ -862,8 +876,10 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
                             <td 
                               key={col.key} 
                               style={cellStyle}
-                              className="py-2 px-3 whitespace-nowrap font-mono text-slate-300 cursor-pointer overflow-hidden"
-                              onDoubleClick={() => {
+                              className="py-2 px-3 whitespace-nowrap font-mono text-slate-300 cursor-pointer overflow-hidden hover:bg-purple-900/20 transition-colors"
+                              title="לחץ לעריכת טלפון (או לחץ על אייקון וואטסאפ לפתיחת שיחה)"
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setEditingCell({ rowId: row.id, colKey: col.key });
                                 setEditCellValue(String(val || ''));
                               }}
@@ -875,6 +891,7 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
                                     href={`https://wa.me/${wa}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
                                     className="w-5 h-5 rounded bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 flex items-center justify-center border border-emerald-500/30 shrink-0"
                                     title="פתח שיחת וואטסאפ"
                                   >
@@ -891,15 +908,17 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
                             <td 
                               key={col.key} 
                               style={cellStyle}
-                              className="py-2 px-3 whitespace-nowrap cursor-pointer overflow-hidden"
-                              onDoubleClick={() => {
+                              className="py-2 px-3 whitespace-nowrap cursor-pointer overflow-hidden hover:bg-purple-900/20 transition-colors"
+                              title="לחץ לעריכת אימייל"
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setEditingCell({ rowId: row.id, colKey: col.key });
                                 setEditCellValue(String(val || ''));
                               }}
                             >
-                              <a href={`mailto:${val}`} className="text-blue-400 hover:underline truncate block">
+                              <span className="text-blue-400 hover:underline truncate block">
                                 {String(val)}
-                              </a>
+                              </span>
                             </td>
                           );
                         }
@@ -909,8 +928,10 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
                             <td 
                               key={col.key} 
                               style={cellStyle}
-                              className="py-2 px-3 whitespace-nowrap cursor-pointer overflow-hidden"
-                              onDoubleClick={() => {
+                              className="py-2 px-3 whitespace-nowrap cursor-pointer overflow-hidden hover:bg-purple-900/20 transition-colors"
+                              title="לחץ לעריכת ערך"
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setEditingCell({ rowId: row.id, colKey: col.key });
                                 setEditCellValue(String(val || ''));
                               }}
@@ -927,8 +948,10 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
                             <td 
                               key={col.key} 
                               style={cellStyle}
-                              className="py-2 px-3 whitespace-nowrap font-mono font-bold text-slate-200 cursor-pointer overflow-hidden"
-                              onDoubleClick={() => {
+                              className="py-2 px-3 whitespace-nowrap font-mono font-bold text-slate-200 cursor-pointer overflow-hidden hover:bg-purple-900/20 transition-colors"
+                              title="לחץ לעריכת מספר"
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setEditingCell({ rowId: row.id, colKey: col.key });
                                 setEditCellValue(String(val ?? ''));
                               }}
@@ -944,9 +967,10 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
                           <td 
                             key={col.key} 
                             style={cellStyle}
-                            className="py-2 px-3 text-slate-300 whitespace-nowrap truncate cursor-pointer hover:text-white overflow-hidden"
-                            title={String(val || '')}
-                            onDoubleClick={() => {
+                            className="py-2 px-3 text-slate-300 whitespace-nowrap truncate cursor-pointer hover:text-white hover:bg-purple-900/20 transition-colors overflow-hidden"
+                            title={String(val || 'לחץ לעריכה')}
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setEditingCell({ rowId: row.id, colKey: col.key });
                               setEditCellValue(String(val ?? ''));
                             }}

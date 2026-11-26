@@ -118,21 +118,29 @@ export const ClientTable: React.FC<ClientTableProps> = ({
   const [additionalBusinessTypes, setAdditionalBusinessTypes] = useState<string[]>([]);
   const [expandedGroupLimits, setExpandedGroupLimits] = useState<Record<string, number>>({});
 
-  // Inline editing for client name
-  const [editingClientId, setEditingClientId] = useState<string | null>(null);
-  const [editingClientName, setEditingClientName] = useState<string>('');
+  // Inline editing for CRM client fields (name, company, phone, email, lastNote)
+  const [editingCrmCell, setEditingCrmCell] = useState<{ clientId: string; field: string } | null>(null);
+  const [editingCrmValue, setEditingCrmValue] = useState<string>('');
 
-  const handleSaveInlineName = (client: Client, newName: string) => {
-    const trimmed = newName.trim();
-    setEditingClientId(null);
-    if (!trimmed || trimmed === client.name) return;
-    if (onUpdateClient) {
-      onUpdateClient({
-        ...client,
-        name: trimmed,
-        updatedDate: new Date().toISOString().slice(0, 10)
-      });
-    }
+  const handleStartEditCrmCell = (clientId: string, field: string, initialVal: string, e?: React.MouseEvent) => {
+    if (!canEdit) return;
+    if (e) e.stopPropagation();
+    setEditingCrmCell({ clientId, field });
+    setEditingCrmValue(initialVal || '');
+  };
+
+  const handleSaveCrmCell = (client: Client, field: string) => {
+    setEditingCrmCell(null);
+    if (!canEdit || !onUpdateClient) return;
+    const trimmed = editingCrmValue.trim();
+    if (trimmed === (client as any)[field]) return;
+
+    const updated: Client = {
+      ...client,
+      [field]: trimmed,
+      updatedDate: new Date().toISOString().slice(0, 10)
+    };
+    onUpdateClient(updated);
   };
 
   // CRM Main Table Custom Columns (persistent in localStorage)
@@ -405,87 +413,115 @@ export const ClientTable: React.FC<ClientTableProps> = ({
 
     switch (col.key) {
       case 'contact':
+        const isEditingName = editingCrmCell?.clientId === client.id && editingCrmCell.field === 'name';
+        const isEditingCompany = editingCrmCell?.clientId === client.id && editingCrmCell.field === 'company';
+
         return (
           <td 
             key={`${client.id}-${col.key}`}
             style={{ ...cellStyle, borderRight: `4px solid ${accentColor}` }}
             className="py-2 px-2.5 overflow-hidden"
             onClick={(e) => {
-              if (editingClientId === client.id) {
+              if (isEditingName || isEditingCompany) {
                 e.stopPropagation();
               }
             }}
           >
-            {editingClientId === client.id ? (
-              <div className="flex items-center gap-1.5 min-w-[210px] w-full" onClick={(e) => e.stopPropagation()}>
+            {isEditingName ? (
+              <div className="flex items-center gap-1.5 w-full" onClick={(e) => e.stopPropagation()}>
                 <input
                   type="text"
                   autoFocus
-                  value={editingClientName}
-                  onChange={(e) => setEditingClientName(e.target.value)}
+                  value={editingCrmValue}
+                  onChange={(e) => setEditingCrmValue(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handleSaveInlineName(client, editingClientName);
-                    } else if (e.key === 'Escape') {
-                      setEditingClientId(null);
-                    }
+                    if (e.key === 'Enter') handleSaveCrmCell(client, 'name');
+                    else if (e.key === 'Escape') setEditingCrmCell(null);
                   }}
-                  onBlur={() => handleSaveInlineName(client, editingClientName)}
-                  className="flex-1 text-[11px] font-semibold bg-slate-850 text-white border border-blue-500 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-inner"
+                  onBlur={() => handleSaveCrmCell(client, 'name')}
+                  className="flex-1 text-[11px] font-semibold bg-slate-850 text-white border border-blue-500 rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-inner w-full"
                   placeholder="שם לקוח"
                 />
                 <button
                   type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    handleSaveInlineName(client, editingClientName);
-                  }}
-                  className="p-1 rounded bg-blue-600 hover:bg-blue-500 text-white shrink-0 shadow-sm transition-transform active:scale-95"
-                  title="שמור שינוי (Enter)"
+                  onMouseDown={(e) => { e.preventDefault(); handleSaveCrmCell(client, 'name'); }}
+                  className="p-1 rounded bg-blue-600 hover:bg-blue-500 text-white shrink-0 shadow-sm"
+                  title="שמור (Enter)"
                 >
                   <Check className="w-3 h-3" />
                 </button>
                 <button
                   type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    setEditingClientId(null);
-                  }}
-                  className="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 shrink-0 transition-transform active:scale-95"
+                  onMouseDown={(e) => { e.preventDefault(); setEditingCrmCell(null); }}
+                  className="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 shrink-0"
                   title="בטל (Esc)"
                 >
                   <X className="w-3 h-3" />
                 </button>
               </div>
             ) : (
-              <div className="flex items-center justify-between group/name gap-1.5">
-                <div 
-                  className="font-semibold text-slate-100 group-hover:text-blue-400 transition-colors text-[10px] leading-tight truncate flex-1"
-                >
+              <div 
+                className="flex items-center justify-between group/name gap-1.5 cursor-pointer hover:bg-blue-950/30 rounded px-1 -mx-1 transition-colors"
+                title="לחץ לעריכת שם הלקוח"
+                onClick={(e) => handleStartEditCrmCell(client.id, 'name', client.name || '', e)}
+              >
+                <div className="font-semibold text-slate-100 group-hover/name:text-blue-400 transition-colors text-[10px] leading-tight truncate flex-1">
                   {client.name || 'ללא שם'}
                 </div>
                 {canEdit && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setEditingClientId(client.id);
-                      setEditingClientName(client.name || '');
-                    }}
-                    className="opacity-30 group-hover:opacity-100 hover:opacity-100 p-0.5 rounded hover:bg-slate-700 text-slate-400 hover:text-blue-400 transition-all shrink-0"
-                    title="ערוך שם לקוח"
-                  >
-                    <Pencil className="w-2.5 h-2.5" />
-                  </button>
+                  <Pencil className="w-2.5 h-2.5 opacity-0 group-hover/name:opacity-100 text-slate-400 hover:text-blue-400 transition-opacity shrink-0" />
                 )}
               </div>
             )}
-            {client.company && client.company !== client.name && (
-              <div className="text-[8px] text-slate-400 flex items-center gap-0.5 mt-0.5">
-                <Building className="w-2 h-2 text-slate-500" />
-                <span className="truncate">{client.company}</span>
+
+            {isEditingCompany ? (
+              <div className="flex items-center gap-1.5 w-full mt-1" onClick={(e) => e.stopPropagation()}>
+                <input
+                  type="text"
+                  autoFocus
+                  value={editingCrmValue}
+                  onChange={(e) => setEditingCrmValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveCrmCell(client, 'company');
+                    else if (e.key === 'Escape') setEditingCrmCell(null);
+                  }}
+                  onBlur={() => handleSaveCrmCell(client, 'company')}
+                  className="flex-1 text-[10px] bg-slate-850 text-white border border-blue-500 rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-inner w-full"
+                  placeholder="שם חברה / משרד"
+                />
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); handleSaveCrmCell(client, 'company'); }}
+                  className="p-1 rounded bg-blue-600 hover:bg-blue-500 text-white shrink-0 shadow-sm"
+                  title="שמור (Enter)"
+                >
+                  <Check className="w-2.5 h-2.5" />
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); setEditingCrmCell(null); }}
+                  className="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 shrink-0"
+                  title="בטל (Esc)"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </div>
+            ) : (
+              <div 
+                className="text-[8px] text-slate-400 flex items-center justify-between gap-1 mt-0.5 cursor-pointer hover:bg-blue-950/30 rounded px-1 -mx-1 group/comp transition-colors"
+                title="לחץ לעריכת שם חברה / עסק"
+                onClick={(e) => handleStartEditCrmCell(client.id, 'company', client.company || '', e)}
+              >
+                <div className="flex items-center gap-0.5 truncate flex-1">
+                  <Building className="w-2 h-2 text-slate-500 shrink-0" />
+                  <span className="truncate">{client.company || 'הוסף חברה'}</span>
+                </div>
+                {canEdit && (
+                  <Pencil className="w-2 h-2 opacity-0 group-hover/comp:opacity-100 text-slate-500 hover:text-blue-400 transition-opacity shrink-0" />
+                )}
               </div>
             )}
+
             {client.requiresAttention && (
               <button
                 type="button"
@@ -552,10 +588,85 @@ export const ClientTable: React.FC<ClientTableProps> = ({
         );
 
       case 'contactDetails':
+        const isEditingPhone = editingCrmCell?.clientId === client.id && editingCrmCell.field === 'phone';
+        const isEditingEmail = editingCrmCell?.clientId === client.id && editingCrmCell.field === 'email';
+
+        if (isEditingPhone) {
+          return (
+            <td key={`${client.id}-${col.key}`} style={cellStyle} className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-1 w-full">
+                <input
+                  type="text"
+                  autoFocus
+                  value={editingCrmValue}
+                  onChange={(e) => setEditingCrmValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveCrmCell(client, 'phone');
+                    else if (e.key === 'Escape') setEditingCrmCell(null);
+                  }}
+                  onBlur={() => handleSaveCrmCell(client, 'phone')}
+                  className="flex-1 text-[9px] font-mono bg-slate-850 text-white border border-blue-500 rounded px-1.5 py-0.5 focus:outline-none shadow-inner w-full"
+                  placeholder="מספר טלפון"
+                />
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); handleSaveCrmCell(client, 'phone'); }}
+                  className="p-1 rounded bg-blue-600 hover:bg-blue-500 text-white shrink-0"
+                >
+                  <Check className="w-2.5 h-2.5" />
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); setEditingCrmCell(null); }}
+                  className="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 shrink-0"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </div>
+            </td>
+          );
+        }
+
+        if (isEditingEmail) {
+          return (
+            <td key={`${client.id}-${col.key}`} style={cellStyle} className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-1 w-full">
+                <input
+                  type="email"
+                  autoFocus
+                  value={editingCrmValue}
+                  onChange={(e) => setEditingCrmValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveCrmCell(client, 'email');
+                    else if (e.key === 'Escape') setEditingCrmCell(null);
+                  }}
+                  onBlur={() => handleSaveCrmCell(client, 'email')}
+                  className="flex-1 text-[9px] bg-slate-850 text-white border border-blue-500 rounded px-1.5 py-0.5 focus:outline-none shadow-inner w-full"
+                  placeholder="כתובת אימייל"
+                />
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); handleSaveCrmCell(client, 'email'); }}
+                  className="p-1 rounded bg-blue-600 hover:bg-blue-500 text-white shrink-0"
+                >
+                  <Check className="w-2.5 h-2.5" />
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); setEditingCrmCell(null); }}
+                  className="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 shrink-0"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </div>
+            </td>
+          );
+        }
+
         return (
           <td key={`${client.id}-${col.key}`} style={cellStyle} className="py-2 px-2.5 overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-1 overflow-hidden">
-              {client.phone && (
+              {client.phone ? (
                 <>
                   <a
                     href={`tel:${client.phone}`}
@@ -575,30 +686,95 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                       <MessageSquare className="w-2.5 h-2.5" />
                     </a>
                   )}
-                  <span className="font-mono text-[8px] text-slate-300 truncate">
+                  <span 
+                    className="font-mono text-[8px] text-slate-300 truncate cursor-pointer hover:text-blue-400 hover:underline"
+                    title="לחץ לעריכת טלפון"
+                    onClick={(e) => handleStartEditCrmCell(client.id, 'phone', client.phone || '', e)}
+                  >
                     {client.phone}
                   </span>
                 </>
-              )}
-              {!client.phone && (
-                <span className="text-slate-600 text-[8px] truncate">אין טלפון</span>
-              )}
-              {client.email && (
-                <a
-                  href={`mailto:${client.email}`}
-                  title={client.email}
-                  className="w-5 h-5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-all mr-0.5 shrink-0"
+              ) : (
+                <span 
+                  className="text-slate-600 text-[8px] truncate cursor-pointer hover:text-slate-400"
+                  title="לחץ להוספת טלפון"
+                  onClick={(e) => handleStartEditCrmCell(client.id, 'phone', '', e)}
                 >
-                  <Mail className="w-2.5 h-2.5" />
-                </a>
+                  + טלפון
+                </span>
+              )}
+
+              {client.email ? (
+                <span 
+                  className="text-blue-400 hover:underline text-[8px] truncate cursor-pointer mr-0.5 max-w-[120px] block"
+                  title={`לחץ לעריכת אימייל (${client.email})`}
+                  onClick={(e) => handleStartEditCrmCell(client.id, 'email', client.email || '', e)}
+                >
+                  {client.email}
+                </span>
+              ) : (
+                <span 
+                  className="text-slate-600 text-[8px] truncate cursor-pointer hover:text-slate-400 mr-0.5"
+                  title="לחץ להוספת אימייל"
+                  onClick={(e) => handleStartEditCrmCell(client.id, 'email', '', e)}
+                >
+                  + אימייל
+                </span>
               )}
             </div>
           </td>
         );
 
       case 'lastNote':
+        const isEditingNote = editingCrmCell?.clientId === client.id && editingCrmCell.field === 'lastNote';
+
+        if (isEditingNote) {
+          return (
+            <td key={`${client.id}-${col.key}`} style={cellStyle} className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-start gap-1 w-full">
+                <textarea
+                  autoFocus
+                  rows={2}
+                  value={editingCrmValue}
+                  onChange={(e) => setEditingCrmValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleSaveCrmCell(client, 'lastNote');
+                    else if (e.key === 'Escape') setEditingCrmCell(null);
+                  }}
+                  className="flex-1 text-[9px] bg-slate-850 text-white border border-blue-500 rounded px-2 py-1 focus:outline-none shadow-inner w-full resize-none"
+                  placeholder="הזן הערה (Ctrl+Enter לשמירה)"
+                />
+                <div className="flex flex-col gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); handleSaveCrmCell(client, 'lastNote'); }}
+                    className="p-1 rounded bg-blue-600 hover:bg-blue-500 text-white"
+                    title="שמור הערה"
+                  >
+                    <Check className="w-2.5 h-2.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); setEditingCrmCell(null); }}
+                    className="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300"
+                    title="בטל (Esc)"
+                  >
+                    <X className="w-2.5 h-2.5" />
+                  </button>
+                </div>
+              </div>
+            </td>
+          );
+        }
+
         return (
-          <td key={`${client.id}-${col.key}`} style={cellStyle} className="py-2 px-2.5 overflow-hidden">
+          <td 
+            key={`${client.id}-${col.key}`} 
+            style={cellStyle} 
+            className="py-2 px-2.5 overflow-hidden cursor-pointer hover:bg-blue-950/20 transition-colors"
+            title="לחץ לעריכת הערה"
+            onClick={(e) => handleStartEditCrmCell(client.id, 'lastNote', client.lastNote || '', e)}
+          >
             {(() => {
               const hasLastNote = !!client.lastNote?.trim();
               const hasGeneralNotes = !!client.generalNotes?.trim();
