@@ -578,8 +578,14 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
         {/* Filter and Search Sub-bar */}
         <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-800 flex-wrap">
           <div className="flex items-center gap-2 flex-1 max-w-md">
-            <div className="relative w-full">
-              <Search className="absolute right-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+            <div 
+              className="relative w-full cursor-text"
+              onClick={(e) => {
+                const input = (e.currentTarget.querySelector('input') as HTMLInputElement);
+                input?.focus();
+              }}
+            >
+              <Search className="absolute right-3 top-2.5 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
               <input
                 type="text"
                 placeholder="חיפוש בטבלה..."

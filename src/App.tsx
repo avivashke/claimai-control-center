@@ -436,10 +436,19 @@ export const App: React.FC = () => {
         blobsConnected={blobsConnected}
         theme={theme}
         onThemeChange={setTheme}
+        clients={clients}
+        productItems={productItems}
+        customTables={customTables}
+        onSelectClient={setSelectedClient}
+        onSelectTicket={setSelectedTicket}
+        onSelectTable={(tableId) => {
+          setSelectedCustomTableId(tableId);
+          setActiveTab('custom_tables');
+        }}
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 max-w-[1920px] w-full mx-auto px-3 sm:px-6 lg:px-8 py-6">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-3">
             <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>

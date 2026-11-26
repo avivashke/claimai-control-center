@@ -1623,8 +1623,14 @@ export const ClientTable: React.FC<ClientTableProps> = ({
             
             {/* Search & Dropdowns */}
             <div className="flex flex-wrap items-center gap-2 flex-1">
-              <div className="relative min-w-[220px] flex-1 max-w-md">
-                <Search className="absolute right-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+              <div 
+                className="relative min-w-[220px] flex-1 max-w-md cursor-text"
+                onClick={(e) => {
+                  const input = (e.currentTarget.querySelector('input') as HTMLInputElement);
+                  input?.focus();
+                }}
+              >
+                <Search className="absolute right-3 top-2.5 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
                 <input
                   type="text"
                   placeholder="חיפוש לפי שם, חברה, טלפון, הערות ומילות מפתח..."

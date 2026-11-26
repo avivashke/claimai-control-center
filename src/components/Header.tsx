@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { 
   LayoutDashboard, 
   Users, 
@@ -16,9 +16,11 @@ import {
   Moon,
   Sun,
   Coffee,
-  LogOut
+  LogOut,
+  X,
+  ExternalLink
 } from 'lucide-react';
-import { AppUser, AppTheme } from '../types';
+import { AppUser, AppTheme, Client, ProductItem, CustomTable } from '../types';
 import { UserMenu } from './Auth/UserMenu';
 
 export type TabType = 'overview' | 'crm' | 'myday' | 'product' | 'custom_tables' | 'ai_studio' | 'admin' | 'database';
@@ -42,6 +44,12 @@ interface HeaderProps {
   blobsConnected?: boolean | null;
   theme: AppTheme;
   onThemeChange: (theme: AppTheme) => void;
+  clients?: Client[];
+  productItems?: ProductItem[];
+  customTables?: CustomTable[];
+  onSelectClient?: (client: Client) => void;
+  onSelectTicket?: (ticket: ProductItem) => void;
+  onSelectTable?: (tableId: string) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -62,81 +70,308 @@ export const Header: React.FC<HeaderProps> = ({
   supabaseConnected,
   blobsConnected,
   theme,
-  onThemeChange
+  onThemeChange,
+  clients = [],
+  productItems = [],
+  customTables = [],
+  onSelectClient,
+  onSelectTicket,
+  onSelectTable
 }) => {
   const isViewer = currentUser.role === 'viewer';
   const isAdmin = currentUser.role === 'admin' || currentUser.permissions.canManageUsers;
 
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setIsSearchFocused(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const trimmedQuery = searchQuery.trim().toLowerCase();
+
+  const matchingClients = useMemo(() => {
+    if (!trimmedQuery || !clients.length) return [];
+    return clients.filter(c => 
+      c.name?.toLowerCase().includes(trimmedQuery) ||
+      c.company?.toLowerCase().includes(trimmedQuery) ||
+      c.phone?.includes(trimmedQuery) ||
+      c.email?.toLowerCase().includes(trimmedQuery) ||
+      c.lastNote?.toLowerCase().includes(trimmedQuery) ||
+      c.status?.toLowerCase().includes(trimmedQuery)
+    ).slice(0, 6);
+  }, [trimmedQuery, clients]);
+
+  const matchingTickets = useMemo(() => {
+    if (!trimmedQuery || !productItems.length) return [];
+    return productItems.filter(p =>
+      p.title?.toLowerCase().includes(trimmedQuery) ||
+      p.description?.toLowerCase().includes(trimmedQuery) ||
+      p.client?.toLowerCase().includes(trimmedQuery) ||
+      p.module?.toLowerCase().includes(trimmedQuery)
+    ).slice(0, 3);
+  }, [trimmedQuery, productItems]);
+
+  const matchingTables = useMemo(() => {
+    if (!trimmedQuery || !customTables.length) return [];
+    return customTables.filter(t =>
+      t.name?.toLowerCase().includes(trimmedQuery) ||
+      t.description?.toLowerCase().includes(trimmedQuery)
+    ).slice(0, 2);
+  }, [trimmedQuery, customTables]);
+
+  const hasResults = matchingClients.length > 0 || matchingTickets.length > 0 || matchingTables.length > 0;
+
   return (
     <header style={{ backgroundColor: 'var(--bg-header, #0f172a)' }} className="sticky top-0 z-40 bg-slate-900 border-b border-slate-800 shadow-xl transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20 gap-4">
+      <div className="w-full max-w-[1920px] mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-20 gap-3 sm:gap-4">
           
           {/* Logo & Brand */}
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => onTabChange('overview')}>
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-md shadow-blue-500/20 border border-blue-400/30">
-              <ShieldCheck className="w-6 h-6 text-white" />
+          <div className="flex items-center gap-2.5 sm:gap-3 cursor-pointer shrink-0" onClick={() => onTabChange('overview')}>
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-md shadow-blue-500/20 border border-blue-400/30 shrink-0">
+              <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold text-xl tracking-tight text-white font-sans">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="font-extrabold text-lg sm:text-xl tracking-tight text-white font-sans">
                   Claim<span className="text-blue-400">AI</span>
                 </span>
-                <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border ${
+                <span className={`text-[9px] sm:text-[10px] uppercase font-bold tracking-wider px-1.5 sm:px-2 py-0.5 rounded-full border ${
                   isViewer
                     ? 'bg-purple-500/20 text-purple-300 border-purple-500/30'
                     : 'bg-blue-500/20 text-blue-300 border-blue-500/30'
                 }`}>
-                  {isViewer ? 'Viewer Portal' : 'Control Hub'}
+                  {isViewer ? 'Viewer' : 'Hub'}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 hidden sm:block font-medium">
+              <p className="text-[11px] text-slate-400 hidden xl:block font-medium">
                 שליטה בלקוחות, מפת מוצר, סטודיו AI ופורטלים
               </p>
             </div>
           </div>
 
-          {/* Global Quick Search */}
-          <div className="flex-1 max-w-md hidden md:block">
-            <div className="relative">
-              <Search className="absolute right-3 top-2.5 w-4 h-4 text-slate-400" />
+          {/* Global Quick Search with Autocomplete & Direct Jump */}
+          <div ref={searchContainerRef} className="flex-1 min-w-[200px] sm:min-w-[280px] max-w-xl relative">
+            <div 
+              onClick={() => searchInputRef.current?.focus()}
+              className="relative flex items-center cursor-text group"
+            >
+              <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-400 transition-colors pointer-events-none" />
               <input
+                ref={searchInputRef}
                 type="text"
                 placeholder="חיפוש מהיר של לקוח, חברה, טלפון, מודול, תקלה..."
                 value={searchQuery}
-                onChange={(e) => onSearchChange(e.target.value)}
-                className="w-full pr-9 pl-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                onFocus={() => setIsSearchFocused(true)}
+                onChange={(e) => {
+                  onSearchChange(e.target.value);
+                  setIsSearchFocused(true);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    setIsSearchFocused(false);
+                    onTabChange('crm');
+                  } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    setIsSearchFocused(false);
+                    searchInputRef.current?.blur();
+                  }
+                }}
+                className="w-full pr-10 pl-9 py-2.5 bg-slate-800/90 border border-slate-700 hover:border-slate-600 rounded-xl text-xs sm:text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-inner"
               />
               {searchQuery && (
                 <button
-                  onClick={() => onSearchChange('')}
-                  className="absolute left-2.5 top-2.5 text-xs text-slate-400 hover:text-white"
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSearchChange('');
+                    searchInputRef.current?.focus();
+                  }}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 p-1 rounded-full text-slate-400 hover:text-white hover:bg-slate-700/60 transition-colors"
+                  title="נקה חיפוש"
                 >
-                  ✕
+                  <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
+
+            {/* Quick Results Dropdown Popover */}
+            {isSearchFocused && trimmedQuery.length > 0 && (
+              <div 
+                className="absolute top-full right-0 left-0 mt-2 bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden z-50 divide-y divide-slate-800 animate-in fade-in zoom-in-95 duration-100 max-h-[80vh] overflow-y-auto"
+                style={{ backgroundColor: 'var(--bg-card, #0f172a)' }}
+              >
+                {/* Results count header */}
+                <div className="px-3.5 py-2 bg-slate-800/60 flex items-center justify-between text-[11px] font-semibold text-slate-400">
+                  <span>תוצאות חיפוש מהיר עבור "{trimmedQuery}"</span>
+                  <span>{matchingClients.length + matchingTickets.length + matchingTables.length} תוצאות ישירות</span>
+                </div>
+
+                {/* Clients Section */}
+                {matchingClients.length > 0 && (
+                  <div className="p-1.5 space-y-1">
+                    <div className="px-2 py-1 text-[10px] font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1">
+                      <Users className="w-3 h-3" />
+                      <span>לקוחות ב-CRM ({matchingClients.length})</span>
+                    </div>
+                    {matchingClients.map(client => (
+                      <button
+                        key={client.id}
+                        type="button"
+                        onClick={() => {
+                          setIsSearchFocused(false);
+                          if (onSelectClient) {
+                            onSelectClient(client);
+                          } else {
+                            onTabChange('crm');
+                          }
+                        }}
+                        className="w-full text-right px-2.5 py-2 rounded-xl hover:bg-blue-600/15 flex items-center justify-between gap-2 transition-colors group cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <span className="w-7 h-7 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs shrink-0">
+                            {(client.name || client.company || '?').charAt(0)}
+                          </span>
+                          <div className="overflow-hidden">
+                            <p className="text-xs font-bold text-white group-hover:text-blue-300 truncate">
+                              {client.name || client.company}
+                              {client.company && client.name && (
+                                <span className="text-[10px] text-slate-400 font-normal mr-1.5">({client.company})</span>
+                              )}
+                            </p>
+                            <p className="text-[10px] text-slate-400 truncate">
+                              {client.phone ? `📞 ${client.phone}` : ''} {client.email ? `✉️ ${client.email}` : ''}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 shrink-0">
+                          {client.status || 'ליד'}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Tickets Section */}
+                {matchingTickets.length > 0 && (
+                  <div className="p-1.5 space-y-1">
+                    <div className="px-2 py-1 text-[10px] font-bold text-purple-400 uppercase tracking-wider flex items-center gap-1">
+                      <Layers className="w-3 h-3" />
+                      <span>משימות ותקלות מוצר ({matchingTickets.length})</span>
+                    </div>
+                    {matchingTickets.map(ticket => (
+                      <button
+                        key={ticket.id}
+                        type="button"
+                        onClick={() => {
+                          setIsSearchFocused(false);
+                          if (onSelectTicket) {
+                            onSelectTicket(ticket);
+                          } else {
+                            onTabChange('product');
+                          }
+                        }}
+                        className="w-full text-right px-2.5 py-2 rounded-xl hover:bg-purple-600/15 flex items-center justify-between gap-2 transition-colors group cursor-pointer"
+                      >
+                        <div className="overflow-hidden">
+                          <p className="text-xs font-semibold text-white group-hover:text-purple-300 truncate">
+                            {ticket.title}
+                          </p>
+                          <p className="text-[10px] text-slate-400 truncate">
+                            {ticket.module ? `מודול: ${ticket.module} · ` : ''}{ticket.client ? `לקוח: ${ticket.client}` : ''}
+                          </p>
+                        </div>
+                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 shrink-0">
+                          {ticket.status}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Custom Tables Section */}
+                {matchingTables.length > 0 && (
+                  <div className="p-1.5 space-y-1">
+                    <div className="px-2 py-1 text-[10px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                      <TableIcon className="w-3 h-3" />
+                      <span>טבלאות ודוחות ({matchingTables.length})</span>
+                    </div>
+                    {matchingTables.map(tbl => (
+                      <button
+                        key={tbl.id}
+                        type="button"
+                        onClick={() => {
+                          setIsSearchFocused(false);
+                          if (onSelectTable) {
+                            onSelectTable(tbl.id);
+                          }
+                          onTabChange('crm');
+                        }}
+                        className="w-full text-right px-2.5 py-2 rounded-xl hover:bg-emerald-600/15 flex items-center justify-between gap-2 transition-colors group cursor-pointer"
+                      >
+                        <span className="text-xs font-bold text-white group-hover:text-emerald-300 truncate">
+                          {tbl.name}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          {tbl.rows.length} שורות
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* If no matches found */}
+                {!hasResults && (
+                  <div className="p-4 text-center text-xs text-slate-400">
+                    לא נמצאו לקוחות או משימות התואמים ל-"{trimmedQuery}"
+                  </div>
+                )}
+
+                {/* Footer Action: Jump to CRM table with search query */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSearchFocused(false);
+                    onTabChange('crm');
+                  }}
+                  className="w-full p-2.5 bg-slate-800/80 hover:bg-blue-600 hover:text-white text-blue-400 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                  <span>מעבר לטבלת ה-CRM לסינון מלא (Enter)</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* User Profile & Actions */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {!isViewer && (
               <>
                 <button
                   onClick={onOpenAiStudio}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-sm font-bold shadow-md shadow-purple-600/30 transition-all hover:scale-[1.02]"
+                  className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs sm:text-sm font-bold shadow-md shadow-purple-600/30 transition-all hover:scale-[1.02]"
                   title="זריקת נתוני לקוחות ויצירת טבלה בעזרת AI"
                 >
-                  <Sparkles className="w-5 h-5 text-amber-300" />
-                  <span className="hidden sm:inline">סטודיו AI</span>
+                  <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300 shrink-0" />
+                  <span className="hidden lg:inline">סטודיו AI</span>
                 </button>
 
                 <button
                   onClick={onNewClient}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium shadow-md shadow-blue-600/30 transition-all hover:scale-[1.02]"
+                  className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-medium shadow-md shadow-blue-600/30 transition-all hover:scale-[1.02]"
                 >
-                  <Plus className="w-5 h-5" />
-                  <span>ליד חדש</span>
+                  <Plus className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+                  <span className="hidden sm:inline">ליד חדש</span>
                 </button>
               </>
             )}
@@ -151,7 +386,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Live Database & Blobs Status Indicator */}
             <button
               onClick={() => onTabChange('database')}
-              className="hidden lg:flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-750 border border-slate-700/80 text-xs transition-all hover:border-slate-600"
+              className="hidden xl:flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-750 border border-slate-700/80 text-xs transition-all hover:border-slate-600"
               title="לחץ לפתיחת הגדרות ובדיקת תקינות מסד נתונים ו-Netlify Blobs"
             >
               <div className="flex items-center gap-1.5">
