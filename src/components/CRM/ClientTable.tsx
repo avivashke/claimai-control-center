@@ -121,9 +121,10 @@ export const ClientTable: React.FC<ClientTableProps> = ({
   const [additionalBusinessTypes, setAdditionalBusinessTypes] = useState<string[]>([]);
   const [expandedGroupLimits, setExpandedGroupLimits] = useState<Record<string, number>>({});
 
-  // Inline editing for CRM client fields (name, company, phone, email, lastNote)
+  // Inline editing for CRM client fields (name, company, phone, email, lastNote, dates, etc.)
   const [editingCrmCell, setEditingCrmCell] = useState<{ clientId: string; field: string } | null>(null);
   const [editingCrmValue, setEditingCrmValue] = useState<string>('');
+  const isSavingCrmCellRef = useRef(false);
 
   const handleStartEditCrmCell = (clientId: string, field: string, initialVal: string, e?: React.MouseEvent) => {
     if (!canEdit) return;
@@ -133,7 +134,13 @@ export const ClientTable: React.FC<ClientTableProps> = ({
   };
 
   const handleSaveCrmCell = (client: Client, field: string) => {
+    if (isSavingCrmCellRef.current) return;
+    isSavingCrmCellRef.current = true;
     setEditingCrmCell(null);
+    setTimeout(() => {
+      isSavingCrmCellRef.current = false;
+    }, 150);
+
     if (!canEdit || !onUpdateClient) return;
     const trimmed = editingCrmValue.trim();
     if (trimmed === (client as any)[field]) return;
@@ -447,8 +454,13 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                   onChange={(e) => setEditingCrmValue(e.target.value)}
                   onKeyDown={(e) => {
                     e.stopPropagation();
-                    if (e.key === 'Enter') handleSaveCrmCell(client, 'name');
-                    else if (e.key === 'Escape') setEditingCrmCell(null);
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSaveCrmCell(client, 'name');
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      setEditingCrmCell(null);
+                    }
                   }}
                   onBlur={() => handleSaveCrmCell(client, 'name')}
                   className="flex-1 text-[11px] font-semibold bg-slate-850 text-white border border-blue-500 rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-inner w-full"
@@ -497,8 +509,13 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                   onChange={(e) => setEditingCrmValue(e.target.value)}
                   onKeyDown={(e) => {
                     e.stopPropagation();
-                    if (e.key === 'Enter') handleSaveCrmCell(client, 'company');
-                    else if (e.key === 'Escape') setEditingCrmCell(null);
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSaveCrmCell(client, 'company');
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      setEditingCrmCell(null);
+                    }
                   }}
                   onBlur={() => handleSaveCrmCell(client, 'company')}
                   className="flex-1 text-[10px] bg-slate-850 text-white border border-blue-500 rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-inner w-full"
@@ -619,8 +636,13 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                   onChange={(e) => setEditingCrmValue(e.target.value)}
                   onKeyDown={(e) => {
                     e.stopPropagation();
-                    if (e.key === 'Enter') handleSaveCrmCell(client, 'phone');
-                    else if (e.key === 'Escape') setEditingCrmCell(null);
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSaveCrmCell(client, 'phone');
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      setEditingCrmCell(null);
+                    }
                   }}
                   onBlur={() => handleSaveCrmCell(client, 'phone')}
                   className="flex-1 text-[9px] font-mono bg-slate-850 text-white border border-blue-500 rounded px-1.5 py-0.5 focus:outline-none shadow-inner w-full"
@@ -660,8 +682,13 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                   onChange={(e) => setEditingCrmValue(e.target.value)}
                   onKeyDown={(e) => {
                     e.stopPropagation();
-                    if (e.key === 'Enter') handleSaveCrmCell(client, 'email');
-                    else if (e.key === 'Escape') setEditingCrmCell(null);
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSaveCrmCell(client, 'email');
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      setEditingCrmCell(null);
+                    }
                   }}
                   onBlur={() => handleSaveCrmCell(client, 'email')}
                   className="flex-1 text-[9px] bg-slate-850 text-white border border-blue-500 rounded px-1.5 py-0.5 focus:outline-none shadow-inner w-full"
@@ -766,11 +793,17 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                   onChange={(e) => setEditingCrmValue(e.target.value)}
                   onKeyDown={(e) => {
                     e.stopPropagation();
-                    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleSaveCrmCell(client, 'lastNote');
-                    else if (e.key === 'Escape') setEditingCrmCell(null);
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSaveCrmCell(client, 'lastNote');
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      setEditingCrmCell(null);
+                    }
                   }}
+                  onBlur={() => handleSaveCrmCell(client, 'lastNote')}
                   className="flex-1 text-[9px] bg-slate-850 text-white border border-blue-500 rounded px-2 py-1 focus:outline-none shadow-inner w-full resize-none"
-                  placeholder="הזן הערה (Ctrl+Enter לשמירה)"
+                  placeholder="הזן הערה (Enter לשמירה, Shift+Enter לירידת שורה)"
                 />
                 <div className="flex flex-col gap-1 shrink-0">
                   <button
@@ -873,8 +906,13 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                   onChange={(e) => setEditingCrmValue(e.target.value)}
                   onKeyDown={(e) => {
                     e.stopPropagation();
-                    if (e.key === 'Enter') handleSaveCrmCell(client, 'createdDate');
-                    else if (e.key === 'Escape') setEditingCrmCell(null);
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSaveCrmCell(client, 'createdDate');
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      setEditingCrmCell(null);
+                    }
                   }}
                   onBlur={() => handleSaveCrmCell(client, 'createdDate')}
                   className="flex-1 text-[9px] font-mono bg-slate-850 text-white border border-blue-500 rounded px-1.5 py-0.5 focus:outline-none shadow-inner w-full"
@@ -934,8 +972,13 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                   onChange={(e) => setEditingCrmValue(e.target.value)}
                   onKeyDown={(e) => {
                     e.stopPropagation();
-                    if (e.key === 'Enter') handleSaveCrmCell(client, 'nextFollowUpDate');
-                    else if (e.key === 'Escape') setEditingCrmCell(null);
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSaveCrmCell(client, 'nextFollowUpDate');
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      setEditingCrmCell(null);
+                    }
                   }}
                   onBlur={() => handleSaveCrmCell(client, 'nextFollowUpDate')}
                   className="flex-1 text-[9px] bg-slate-850 text-white border border-blue-500 rounded px-1.5 py-0.5 focus:outline-none shadow-inner w-full"
@@ -999,8 +1042,13 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                   onChange={(e) => setEditingCrmValue(e.target.value)}
                   onKeyDown={(e) => {
                     e.stopPropagation();
-                    if (e.key === 'Enter') handleSaveCrmCell(client, 'location');
-                    else if (e.key === 'Escape') setEditingCrmCell(null);
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSaveCrmCell(client, 'location');
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      setEditingCrmCell(null);
+                    }
                   }}
                   onBlur={() => handleSaveCrmCell(client, 'location')}
                   className="flex-1 text-[9px] bg-slate-850 text-white border border-blue-500 rounded px-1.5 py-0.5 focus:outline-none shadow-inner w-full"
@@ -1060,8 +1108,13 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                   onChange={(e) => setEditingCrmValue(e.target.value)}
                   onKeyDown={(e) => {
                     e.stopPropagation();
-                    if (e.key === 'Enter') handleSaveCrmCell(client, 'teamContacts');
-                    else if (e.key === 'Escape') setEditingCrmCell(null);
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSaveCrmCell(client, 'teamContacts');
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      setEditingCrmCell(null);
+                    }
                   }}
                   onBlur={() => handleSaveCrmCell(client, 'teamContacts')}
                   className="flex-1 text-[9px] bg-slate-850 text-white border border-blue-500 rounded px-1.5 py-0.5 focus:outline-none shadow-inner w-full"

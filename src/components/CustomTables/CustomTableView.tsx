@@ -88,6 +88,7 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
   // Inline editing state
   const [editingCell, setEditingCell] = useState<{ rowId: string; colKey: string } | null>(null);
   const [editCellValue, setEditCellValue] = useState<string>('');
+  const isSavingInlineRef = useRef(false);
 
   // Excel-style Column Width Resizing State
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
@@ -332,11 +333,21 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
 
   // Save inline cell edit with automatic cross-table sync!
   const handleSaveInlineCell = (rowId: string, colKey: string) => {
+    if (isSavingInlineRef.current) return;
+    isSavingInlineRef.current = true;
+    setEditingCell(null);
+    setTimeout(() => {
+      isSavingInlineRef.current = false;
+    }, 150);
+
     if (!currentTable) return;
     const targetRow = currentTable.rows.find(r => r.id === rowId);
     if (!targetRow) return;
 
-    const newRow = { ...targetRow, [colKey]: editCellValue };
+    const trimmed = editCellValue.trim();
+    if (String(targetRow[colKey] ?? '').trim() === trimmed) return;
+
+    const newRow = { ...targetRow, [colKey]: trimmed };
     const updatedRows = currentTable.rows.map(r => r.id === rowId ? newRow : r);
 
     const updatedTable: CustomTable = {
@@ -346,7 +357,6 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
     };
 
     onUpdateTable(updatedTable);
-    setEditingCell(null);
 
     // Two-way cross-table sync: If this row overlaps with a client in CRM (or another table), sync it automatically!
     const match = rowMatches.get(rowId) || findRowClientMatch(targetRow, currentTable.columns, clients);
@@ -844,9 +854,15 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
                                   onChange={(e) => setEditCellValue(e.target.value)}
                                   onKeyDown={(e) => {
                                     e.stopPropagation();
-                                    if (e.key === 'Enter') handleSaveInlineCell(row.id, col.key);
-                                    else if (e.key === 'Escape') setEditingCell(null);
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      handleSaveInlineCell(row.id, col.key);
+                                    } else if (e.key === 'Escape') {
+                                      e.preventDefault();
+                                      setEditingCell(null);
+                                    }
                                   }}
+                                  onBlur={() => handleSaveInlineCell(row.id, col.key)}
                                   autoFocus
                                   className="w-full bg-slate-950 border border-purple-500 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none shadow-inner"
                                 />
