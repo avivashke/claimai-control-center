@@ -108,7 +108,7 @@ export const checkSupabaseHealth = async (): Promise<{ isConnected: boolean; mes
 };
 
 // Database initialization & seeding
-export const CURRENT_DATA_VERSION = '2026-11-26-v5-tables-fix';
+export const CURRENT_DATA_VERSION = '2026-11-26-v6-new-leads-sync';
 const DELETED_CUSTOM_TABLES_KEY = 'claimai_deleted_custom_tables';
 
 export const getDeletedCustomTableIds = (): string[] => {

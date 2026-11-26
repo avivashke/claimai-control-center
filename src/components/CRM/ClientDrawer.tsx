@@ -184,6 +184,8 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
       current.nextFollowUpDate !== prev.nextFollowUpDate ||
       current.teamContacts !== prev.teamContacts ||
       current.itContact !== prev.itContact ||
+      current.location !== prev.location ||
+      current.createdDate !== prev.createdDate ||
       current.monthlyClaims !== prev.monthlyClaims ||
       current.requiresAttention !== prev.requiresAttention ||
       current.generalNotes !== prev.generalNotes
@@ -564,6 +566,28 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
                   type="email"
                   value={formData.email || ''}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">מועד השארת פרטים</label>
+                <input
+                  type="text"
+                  value={formData.createdDate || (formData.customFields as any)?.leadDate || ''}
+                  onChange={(e) => setFormData({ ...formData, createdDate: e.target.value })}
+                  placeholder="למשל: 4.1.2026"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">מיקום / כתובת</label>
+                <input
+                  type="text"
+                  value={formData.location || ''}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  placeholder="עיר, רחוב או אזור"
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>

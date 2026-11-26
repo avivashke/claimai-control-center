@@ -29,6 +29,8 @@ import {
   CheckSquare,
   Trash2,
   Calendar,
+  Clock,
+  MapPin,
   Tag,
   GripVertical,
   RotateCcw,
@@ -211,7 +213,11 @@ export const ClientTable: React.FC<ClientTableProps> = ({
     { key: 'businessType', label: 'סוג עסק', minWidth: 'min-w-[140px]' },
     { key: 'status', label: 'סטטוס CRM', minWidth: 'min-w-[180px]' },
     { key: 'contactDetails', label: 'פרטי התקשרות', minWidth: 'min-w-[160px]' },
+    { key: 'createdDate', label: 'מועד השארת פרטים', minWidth: 'min-w-[130px]' },
+    { key: 'nextFollowUpDate', label: 'פגישה קרובה / מעקב', minWidth: 'min-w-[150px]' },
     { key: 'lastNote', label: 'הערה אחרונה', minWidth: 'min-w-[200px]' },
+    { key: 'location', label: 'מיקום', minWidth: 'min-w-[130px]' },
+    { key: 'teamContacts', label: 'אנשי צוות ומחשוב', minWidth: 'min-w-[150px]' },
   ];
 
   const CRM_COL_STORAGE_KEY = 'claimai_crm_column_order';
@@ -237,7 +243,11 @@ export const ClientTable: React.FC<ClientTableProps> = ({
       case 'businessType': return 140;
       case 'status': return 180;
       case 'contactDetails': return 160;
+      case 'createdDate': return 130;
+      case 'nextFollowUpDate': return 150;
       case 'lastNote': return 260;
+      case 'location': return 130;
+      case 'teamContacts': return 150;
       case 'actions': return 80;
       default: return 140;
     }
@@ -285,7 +295,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
     } catch (e) {
       console.error('Failed to parse crm column order:', e);
     }
-    return ['contact', 'businessType', 'status', 'contactDetails', 'lastNote', 'actions'];
+    return ['contact', 'businessType', 'status', 'contactDetails', 'createdDate', 'nextFollowUpDate', 'lastNote', 'location', 'teamContacts', 'actions'];
   });
 
   const [draggedColKey, setDraggedColKey] = useState<string | null>(null);
@@ -350,7 +360,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
   };
 
   const handleResetColumnOrder = () => {
-    const defaultOrder = ['contact', 'businessType', 'status', 'contactDetails', 'lastNote', ...crmCustomColumns.map(c => c.id), 'actions'];
+    const defaultOrder = ['contact', 'businessType', 'status', 'contactDetails', 'createdDate', 'nextFollowUpDate', 'lastNote', 'location', 'teamContacts', ...crmCustomColumns.map(c => c.id), 'actions'];
     setCrmColumnOrder(defaultOrder);
     try {
       localStorage.removeItem(CRM_COL_STORAGE_KEY);
@@ -845,6 +855,254 @@ export const ClientTable: React.FC<ClientTableProps> = ({
             })()}
           </td>
         );
+
+      case 'createdDate': {
+        const isEditingCreatedDate = editingCrmCell?.clientId === client.id && editingCrmCell.field === 'createdDate';
+        const displayCreatedDate = client.createdDate || client.customFields?.leadDate || '';
+
+        if (isEditingCreatedDate) {
+          return (
+            <td key={`${client.id}-${col.key}`} style={cellStyle} className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-1 w-full" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+                <input
+                  type="text"
+                  autoFocus
+                  value={editingCrmValue}
+                  onChange={(e) => setEditingCrmValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                    if (e.key === 'Enter') handleSaveCrmCell(client, 'createdDate');
+                    else if (e.key === 'Escape') setEditingCrmCell(null);
+                  }}
+                  onBlur={() => handleSaveCrmCell(client, 'createdDate')}
+                  className="flex-1 text-[9px] font-mono bg-slate-850 text-white border border-blue-500 rounded px-1.5 py-0.5 focus:outline-none shadow-inner w-full"
+                  placeholder="תאריך השארת פרטים"
+                />
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSaveCrmCell(client, 'createdDate'); }}
+                  className="p-1 rounded bg-blue-600 hover:bg-blue-500 text-white shrink-0 shadow-sm"
+                  title="שמור"
+                >
+                  <Check className="w-2.5 h-2.5" />
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingCrmCell(null); }}
+                  className="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 shrink-0"
+                  title="בטל"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </div>
+            </td>
+          );
+        }
+
+        return (
+          <td 
+            key={`${client.id}-${col.key}`} 
+            style={cellStyle} 
+            className="py-2 px-2.5 overflow-hidden cursor-pointer hover:bg-blue-950/20 transition-colors"
+            title="לחץ לעריכת מועד השארת פרטים"
+            onClick={(e) => handleStartEditCrmCell(client.id, 'createdDate', displayCreatedDate, e)}
+          >
+            <div className="flex items-center gap-1 text-[9px] text-slate-300 font-mono truncate">
+              <Calendar className="w-2.5 h-2.5 text-slate-500 shrink-0" />
+              <span className="truncate">{displayCreatedDate || '-'}</span>
+            </div>
+          </td>
+        );
+      }
+
+      case 'nextFollowUpDate': {
+        const isEditingMeeting = editingCrmCell?.clientId === client.id && editingCrmCell.field === 'nextFollowUpDate';
+        const displayMeeting = client.nextFollowUpDate || '';
+
+        if (isEditingMeeting) {
+          return (
+            <td key={`${client.id}-${col.key}`} style={cellStyle} className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-1 w-full" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+                <input
+                  type="text"
+                  autoFocus
+                  value={editingCrmValue}
+                  onChange={(e) => setEditingCrmValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                    if (e.key === 'Enter') handleSaveCrmCell(client, 'nextFollowUpDate');
+                    else if (e.key === 'Escape') setEditingCrmCell(null);
+                  }}
+                  onBlur={() => handleSaveCrmCell(client, 'nextFollowUpDate')}
+                  className="flex-1 text-[9px] bg-slate-850 text-white border border-blue-500 rounded px-1.5 py-0.5 focus:outline-none shadow-inner w-full"
+                  placeholder="פגישה או מעקב"
+                />
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSaveCrmCell(client, 'nextFollowUpDate'); }}
+                  className="p-1 rounded bg-blue-600 hover:bg-blue-500 text-white shrink-0 shadow-sm"
+                  title="שמור"
+                >
+                  <Check className="w-2.5 h-2.5" />
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingCrmCell(null); }}
+                  className="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 shrink-0"
+                  title="בטל"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </div>
+            </td>
+          );
+        }
+
+        return (
+          <td 
+            key={`${client.id}-${col.key}`} 
+            style={cellStyle} 
+            className="py-2 px-2.5 overflow-hidden cursor-pointer hover:bg-blue-950/20 transition-colors"
+            title="לחץ לעריכת פגישה קרובה / מעקב"
+            onClick={(e) => handleStartEditCrmCell(client.id, 'nextFollowUpDate', displayMeeting, e)}
+          >
+            {displayMeeting ? (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8.5px] font-medium bg-amber-500/15 text-amber-300 border border-amber-500/30 truncate max-w-full">
+                <Clock className="w-2.5 h-2.5 text-amber-400 shrink-0" />
+                <span className="truncate">{displayMeeting}</span>
+              </span>
+            ) : (
+              <span className="text-[8.5px] text-slate-600">-</span>
+            )}
+          </td>
+        );
+      }
+
+      case 'location': {
+        const isEditingLoc = editingCrmCell?.clientId === client.id && editingCrmCell.field === 'location';
+        const displayLoc = client.location || '';
+
+        if (isEditingLoc) {
+          return (
+            <td key={`${client.id}-${col.key}`} style={cellStyle} className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-1 w-full" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+                <input
+                  type="text"
+                  autoFocus
+                  value={editingCrmValue}
+                  onChange={(e) => setEditingCrmValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                    if (e.key === 'Enter') handleSaveCrmCell(client, 'location');
+                    else if (e.key === 'Escape') setEditingCrmCell(null);
+                  }}
+                  onBlur={() => handleSaveCrmCell(client, 'location')}
+                  className="flex-1 text-[9px] bg-slate-850 text-white border border-blue-500 rounded px-1.5 py-0.5 focus:outline-none shadow-inner w-full"
+                  placeholder="מיקום / כתובת"
+                />
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSaveCrmCell(client, 'location'); }}
+                  className="p-1 rounded bg-blue-600 hover:bg-blue-500 text-white shrink-0 shadow-sm"
+                  title="שמור"
+                >
+                  <Check className="w-2.5 h-2.5" />
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingCrmCell(null); }}
+                  className="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 shrink-0"
+                  title="בטל"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </div>
+            </td>
+          );
+        }
+
+        return (
+          <td 
+            key={`${client.id}-${col.key}`} 
+            style={cellStyle} 
+            className="py-2 px-2.5 overflow-hidden cursor-pointer hover:bg-blue-950/20 transition-colors"
+            title="לחץ לעריכת מיקום"
+            onClick={(e) => handleStartEditCrmCell(client.id, 'location', displayLoc, e)}
+          >
+            <div className="flex items-center gap-1 text-[9px] text-slate-300 truncate">
+              {displayLoc ? <MapPin className="w-2.5 h-2.5 text-rose-400 shrink-0" /> : null}
+              <span className="truncate">{displayLoc || '-'}</span>
+            </div>
+          </td>
+        );
+      }
+
+      case 'teamContacts': {
+        const isEditingTeam = editingCrmCell?.clientId === client.id && editingCrmCell.field === 'teamContacts';
+        const displayTeam = [client.teamContacts, client.itContact ? `IT: ${client.itContact}` : ''].filter(Boolean).join(' | ');
+
+        if (isEditingTeam) {
+          return (
+            <td key={`${client.id}-${col.key}`} style={cellStyle} className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-1 w-full" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+                <input
+                  type="text"
+                  autoFocus
+                  value={editingCrmValue}
+                  onChange={(e) => setEditingCrmValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                    if (e.key === 'Enter') handleSaveCrmCell(client, 'teamContacts');
+                    else if (e.key === 'Escape') setEditingCrmCell(null);
+                  }}
+                  onBlur={() => handleSaveCrmCell(client, 'teamContacts')}
+                  className="flex-1 text-[9px] bg-slate-850 text-white border border-blue-500 rounded px-1.5 py-0.5 focus:outline-none shadow-inner w-full"
+                  placeholder="אנשי צוות / מחשוב"
+                />
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSaveCrmCell(client, 'teamContacts'); }}
+                  className="p-1 rounded bg-blue-600 hover:bg-blue-500 text-white shrink-0 shadow-sm"
+                  title="שמור"
+                >
+                  <Check className="w-2.5 h-2.5" />
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingCrmCell(null); }}
+                  className="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 shrink-0"
+                  title="בטל"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </div>
+            </td>
+          );
+        }
+
+        return (
+          <td 
+            key={`${client.id}-${col.key}`} 
+            style={cellStyle} 
+            className="py-2 px-2.5 overflow-hidden cursor-pointer hover:bg-blue-950/20 transition-colors"
+            title="לחץ לעריכת אנשי צוות ומחשוב"
+            onClick={(e) => handleStartEditCrmCell(client.id, 'teamContacts', client.teamContacts || '', e)}
+          >
+            <div className="flex items-center gap-1 text-[9px] text-slate-300 truncate">
+              {displayTeam ? <Users className="w-2.5 h-2.5 text-blue-400 shrink-0" /> : null}
+              <span className="truncate">{displayTeam || '-'}</span>
+            </div>
+          </td>
+        );
+      }
 
       case 'actions':
         return (

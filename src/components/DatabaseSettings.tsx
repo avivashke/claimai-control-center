@@ -34,6 +34,7 @@ import {
   setSheetsWebhookUrl,
   getLastSheetsSyncTime,
   generateCrmSheetCSV,
+  generateNewLeadsSheetCSV,
   generateProductSheetCSV,
   downloadCSV,
   syncToGoogleSheetsWebhook,
@@ -138,6 +139,13 @@ export const DatabaseSettings: React.FC<DatabaseSettingsProps> = ({
     const csv = generateCrmSheetCSV(clients);
     const dateStr = new Date().toISOString().slice(0, 10);
     downloadCSV(csv, `Claimai_CRM_DirectBackup_${dateStr}.csv`);
+  };
+
+  const handleDownloadNewLeadsCSV = async () => {
+    const clients = await db.clients.toArray();
+    const csv = generateNewLeadsSheetCSV(clients);
+    const dateStr = new Date().toISOString().slice(0, 10);
+    downloadCSV(csv, `Copy_CRM_PM_NewLeads_${dateStr}.csv`);
   };
 
   const handleDownloadProductSheetCSV = async () => {
@@ -442,12 +450,15 @@ CREATE TABLE product_items (
 
         {/* The Two Target Google Spreadsheets */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-          {/* Target 1: Claimai_CRM */}
+          {/* Target 1: Copy of CRM+PM (לידים חדשים + ראשי) */}
           <div className="sheets-inner-card p-4 rounded-xl bg-slate-800/80 border border-slate-700/80 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
-                <h4 className="text-sm font-bold text-white">Claimai_CRM</h4>
+                <div>
+                  <h4 className="text-sm font-bold text-white">Copy of CRM+PM</h4>
+                  <span className="text-[10px] text-emerald-400 font-semibold block">לשונית מרכזית: ״לידים חדשים״ (הערות + תאריכי פנייה) + ״ראשי״</span>
+                </div>
               </div>
               <a
                 href={CRM_SPREADSHEET_URL}
@@ -462,18 +473,28 @@ CREATE TABLE product_items (
             <p className="text-[11px] text-slate-400">
               מזהה גיליון: <code className="text-emerald-300/80 font-mono text-[10px]">{CRM_SPREADSHEET_ID}</code>
             </p>
-            <div className="flex items-center justify-between pt-1">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pt-1">
               <span className="text-xs text-slate-300">
                 סה״כ לקוחות: <strong className="text-white font-bold">{clientsCount.toLocaleString()}</strong>
               </span>
-              <button
-                onClick={handleDownloadCrmSheetCSV}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-semibold transition-all"
-                title="הורדת קובץ CSV מותאם ב-100% ל-33 העמודות המדויקות של Claimai_CRM"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>הורד CSV מותאם ל-CRM</span>
-              </button>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  onClick={handleDownloadNewLeadsCSV}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/40 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition-all"
+                  title="הורדת קובץ CSV של לידים חדשים כולל תאריך השארת פרטים, פגישות והערות"
+                >
+                  <Download className="w-3 h-3" />
+                  <span>הורד CSV לידים חדשים</span>
+                </button>
+                <button
+                  onClick={handleDownloadCrmSheetCSV}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-700/60 hover:bg-slate-700 border border-slate-600 text-slate-300 text-xs font-semibold transition-all"
+                  title="הורדת קובץ CSV של גיליון ראשי"
+                >
+                  <Download className="w-3 h-3" />
+                  <span>הורד CSV ראשי</span>
+                </button>
+              </div>
             </div>
           </div>
 

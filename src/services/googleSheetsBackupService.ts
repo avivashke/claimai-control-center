@@ -1,7 +1,7 @@
 import { Client, ProductItem, CustomTable } from '../types';
 import { db } from './db';
 
-export const CRM_SPREADSHEET_ID = '16qi8qhHFtlaoxgtda2fvv9bd3WmGU168-RlEwtfP8NM';
+export const CRM_SPREADSHEET_ID = '1DaEDKKsRVSuQxI7RNv8pMLMZII6KrnDMQj18FYosxpU';
 export const CRM_SPREADSHEET_URL = `https://docs.google.com/spreadsheets/d/${CRM_SPREADSHEET_ID}/edit?usp=drivesdk`;
 
 export const PRODUCT_SPREADSHEET_ID = '1Jn8jbwlhukd9jsP8nrLbW8ggtljYVZd_5WYqaZkL5x4';
@@ -107,6 +107,97 @@ export const mapClientToCrmSheetRow = (c: Client): (string | number | boolean)[]
     c.updatedDate || new Date().toISOString().slice(0, 10),
     c.customFields?.notesForEyal || ''
   ];
+};
+
+// Exact column headers matching Sheet 'לידים חדשים'
+export const NEW_LEADS_EXACT_HEADERS = [
+  'שם הלקוח',
+  'טלפון',
+  'מועד השארת פרטים',
+  'חברה',
+  'אימייל',
+  'מיקום',
+  'טלפון מחשוב',
+  'טלפונים צוות',
+  'הערות',
+  'פגישה קרובה',
+  'שיחה אחרונה',
+  'סיבה',
+  'סטטוס',
+  'תזמן פגישה'
+];
+
+export const mapClientToNewLeadRow = (c: Client): (string | number | boolean)[] => {
+  return [
+    c.name || '',
+    c.phone || '',
+    c.createdDate || c.customFields?.leadDate || '',
+    c.company || '',
+    c.email || '',
+    c.location || '',
+    c.itContact || '',
+    c.teamContacts || '',
+    c.generalNotes || '',
+    c.nextFollowUpDate || '',
+    c.lastNote || '',
+    c.subStatus || '',
+    c.status || '',
+    c.customFields?.scheduleUrl || '📅 תזמן ביומן'
+  ];
+};
+
+export const mapNewLeadRowToClient = (row: any[], fallbackId?: string): Client | null => {
+  if (!row || (!row[0] && !row[1])) return null;
+  const name = String(row[0] || '').trim();
+  const phone = String(row[1] || '').trim();
+  if (name === 'שם הלקוח' || phone === 'טלפון') return null;
+
+  const leadDate = String(row[2] || '').trim();
+  const company = String(row[3] || '').trim();
+  const email = String(row[4] || '').trim();
+  const location = String(row[5] || '').trim();
+  const itContact = String(row[6] || '').trim();
+  const teamContacts = String(row[7] || '').trim();
+  const generalNotes = String(row[8] || '').trim();
+  const nextMeeting = String(row[9] || '').trim();
+  const lastCall = String(row[10] || '').trim();
+  const subStatus = String(row[11] || '').trim();
+  const status = String(row[12] || '').trim();
+  const scheduleUrl = String(row[13] || '').trim();
+
+  return {
+    id: fallbackId || `lead_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    name: name || 'ללא שם',
+    company,
+    businessType: 'אחר',
+    status: status || "1'st Lead",
+    subStatus,
+    assignedTo: '',
+    group: 'לידים חדשים',
+    temperature: (status.toLowerCase().includes('meeting') || nextMeeting) ? '🔥 חם' : 'רגיל',
+    priority: '5',
+    requiresAttention: status.toLowerCase().includes('urgent') || status.includes('דחוף'),
+    phone,
+    email,
+    teamContacts,
+    itContact,
+    location,
+    source: 'גוגל שיטס - לידים חדשים',
+    monthlyClaims: '',
+    createdDate: leadDate || new Date().toISOString().slice(0, 10),
+    nextFollowUpDate: nextMeeting,
+    lastContactDate: '',
+    statusSince: '',
+    lastNote: lastCall,
+    generalNotes,
+    contactType: '',
+    updatedBy: 'Google Sheets לידים חדשים',
+    updatedDate: new Date().toISOString().slice(0, 10),
+    customFields: {
+      leadDate,
+      scheduleUrl
+    }
+  };
 };
 
 // Map a row array from 'ראשי' back to a Client object
@@ -274,6 +365,17 @@ export const generateCrmSheetCSV = (clients: Client[]): string => {
   return '\uFEFF' + [headerLine, ...rowLines].join('\n');
 };
 
+// Generate CSV for 'לידים חדשים'
+export const generateNewLeadsSheetCSV = (clients: Client[]): string => {
+  const headerLine = NEW_LEADS_EXACT_HEADERS.map(h => `"${h.replace(/"/g, '""')}"`).join(',');
+  const rowLines = clients.map(c => {
+    const row = mapClientToNewLeadRow(c);
+    return row.map(val => `"${String(val || '').replace(/"/g, '""')}"`).join(',');
+  });
+
+  return '\uFEFF' + [headerLine, ...rowLines].join('\n');
+};
+
 // Generate CSV for CLAIMAI | Product & Delivery Control
 export const generateProductSheetCSV = (items: ProductItem[]): string => {
   const headers = [
@@ -368,6 +470,7 @@ export const syncToGoogleSheetsWebhook = async (customUrl?: string): Promise<{ s
       clientsCount: clients.length,
       productCount: productItems.length,
       noCasesCount: noCasesRows.length,
+      newLeads: clients.map(mapClientToNewLeadRow),
       clients: clients.map(mapClientToCrmSheetRow),
       noCasesRows: noCasesRows,
       bugs: bugs,
@@ -434,7 +537,55 @@ export const pullFromGoogleSheetsWebhook = async (customUrl?: string): Promise<{
     let noCasesUpdated = 0;
     let productsUpdated = 0;
 
-    // 1. Process 'ראשי' sheet rows (includes notes)
+    // 1. Process 'לידים חדשים' sheet rows (primary customer notes & documentation)
+    if (data.newLeads && Array.isArray(data.newLeads) && data.newLeads.length > 0) {
+      const existingClients = await db.clients.toArray();
+      const clientMap = new Map<string, Client>();
+      existingClients.forEach(c => {
+        if (c.phone) clientMap.set(c.phone.replace(/\D/g, ''), c);
+        if (c.email) clientMap.set(c.email.trim().toLowerCase(), c);
+        if (c.name) clientMap.set(c.name.trim().toLowerCase(), c);
+      });
+
+      const updatedOrNewClients: Client[] = [];
+      let idx = 1300;
+      for (const row of data.newLeads) {
+        const lead = mapNewLeadRowToClient(row, `L${idx++}`);
+        if (!lead) continue;
+        const normP = (lead.phone || '').replace(/\D/g, '');
+        const normE = (lead.email || '').trim().toLowerCase();
+        const normN = (lead.name || '').trim().toLowerCase();
+        const match = (normP && clientMap.get(normP)) || (normE && clientMap.get(normE)) || (normN && clientMap.get(normN));
+
+        if (match) {
+          const merged: Client = {
+            ...match,
+            createdDate: lead.createdDate || match.createdDate,
+            nextFollowUpDate: lead.nextFollowUpDate || match.nextFollowUpDate,
+            lastNote: lead.lastNote || match.lastNote,
+            generalNotes: lead.generalNotes || match.generalNotes,
+            location: lead.location || match.location,
+            itContact: lead.itContact || match.itContact,
+            teamContacts: lead.teamContacts || match.teamContacts,
+            company: lead.company || match.company,
+            status: lead.status || match.status,
+            subStatus: lead.subStatus || match.subStatus,
+            updatedDate: new Date().toISOString().slice(0, 10),
+            updatedBy: 'Google Sheets לידים חדשים'
+          };
+          updatedOrNewClients.push(merged);
+        } else {
+          updatedOrNewClients.push(lead);
+        }
+      }
+
+      if (updatedOrNewClients.length > 0) {
+        await db.clients.bulkPut(updatedOrNewClients);
+        clientsUpdated = Math.max(clientsUpdated, updatedOrNewClients.length);
+      }
+    }
+
+    // 2. Process 'ראשי' sheet rows (includes notes)
     if (data.clients && Array.isArray(data.clients) && data.clients.length > 0) {
       const incomingClients: Client[] = [];
       for (const row of data.clients) {
@@ -446,7 +597,7 @@ export const pullFromGoogleSheetsWebhook = async (customUrl?: string): Promise<{
 
       if (incomingClients.length > 0) {
         await db.clients.bulkPut(incomingClients);
-        clientsUpdated = incomingClients.length;
+        clientsUpdated = Math.max(clientsUpdated, incomingClients.length);
       }
     }
 
@@ -563,7 +714,18 @@ function doGet(e) {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     
-    // 1. קריאת גליון "ראשי" (עמודה 25 היא 'הערה אחרונה')
+    // 1. קריאת גליון "לידים חדשים" (הגליון המרכזי לתיעוד והערות לקוחות)
+    var newLeadsSheet = ss.getSheetByName("לידים חדשים");
+    var newLeads = [];
+    if (newLeadsSheet) {
+      var lastRowLeads = newLeadsSheet.getLastRow();
+      var lastColLeads = newLeadsSheet.getLastColumn();
+      if (lastRowLeads >= 2 && lastColLeads >= 1) {
+        newLeads = newLeadsSheet.getRange(2, 1, lastRowLeads - 1, lastColLeads).getValues();
+      }
+    }
+
+    // 2. קריאת גליון "ראשי"
     var mainSheet = ss.getSheetByName(CFG.MAIN) || ss.getSheetByName("ראשי") || ss.getActiveSheet();
     var lastRowMain = mainSheet.getLastRow();
     var lastColMain = mainSheet.getLastColumn();
@@ -572,7 +734,7 @@ function doGet(e) {
       clients = mainSheet.getRange(2, 1, lastRowMain - 1, lastColMain).getValues();
     }
     
-    // 2. קריאת גליון "דוח לקוחות ללא תיקים"
+    // 3. קריאת גליון "דוח לקוחות ללא תיקים"
     var noCasesSheet = ss.getSheetByName("דוח לקוחות ללא תיקים");
     var noCases = [];
     if (noCasesSheet) {
@@ -583,7 +745,7 @@ function doGet(e) {
       }
     }
 
-    // 3. קריאת באגים ופיתוחים מגליון המוצר
+    // 4. קריאת באגים ופיתוחים מגליון המוצר
     var bugs = [];
     var roadmap = [];
     var prodSheetId = "1Jn8jbwlhukd9jsP8nrLbW8ggtljYVZd_5WYqaZkL5x4";
@@ -604,10 +766,12 @@ function doGet(e) {
     var response = {
       status: "success",
       timestamp: new Date().toISOString(),
+      newLeadsCount: newLeads.length,
       clientsCount: clients.length,
       noCasesCount: noCases.length,
       bugsCount: bugs.length,
       roadmapCount: roadmap.length,
+      newLeads: newLeads,
       clients: clients,
       noCases: noCases,
       bugs: bugs,
@@ -637,7 +801,18 @@ function doPost(e) {
     var updatedRoadmap = 0;
     var newNotesRecorded = 0;
 
-    // 1. עדכון גליון "ראשי" והערות
+    // 1. עדכון גליון "לידים חדשים" (תיעוד לקוחות)
+    if (data.newLeads && data.newLeads.length > 0) {
+      var leadsSheet = ss.getSheetByName("לידים חדשים");
+      if (leadsSheet) {
+        var leadsRows = data.newLeads;
+        var numCols = leadsRows[0].length;
+        leadsSheet.getRange(2, 1, leadsRows.length, numCols).setValues(leadsRows);
+        updatedClients = Math.max(updatedClients, leadsRows.length);
+      }
+    }
+
+    // 2. עדכון גליון "ראשי" והערות
     if (data.clients && data.clients.length > 0) {
       var sheet = ss.getSheetByName(CFG.MAIN) || ss.getSheetByName("ראשי") || ss.getActiveSheet();
       var rows = data.clients;
@@ -656,7 +831,7 @@ function doPost(e) {
 
       // כתיבת הנתונים המעודכנים לגליון ראשי
       sheet.getRange(2, 1, rows.length, numCols).setValues(rows);
-      updatedClients = rows.length;
+      updatedClients = Math.max(updatedClients, rows.length);
 
       // בדיקה ותיעוד הערות חדשות שנשלחו מהאפליקציה ביומן הפעילות + רענון קומבו
       var now = new Date();
