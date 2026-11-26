@@ -84,21 +84,6 @@ const FIELD_MAPPING_RULES: Array<{
     }
   },
   {
-    clientField: 'company',
-    clientFieldLabel: 'שם חברה / סוכנות',
-    matches: (k, l) => {
-      const lowerK = k.toLowerCase();
-      const lowerL = l.toLowerCase();
-      return (
-        lowerK.includes('company') ||
-        lowerK.includes('agency') ||
-        lowerL.includes('חברה') ||
-        lowerL.includes('סוכנות') ||
-        lowerL.includes('עסק')
-      );
-    }
-  },
-  {
     clientField: 'phone',
     clientFieldLabel: 'טלפון',
     matches: (k, l) => {
@@ -110,6 +95,31 @@ const FIELD_MAPPING_RULES: Array<{
         lowerK.includes('tel') ||
         lowerL.includes('טלפון') ||
         lowerL.includes('נייד')
+      );
+    }
+  },
+  {
+    clientField: 'company',
+    clientFieldLabel: 'שם חברה / סוכנות',
+    matches: (k, l) => {
+      const lowerK = k.toLowerCase();
+      const lowerL = l.toLowerCase();
+      if (
+        lowerK.includes('phone') || 
+        lowerK.includes('mobile') || 
+        lowerK.includes('tel') || 
+        lowerK.includes('mail') || 
+        lowerL.includes('טלפון') || 
+        lowerL.includes('מייל')
+      ) {
+        return false;
+      }
+      return (
+        lowerK.includes('company') ||
+        lowerK.includes('agency') ||
+        lowerL.includes('חברה') ||
+        lowerL.includes('סוכנות') ||
+        lowerL.includes('עסק')
       );
     }
   },
@@ -472,10 +482,10 @@ export const createClientFromRow = (
   });
 
   // Fallbacks from raw row keys if columns didn't catch them
-  if (!name) name = row.name || row.fullName || row['שם מלא'] || row['שם איש קשר'] || company || 'לקוח מטבלה';
-  if (!company) company = row.company || row['חברה / עסק'] || row['חברה'] || name;
-  if (!phone) phone = row.phone || row['טלפון'] || row.mobile || '';
-  if (!email) email = row.email || row['אימייל'] || row.mail || '';
+  if (!name) name = row.fullName || row.name || row['שם מלא'] || row['שם איש קשר'] || company || 'לקוח מטבלה';
+  if (!company) company = row.companyName || row.company_name || row.company || row['חברה / עסק'] || row['חברה'] || name;
+  if (!phone) phone = row.companyPhone || row.company_phone || row.phone || row['טלפון'] || row['טלפון חברה'] || row.mobile || '';
+  if (!email) email = row.email || row.mail || row['אימייל'] || '';
 
   const today = new Date().toISOString().slice(0, 10);
 

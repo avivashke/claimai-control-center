@@ -311,8 +311,11 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
         {/* Drawer Header */}
         <div className="p-5 border-b border-slate-800 bg-slate-850 flex items-center justify-between">
           <div className="flex items-center gap-3 flex-1 min-w-0 mr-2">
-            <div className="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold text-sm shrink-0">
-              {client.id}
+            <div 
+              className="h-10 px-2.5 min-w-[40px] max-w-[120px] rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold font-mono text-xs shrink-0 truncate"
+              title={client.id}
+            >
+              {client.id.length > 9 ? `${client.id.slice(0, 4)}...${client.id.slice(-3)}` : client.id}
             </div>
             <div className="flex-1 min-w-0">
               {canEdit ? (
