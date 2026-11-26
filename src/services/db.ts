@@ -108,7 +108,31 @@ export const checkSupabaseHealth = async (): Promise<{ isConnected: boolean; mes
 };
 
 // Database initialization & seeding
-export const CURRENT_DATA_VERSION = '2026-11-24-v4-eyal-claimi';
+export const CURRENT_DATA_VERSION = '2026-11-26-v5-tables-fix';
+const DELETED_CUSTOM_TABLES_KEY = 'claimai_deleted_custom_tables';
+
+export const getDeletedCustomTableIds = (): string[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(DELETED_CUSTOM_TABLES_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+export const markCustomTableAsDeleted = (tableId: string): void => {
+  if (typeof window === 'undefined') return;
+  const deleted = getDeletedCustomTableIds();
+  if (!deleted.includes(tableId)) {
+    deleted.push(tableId);
+    try {
+      localStorage.setItem(DELETED_CUSTOM_TABLES_KEY, JSON.stringify(deleted));
+    } catch (e) {
+      console.warn('Failed to save deleted table id to localStorage:', e);
+    }
+  }
+};
 
 export const initDatabase = async (): Promise<{ clientsCount: number; productCount: number; tablesCount: number; usersCount: number }> => {
   if (USE_LOCAL_API) {
@@ -131,13 +155,19 @@ export const initDatabase = async (): Promise<{ clientsCount: number; productCou
     }
   }
   try {
+    const deletedTableIds = getDeletedCustomTableIds();
     const currentVersion = localStorage.getItem('claimai_data_version');
     if (currentVersion !== CURRENT_DATA_VERSION) {
       console.log('Syncing database with new data version:', CURRENT_DATA_VERSION);
       await db.clients.clear();
       await db.clients.bulkAdd(seedClientsData as Client[]);
       for (const t of seedCustomTablesData as CustomTable[]) {
-        await db.customTables.put(t);
+        if (!deletedTableIds.includes(t.id) && t.id !== 'table-users-export') {
+          await db.customTables.put(t);
+        }
+      }
+      if (deletedTableIds.includes('table-users-export')) {
+        await db.customTables.delete('table-users-export');
       }
       await db.users.clear();
       await db.users.bulkAdd(seedUsersData as AppUser[]);
@@ -166,7 +196,12 @@ export const initDatabase = async (): Promise<{ clientsCount: number; productCou
 
     if (tablesCount === 0) {
       console.log('Seeding initial Custom Tables into IndexedDB...');
-      await db.customTables.bulkAdd(seedCustomTablesData as CustomTable[]);
+      const seedTables = (seedCustomTablesData as CustomTable[]).filter(
+        t => !deletedTableIds.includes(t.id) && t.id !== 'table-users-export'
+      );
+      if (seedTables.length > 0) {
+        await db.customTables.bulkAdd(seedTables);
+      }
     }
 
     if (usersCount === 0) {
@@ -361,31 +396,44 @@ export const deleteProductItem = async (id: string): Promise<void> => {
 
 // Custom Dynamic Tables Operations
 export const getCustomTables = async (): Promise<CustomTable[]> => {
+  const deletedTableIds = getDeletedCustomTableIds();
   if (USE_LOCAL_API) {
     try {
       const res = await apiRequest('/api/custom-tables');
-      return await res.json();
+      const list = await res.json();
+      return (list || []).filter((t: any) => !deletedTableIds.includes(t.id));
     } catch (e) {
       console.error('Failed to get custom tables from local API, falling back to IndexedDB', e);
     }
   }
   try {
-    const list = await db.customTables.toArray();
-    if (list.length === 0) {
-      await initDatabase();
-      return await db.customTables.toArray();
-    }
-    // Ensure all seed custom tables (like table-no-cases) are present in IndexedDB
-    for (const st of seedCustomTablesData as CustomTable[]) {
-      if (!list.some(t => t.id === st.id)) {
-        await db.customTables.put(st);
-        list.push(st);
+    const rawList = await db.customTables.toArray();
+    
+    // Purge any tables that were marked as deleted
+    for (const deletedId of deletedTableIds) {
+      if (rawList.some(t => t.id === deletedId)) {
+        await db.customTables.delete(deletedId);
       }
     }
+
+    const list = rawList.filter(t => !deletedTableIds.includes(t.id));
+    if (list.length === 0) {
+      await initDatabase();
+      const rechecked = await db.customTables.toArray();
+      return rechecked.filter(t => !deletedTableIds.includes(t.id));
+    }
+
+    // Ensure only essential primary sheet tables (like table-no-cases) are present if NOT deleted
+    const noCasesSeed = (seedCustomTablesData as CustomTable[]).find(t => t.id === 'table-no-cases');
+    if (noCasesSeed && !deletedTableIds.includes('table-no-cases') && !list.some(t => t.id === 'table-no-cases')) {
+      await db.customTables.put(noCasesSeed);
+      list.push(noCasesSeed);
+    }
+
     return list;
   } catch (e) {
     console.error('Failed to get custom tables', e);
-    return seedCustomTablesData as CustomTable[];
+    return (seedCustomTablesData as CustomTable[]).filter(t => !deletedTableIds.includes(t.id) && t.id !== 'table-users-export');
   }
 };
 
@@ -417,6 +465,7 @@ export const saveCustomTable = async (table: CustomTable): Promise<void> => {
 };
 
 export const deleteCustomTable = async (tableId: string): Promise<void> => {
+  markCustomTableAsDeleted(tableId);
   if (USE_LOCAL_API) {
     try {
       await apiRequest(`/api/custom-tables/${tableId}`, { method: 'DELETE' });

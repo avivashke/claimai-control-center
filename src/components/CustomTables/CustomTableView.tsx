@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { 
   Table as TableIcon, 
   Search, 
@@ -84,6 +84,81 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
   // Inline editing state
   const [editingCell, setEditingCell] = useState<{ rowId: string; colKey: string } | null>(null);
   const [editCellValue, setEditCellValue] = useState<string>('');
+
+  // Excel-style Column Width Resizing State
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
+    if (!currentTable?.id) return {};
+    try {
+      const saved = localStorage.getItem(`claimai_table_widths_${currentTable.id}`);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    if (!currentTable?.id) return;
+    try {
+      const saved = localStorage.getItem(`claimai_table_widths_${currentTable.id}`);
+      setColumnWidths(saved ? JSON.parse(saved) : {});
+    } catch {
+      setColumnWidths({});
+    }
+  }, [currentTable?.id]);
+
+  const [resizingColKey, setResizingColKey] = useState<string | null>(null);
+
+  const getColWidth = (col: { key: string; type?: string; label?: string }): number => {
+    if (columnWidths[col.key]) return columnWidths[col.key];
+    if (col.key === '__crm_sync__') return 220;
+    if (col.type === 'email' || col.label?.includes('חברה') || col.label?.includes('אימייל')) return 190;
+    if (col.type === 'date' || col.label?.includes('תאריך')) return 130;
+    if (col.type === 'number' || col.label?.includes('תביעות') || col.label?.includes('ימי')) return 120;
+    return 160;
+  };
+
+  const totalTableWidth = useMemo(() => {
+    const syncWidth = getColWidth({ key: '__crm_sync__' });
+    const colsWidth = (currentTable?.columns || []).reduce((sum, col) => sum + getColWidth(col), 0);
+    return 48 + syncWidth + colsWidth + 64;
+  }, [currentTable?.columns, columnWidths]);
+
+  const handleResizeStart = (colKey: string, initialWidth: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const startX = e.clientX;
+    const isRtl = document.dir === 'rtl' || (typeof window !== 'undefined' && getComputedStyle(document.body).direction === 'rtl');
+    setResizingColKey(colKey);
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      // In RTL, dragging left increases width; in LTR, dragging right increases width
+      const delta = isRtl ? (startX - moveEvent.clientX) : (moveEvent.clientX - startX);
+      const newWidth = Math.max(70, Math.min(900, Math.round(initialWidth + delta)));
+
+      setColumnWidths(prev => ({
+        ...prev,
+        [colKey]: newWidth
+      }));
+    };
+
+    const handleMouseUp = () => {
+      setResizingColKey(null);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      if (currentTable?.id) {
+        setColumnWidths(latest => {
+          try {
+            localStorage.setItem(`claimai_table_widths_${currentTable.id}`, JSON.stringify(latest));
+          } catch {}
+          return latest;
+        });
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
 
   // Column Reordering (Drag and Drop)
   const [draggedColKey, setDraggedColKey] = useState<string | null>(null);
@@ -510,31 +585,68 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
         <div className="overflow-x-auto overflow-y-auto h-[calc(100vh-270px)] min-h-[420px] relative scroll-smooth">
           <table 
             style={{ 
-              minWidth: `${Math.max(1000, 260 + currentTable.columns.length * 160)}px`, 
+              width: `${totalTableWidth}px`,
+              minWidth: `${totalTableWidth}px`, 
               borderCollapse: 'separate', 
-              borderSpacing: 0 
+              borderSpacing: 0,
+              tableLayout: 'fixed'
             }} 
             className="w-full text-right text-xs"
           >
             <thead style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="bg-slate-900 sticky top-0 z-20 transition-colors">
               <tr style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="border-b border-slate-700 bg-slate-900 transition-colors">
                 {/* Index / ID Header */}
-                <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-0 z-20 bg-slate-900 shadow-sm py-2 px-3 w-12 text-slate-400 text-center font-mono border-b border-slate-700 transition-colors">
+                <th style={{ backgroundColor: 'var(--bg-th, #0f172a)', width: '48px', minWidth: '48px', maxWidth: '48px' }} className="sticky top-0 z-20 bg-slate-900 shadow-sm py-2 px-3 text-slate-400 text-center font-mono border-b border-slate-700 transition-colors">
                   #
                 </th>
 
                 {/* Cross-table Match & Sync Column Header */}
-                <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-0 z-20 bg-slate-900 shadow-sm py-2 px-3 w-56 min-w-[220px] text-amber-400 font-bold border-l border-slate-800 border-b border-slate-700 transition-colors">
-                  <div className="flex items-center gap-1.5">
-                    <GitCompare className="w-3.5 h-3.5" />
-                    <span>סנכרון וכפילויות CRM</span>
-                  </div>
-                </th>
+                {(() => {
+                  const syncColWidth = getColWidth({ key: '__crm_sync__' });
+                  return (
+                    <th 
+                      style={{ 
+                        width: `${syncColWidth}px`,
+                        minWidth: `${syncColWidth}px`,
+                        maxWidth: `${syncColWidth}px`,
+                        backgroundColor: 'var(--bg-th, #0f172a)' 
+                      }} 
+                      className="sticky top-0 z-20 bg-slate-900 shadow-sm py-2 px-3 text-amber-400 font-bold border-l border-slate-800 border-b border-slate-700 transition-colors relative group select-none"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <GitCompare className="w-3.5 h-3.5" />
+                        <span className="truncate">סנכרון וכפילויות CRM</span>
+                      </div>
+
+                      {/* Excel-style Drag-to-Resize Handle */}
+                      <div
+                        onMouseDown={(e) => handleResizeStart('__crm_sync__', syncColWidth, e)}
+                        onDoubleClick={(e) => {
+                          e.stopPropagation();
+                          setColumnWidths(prev => {
+                            const next = { ...prev };
+                            delete next['__crm_sync__'];
+                            try { localStorage.setItem(`claimai_table_widths_${currentTable.id}`, JSON.stringify(next)); } catch {}
+                            return next;
+                          });
+                        }}
+                        className={`absolute left-0 top-0 bottom-0 w-2.5 -ml-1 cursor-col-resize z-30 transition-all ${
+                          resizingColKey === '__crm_sync__'
+                            ? 'bg-purple-500 shadow-lg scale-x-125'
+                            : 'hover:bg-purple-500/60 active:bg-purple-400 bg-transparent'
+                        }`}
+                        title="גרור כדי להרחיב או לצמצם רוחב (דאבל-קליק לאיפוס)"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </th>
+                  );
+                })()}
 
                 {/* Custom Dynamic Column Headers */}
                 {currentTable.columns.map(col => {
                   const isDragging = draggedColKey === col.key;
                   const isOver = dragOverColKey === col.key;
+                  const colWidth = getColWidth(col);
 
                   return (
                     <th 
@@ -547,17 +659,19 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
                       onDragEnd={handleColDragEnd}
                       onClick={() => handleToggleSort(col.key)}
                       style={{ 
-                        minWidth: col.type === 'email' || col.label.includes('חברה') ? '180px' : '150px',
+                        width: `${colWidth}px`,
+                        minWidth: `${colWidth}px`,
+                        maxWidth: `${colWidth}px`,
                         backgroundColor: 'var(--bg-th, #0f172a)'
                       }}
-                      className={`sticky top-0 z-20 bg-slate-900 shadow-sm py-2 px-3 whitespace-nowrap select-none cursor-grab active:cursor-grabbing hover:bg-slate-800 transition-all group border-b border-slate-700 ${
+                      className={`sticky top-0 z-20 bg-slate-900 shadow-sm py-2 px-3 whitespace-nowrap select-none cursor-grab active:cursor-grabbing hover:bg-slate-800 transition-all group border-b border-slate-700 relative ${
                         isOver && dropSide === 'right' ? 'border-r-2 border-r-purple-400' : ''
                       } ${
                         isOver && dropSide === 'left' ? 'border-l-2 border-l-purple-400' : ''
                       } ${isDragging ? 'opacity-40 bg-slate-800' : ''}`}
-                      title="גרור לשינוי סדר העמודה ימינה או שמאלה (לחץ למיון)"
+                      title="גרור לשינוי סדר העמודה (לחץ למיון)"
                     >
-                      <div className="flex items-center justify-between gap-1.5">
+                      <div className="flex items-center justify-between gap-1.5 overflow-hidden">
                         <div className="flex items-center gap-1 min-w-0">
                           <GripVertical className="w-3 h-3 text-slate-500 opacity-40 group-hover:opacity-100 transition-opacity shrink-0 cursor-grab" />
                           <span className="font-bold text-slate-200 group-hover:text-white truncate" title={col.label}>
@@ -571,12 +685,33 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
                           <ArrowUpDown className="w-3 h-3 text-slate-500 group-hover:text-slate-300" />
                         </div>
                       </div>
+
+                      {/* Excel-style Drag-to-Resize Handle */}
+                      <div
+                        onMouseDown={(e) => handleResizeStart(col.key, colWidth, e)}
+                        onDoubleClick={(e) => {
+                          e.stopPropagation();
+                          setColumnWidths(prev => {
+                            const next = { ...prev };
+                            delete next[col.key];
+                            try { localStorage.setItem(`claimai_table_widths_${currentTable.id}`, JSON.stringify(next)); } catch {}
+                            return next;
+                          });
+                        }}
+                        className={`absolute left-0 top-0 bottom-0 w-2.5 -ml-1 cursor-col-resize z-30 transition-all ${
+                          resizingColKey === col.key
+                            ? 'bg-purple-500 shadow-lg scale-x-125'
+                            : 'hover:bg-purple-500/60 active:bg-purple-400 bg-transparent'
+                        }`}
+                        title="גרור כדי להרחיב או לצמצם רוחב (דאבל-קליק לאיפוס)"
+                        onClick={(e) => e.stopPropagation()}
+                      />
                     </th>
                   );
                 })}
 
                 {/* Actions Header */}
-                <th style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="sticky top-0 z-20 bg-slate-900 shadow-sm py-2 px-3 w-16 text-center text-slate-400 border-b border-slate-700 transition-colors">
+                <th style={{ backgroundColor: 'var(--bg-th, #0f172a)', width: '64px', minWidth: '64px', maxWidth: '64px' }} className="sticky top-0 z-20 bg-slate-900 shadow-sm py-2 px-3 text-center text-slate-400 border-b border-slate-700 transition-colors">
                   פעולות
                 </th>
               </tr>
@@ -606,7 +741,14 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
                       </td>
 
                       {/* Deduplication & Two-Way Sync Actions */}
-                      <td className="py-2 px-3 border-l border-slate-800">
+                      <td 
+                        style={{
+                          width: `${getColWidth({ key: '__crm_sync__' })}px`,
+                          minWidth: `${getColWidth({ key: '__crm_sync__' })}px`,
+                          maxWidth: `${getColWidth({ key: '__crm_sync__' })}px`,
+                        }}
+                        className="py-2 px-3 border-l border-slate-800 overflow-hidden"
+                      >
                         {match ? (
                           <div className="space-y-1.5">
                             <div className="flex items-center gap-1.5">
@@ -655,10 +797,16 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
                       {currentTable.columns.map(col => {
                         const val = row[col.key];
                         const isEditingThis = editingCell?.rowId === row.id && editingCell?.colKey === col.key;
+                        const colWidth = getColWidth(col);
+                        const cellStyle = { 
+                          width: `${colWidth}px`, 
+                          minWidth: `${colWidth}px`, 
+                          maxWidth: `${colWidth}px` 
+                        };
 
                         if (isEditingThis) {
                           return (
-                            <td key={col.key} className="py-1 px-2">
+                            <td key={col.key} style={cellStyle} className="py-1 px-2">
                               <div className="flex items-center gap-1">
                                 <input
                                   type={col.type === 'number' ? 'number' : 'text'}
@@ -686,29 +834,26 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
                           );
                         }
 
-                        // Render based on column type
-                        const cellStyle = { minWidth: col.type === 'email' || col.label.includes('חברה') ? '180px' : '150px' };
-
                         if (col.type === 'phone' && val) {
                           const wa = formatWhatsAppNumber(val);
                           return (
                             <td 
                               key={col.key} 
                               style={cellStyle}
-                              className="py-2 px-3 whitespace-nowrap font-mono text-slate-300 cursor-pointer"
+                              className="py-2 px-3 whitespace-nowrap font-mono text-slate-300 cursor-pointer overflow-hidden"
                               onDoubleClick={() => {
                                 setEditingCell({ rowId: row.id, colKey: col.key });
                                 setEditCellValue(String(val || ''));
                               }}
                             >
-                              <div className="flex items-center gap-1.5">
-                                <span>{String(val)}</span>
+                              <div className="flex items-center gap-1.5 truncate">
+                                <span className="truncate">{String(val)}</span>
                                 {wa && (
                                   <a
                                     href={`https://wa.me/${wa}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="w-5 h-5 rounded bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 flex items-center justify-center border border-emerald-500/30"
+                                    className="w-5 h-5 rounded bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 flex items-center justify-center border border-emerald-500/30 shrink-0"
                                     title="פתח שיחת וואטסאפ"
                                   >
                                     <MessageSquare className="w-3 h-3" />
@@ -724,13 +869,13 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
                             <td 
                               key={col.key} 
                               style={cellStyle}
-                              className="py-2 px-3 whitespace-nowrap cursor-pointer"
+                              className="py-2 px-3 whitespace-nowrap cursor-pointer overflow-hidden"
                               onDoubleClick={() => {
                                 setEditingCell({ rowId: row.id, colKey: col.key });
                                 setEditCellValue(String(val || ''));
                               }}
                             >
-                              <a href={`mailto:${val}`} className="text-blue-400 hover:underline">
+                              <a href={`mailto:${val}`} className="text-blue-400 hover:underline truncate block">
                                 {String(val)}
                               </a>
                             </td>
@@ -742,13 +887,13 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
                             <td 
                               key={col.key} 
                               style={cellStyle}
-                              className="py-2 px-3 whitespace-nowrap cursor-pointer"
+                              className="py-2 px-3 whitespace-nowrap cursor-pointer overflow-hidden"
                               onDoubleClick={() => {
                                 setEditingCell({ rowId: row.id, colKey: col.key });
                                 setEditCellValue(String(val || ''));
                               }}
                             >
-                              <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-purple-500/15 text-purple-300 border border-purple-500/30 truncate inline-block max-w-full">
                                 {String(val)}
                               </span>
                             </td>
@@ -760,13 +905,15 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
                             <td 
                               key={col.key} 
                               style={cellStyle}
-                              className="py-2 px-3 whitespace-nowrap font-mono font-bold text-slate-200 cursor-pointer"
+                              className="py-2 px-3 whitespace-nowrap font-mono font-bold text-slate-200 cursor-pointer overflow-hidden"
                               onDoubleClick={() => {
                                 setEditingCell({ rowId: row.id, colKey: col.key });
                                 setEditCellValue(String(val ?? ''));
                               }}
                             >
-                              {val !== undefined && val !== null && val !== '' ? Number(val).toLocaleString() : '-'}
+                              <span className="truncate block">
+                                {val !== undefined && val !== null && val !== '' ? Number(val).toLocaleString() : '-'}
+                              </span>
                             </td>
                           );
                         }
@@ -775,14 +922,14 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({
                           <td 
                             key={col.key} 
                             style={cellStyle}
-                            className="py-2 px-3 text-slate-300 whitespace-nowrap max-w-xs truncate cursor-pointer hover:text-white"
+                            className="py-2 px-3 text-slate-300 whitespace-nowrap truncate cursor-pointer hover:text-white overflow-hidden"
                             title={String(val || '')}
                             onDoubleClick={() => {
                               setEditingCell({ rowId: row.id, colKey: col.key });
                               setEditCellValue(String(val ?? ''));
                             }}
                           >
-                            {String(val ?? '')}
+                            <span className="truncate block">{String(val ?? '')}</span>
                           </td>
                         );
                       })}

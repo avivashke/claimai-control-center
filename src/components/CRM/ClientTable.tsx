@@ -207,6 +207,68 @@ export const ClientTable: React.FC<ClientTableProps> = ({
   ];
 
   const CRM_COL_STORAGE_KEY = 'claimai_crm_column_order';
+  const CRM_COL_WIDTHS_KEY = 'claimai_crm_column_widths';
+
+  // CRM Column Resizing (Excel-style)
+  const [crmColumnWidths, setCrmColumnWidths] = useState<Record<string, number>>(() => {
+    try {
+      const saved = localStorage.getItem(CRM_COL_WIDTHS_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error('Failed to parse crm column widths:', e);
+    }
+    return {};
+  });
+
+  const [crmResizingColKey, setCrmResizingColKey] = useState<string | null>(null);
+
+  const getCrmColWidth = (key: string): number => {
+    if (crmColumnWidths[key]) return crmColumnWidths[key];
+    switch (key) {
+      case 'contact': return 190;
+      case 'businessType': return 140;
+      case 'status': return 180;
+      case 'contactDetails': return 160;
+      case 'lastNote': return 260;
+      case 'actions': return 80;
+      default: return 140;
+    }
+  };
+
+  const handleCrmResizeStart = (colKey: string, initialWidth: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const startX = e.clientX;
+    const isRtl = document.dir === 'rtl' || (typeof window !== 'undefined' && getComputedStyle(document.body).direction === 'rtl');
+    setCrmResizingColKey(colKey);
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      // In RTL, dragging left increases width; in LTR, dragging right increases width
+      const delta = isRtl ? (startX - moveEvent.clientX) : (moveEvent.clientX - startX);
+      const newWidth = Math.max(60, Math.min(800, Math.round(initialWidth + delta)));
+
+      setCrmColumnWidths(prev => ({
+        ...prev,
+        [colKey]: newWidth
+      }));
+    };
+
+    const handleMouseUp = () => {
+      setCrmResizingColKey(null);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      setCrmColumnWidths(latest => {
+        try {
+          localStorage.setItem(CRM_COL_WIDTHS_KEY, JSON.stringify(latest));
+        } catch {}
+        return latest;
+      });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
 
   const [crmColumnOrder, setCrmColumnOrder] = useState<string[]>(() => {
     try {
@@ -323,6 +385,10 @@ export const ClientTable: React.FC<ClientTableProps> = ({
     return ordered;
   }, [crmColumnOrder, crmCustomColumns]);
 
+  const totalCrmWidth = useMemo(() => {
+    return activeColumns.reduce((sum, col) => sum + getCrmColWidth(col.key), 0);
+  }, [activeColumns, crmColumnWidths]);
+
   const renderColCell = (
     col: CrmColDef,
     client: Client,
@@ -330,13 +396,20 @@ export const ClientTable: React.FC<ClientTableProps> = ({
     waNumber: string | null,
     accentColor: string
   ) => {
+    const colWidth = getCrmColWidth(col.key);
+    const cellStyle: React.CSSProperties = {
+      width: `${colWidth}px`,
+      minWidth: `${colWidth}px`,
+      maxWidth: `${colWidth}px`,
+    };
+
     switch (col.key) {
       case 'contact':
         return (
           <td 
             key={`${client.id}-${col.key}`}
-            style={{ borderRight: `4px solid ${accentColor}` }}
-            className="py-2 px-2.5 min-w-[170px]"
+            style={{ ...cellStyle, borderRight: `4px solid ${accentColor}` }}
+            className="py-2 px-2.5 overflow-hidden"
             onClick={(e) => {
               if (editingClientId === client.id) {
                 e.stopPropagation();
@@ -439,11 +512,11 @@ export const ClientTable: React.FC<ClientTableProps> = ({
 
       case 'businessType':
         return (
-          <td key={`${client.id}-${col.key}`} className="py-2 px-2.5 min-w-[140px]">
+          <td key={`${client.id}-${col.key}`} style={cellStyle} className="py-2 px-2.5 overflow-hidden">
             {canEdit ? (
               renderBusinessTypeCell(client)
             ) : (
-              <span className="px-1.5 py-0.5 rounded text-[8.5px] font-medium bg-slate-800 text-slate-300 border border-slate-700 block max-w-xs truncate" title={client.businessType || ''}>
+              <span className="px-1.5 py-0.5 rounded text-[8.5px] font-medium bg-slate-800 text-slate-300 border border-slate-700 block truncate" title={client.businessType || ''}>
                 {client.businessType || '-'}
               </span>
             )}
@@ -452,12 +525,12 @@ export const ClientTable: React.FC<ClientTableProps> = ({
 
       case 'status':
         return (
-          <td key={`${client.id}-${col.key}`} className="py-2 px-2.5 min-w-[180px]" onClick={(e) => e.stopPropagation()}>
+          <td key={`${client.id}-${col.key}`} style={cellStyle} className="py-2 px-2.5 overflow-hidden" onClick={(e) => e.stopPropagation()}>
             {canEdit ? (
               <select
                 value={client.status}
                 onChange={(e) => onUpdateClientStatus(client.id, e.target.value)}
-                className={`text-[9.5px] font-semibold px-2 py-0.5 rounded-md border focus:outline-none transition-all cursor-pointer shadow-sm ${style.bg} ${style.text} ${style.border} w-full`}
+                className={`text-[9.5px] font-semibold px-2 py-0.5 rounded-md border focus:outline-none transition-all cursor-pointer shadow-sm ${style.bg} ${style.text} ${style.border} w-full truncate`}
               >
                 {ALL_STATUSES.map(s => (
                   <option key={s} value={s} className="bg-slate-900 text-slate-200 truncate">
@@ -466,12 +539,12 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                 ))}
               </select>
             ) : (
-              <span className={`text-[9.5px] font-semibold px-2 py-0.5 rounded-md border inline-block shadow-sm ${style.bg} ${style.text} ${style.border}`}>
+              <span className={`text-[9.5px] font-semibold px-2 py-0.5 rounded-md border inline-block shadow-sm ${style.bg} ${style.text} ${style.border} truncate max-w-full`}>
                 {client.status}
               </span>
             )}
             {client.subStatus && (
-              <div className="text-[8px] text-slate-400 mt-0.5">
+              <div className="text-[8px] text-slate-400 mt-0.5 truncate">
                 {client.subStatus}
               </div>
             )}
@@ -480,14 +553,14 @@ export const ClientTable: React.FC<ClientTableProps> = ({
 
       case 'contactDetails':
         return (
-          <td key={`${client.id}-${col.key}`} className="py-2 px-2.5" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-1">
+          <td key={`${client.id}-${col.key}`} style={cellStyle} className="py-2 px-2.5 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-1 overflow-hidden">
               {client.phone && (
                 <>
                   <a
                     href={`tel:${client.phone}`}
                     title={`חייג: ${client.phone}`}
-                    className="w-5 h-5 rounded-lg bg-slate-800 hover:bg-blue-600/30 border border-slate-700 hover:border-blue-500/50 text-slate-300 hover:text-blue-300 flex items-center justify-center transition-all"
+                    className="w-5 h-5 rounded-lg bg-slate-800 hover:bg-blue-600/30 border border-slate-700 hover:border-blue-500/50 text-slate-300 hover:text-blue-300 flex items-center justify-center transition-all shrink-0"
                   >
                     <Phone className="w-2.5 h-2.5" />
                   </a>
@@ -497,24 +570,24 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                       target="_blank"
                       rel="noopener noreferrer"
                       title={`שלח הודעת וואטסאפ ל-${client.phone}`}
-                      className="w-5 h-5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/30 text-emerald-300 flex items-center justify-center transition-all"
+                      className="w-5 h-5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/30 text-emerald-300 flex items-center justify-center transition-all shrink-0"
                     >
                       <MessageSquare className="w-2.5 h-2.5" />
                     </a>
                   )}
-                  <span className="font-mono text-[8px] text-slate-300 truncate max-w-xs">
+                  <span className="font-mono text-[8px] text-slate-300 truncate">
                     {client.phone}
                   </span>
                 </>
               )}
               {!client.phone && (
-                <span className="text-slate-600 text-[8px]">אין טלפון</span>
+                <span className="text-slate-600 text-[8px] truncate">אין טלפון</span>
               )}
               {client.email && (
                 <a
                   href={`mailto:${client.email}`}
                   title={client.email}
-                  className="w-5 h-5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-all mr-0.5"
+                  className="w-5 h-5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-all mr-0.5 shrink-0"
                 >
                   <Mail className="w-2.5 h-2.5" />
                 </a>
@@ -525,7 +598,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
 
       case 'lastNote':
         return (
-          <td key={`${client.id}-${col.key}`} className="py-2 px-2.5 max-w-xs">
+          <td key={`${client.id}-${col.key}`} style={cellStyle} className="py-2 px-2.5 overflow-hidden">
             {(() => {
               const hasLastNote = !!client.lastNote?.trim();
               const hasGeneralNotes = !!client.generalNotes?.trim();
@@ -540,34 +613,34 @@ export const ClientTable: React.FC<ClientTableProps> = ({
 
               return (
                 <div 
-                  className="space-y-1" 
+                  className="space-y-1 overflow-hidden" 
                   title={`${hasLastNote ? `הערה אחרונה:\n${client.lastNote}\n\n` : ''}${hasGeneralNotes ? `הערות כלליות:\n${client.generalNotes}` : ''}`}
                 >
                   {matchedInNotes && (
-                    <span className="inline-flex items-center gap-0.5 text-[7.5px] font-bold text-amber-300 bg-amber-500/20 px-1.5 py-0.2 rounded border border-amber-500/30">
+                    <span className="inline-flex items-center gap-0.5 text-[7.5px] font-bold text-amber-300 bg-amber-500/20 px-1.5 py-0.2 rounded border border-amber-500/30 truncate max-w-full">
                       🔍 נמצא בהערות
                     </span>
                   )}
 
                   {hasLastNote && (
-                    <div>
+                    <div className="overflow-hidden">
                       {client.lastNote!.includes('👤') && (
-                        <span className="inline-flex items-center gap-0.5 text-[8px] font-bold text-blue-400 bg-blue-500/10 px-1 py-0.5 rounded border border-blue-500/20 mb-0.5">
+                        <span className="inline-flex items-center gap-0.5 text-[8px] font-bold text-blue-400 bg-blue-500/10 px-1 py-0.5 rounded border border-blue-500/20 mb-0.5 truncate max-w-full">
                           {client.lastNote!.match(/👤\s*([^|\n]+)/)?.[0] || '👤 הערה חתומה'}
                         </span>
                       )}
-                      <p className="text-[8.5px] text-slate-300 line-clamp-2">
+                      <p className="text-[8.5px] text-slate-300 line-clamp-2 break-words">
                         {client.lastNote!.replace(/^[0-9/:\s|]+👤[^|]+\|\s*/, '')}
                       </p>
                     </div>
                   )}
 
                   {hasGeneralNotes && (!hasLastNote || matchedInNotes) && (
-                    <div className={`${hasLastNote ? 'pt-0.5 border-t border-slate-800/60' : ''}`}>
+                    <div className={`overflow-hidden ${hasLastNote ? 'pt-0.5 border-t border-slate-800/60' : ''}`}>
                       {hasLastNote && (
-                        <span className="text-[7.5px] font-semibold text-purple-400 block">הערות כלליות:</span>
+                        <span className="text-[7.5px] font-semibold text-purple-400 block truncate">הערות כלליות:</span>
                       )}
-                      <p className="text-[8.5px] text-slate-400 line-clamp-2">
+                      <p className="text-[8.5px] text-slate-400 line-clamp-2 break-words">
                         {client.generalNotes}
                       </p>
                     </div>
@@ -580,7 +653,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
 
       case 'actions':
         return (
-          <td key={`${client.id}-${col.key}`} className="py-2 px-2.5 text-center">
+          <td key={`${client.id}-${col.key}`} style={cellStyle} className="py-2 px-2.5 text-center overflow-hidden">
             <button
               onClick={() => onSelectClient(client)}
               className="px-2 py-1 rounded-md bg-slate-800/80 group-hover:bg-blue-600 group-hover:text-white border border-slate-700/80 group-hover:border-blue-500 text-slate-300 text-[8.5px] font-semibold transition-all shadow-sm"
@@ -595,7 +668,8 @@ export const ClientTable: React.FC<ClientTableProps> = ({
           return (
             <td
               key={`${client.id}-${col.key}`}
-              className="py-2 px-2.5 min-w-[130px]"
+              style={cellStyle}
+              className="py-2 px-2.5 overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               {renderCustomCell(client, col.customCol)}
@@ -1195,12 +1269,13 @@ export const ClientTable: React.FC<ClientTableProps> = ({
 
             {/* Table Area */}
             <div className="flex-1 min-w-0">
-              <table style={{ tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0 }} className="w-full border-separate border-spacing-0 text-right text-[9px]">
+              <table style={{ width: `${totalCrmWidth}px`, minWidth: `${totalCrmWidth}px`, tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0 }} className="border-separate border-spacing-0 text-right text-[9px]">
                 <thead style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="bg-slate-900 sticky top-0 z-20">
                   <tr style={{ backgroundColor: 'var(--bg-th, #0f172a)' }} className="border-b border-slate-700 bg-slate-900">
                     {activeColumns.map((col) => {
                       const isDragging = draggedColKey === col.key;
                       const isOver = dragOverColKey === col.key;
+                      const colWidth = getCrmColWidth(col.key);
 
                       return (
                         <th
@@ -1211,15 +1286,20 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                           onDragLeave={handleDragLeave}
                           onDrop={(e) => handleDrop(e, col.key)}
                           onDragEnd={handleDragEnd}
-                          style={{ backgroundColor: 'var(--bg-th, #0f172a)' }}
-                          className={`sticky top-0 z-20 bg-slate-900 shadow-sm py-1.5 px-2 select-none cursor-grab active:cursor-grabbing transition-all ${col.minWidth} ${
+                          style={{ 
+                            width: `${colWidth}px`,
+                            minWidth: `${colWidth}px`,
+                            maxWidth: `${colWidth}px`,
+                            backgroundColor: 'var(--bg-th, #0f172a)' 
+                          }}
+                          className={`sticky top-0 z-20 bg-slate-900 shadow-sm py-1.5 px-2 select-none cursor-grab active:cursor-grabbing transition-all relative ${
                             isOver && dropSide === 'right' ? 'border-r-2 border-r-blue-400' : ''
                           } ${
                             isOver && dropSide === 'left' ? 'border-l-2 border-l-blue-400' : ''
                           } ${isDragging ? 'opacity-40 bg-slate-800' : ''}`}
-                          title="גרור כדי לשנות את מיקום העמודה ימינה או שמאלה"
+                          title="גרור לשינוי סדר העמודה (או הרחב/צמצם משמאל)"
                         >
-                          <div className="flex items-center justify-between gap-1 group/th">
+                          <div className="flex items-center justify-between gap-1 group/th overflow-hidden">
                             <div className="flex items-center gap-1 min-w-0">
                               <GripVertical className="w-3 h-3 text-slate-500 opacity-40 group-hover/th:opacity-100 transition-opacity shrink-0 cursor-grab" />
                               <span className="truncate font-bold text-slate-200 group-hover/th:text-white" title={col.label}>
@@ -1235,13 +1315,34 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                                     handleDeleteCrmColumn(col.key);
                                   }
                                 }}
-                                className="text-slate-400 hover:text-rose-400 p-0.5 rounded transition-colors cursor-pointer"
+                                className="text-slate-400 hover:text-rose-400 p-0.5 rounded transition-colors cursor-pointer shrink-0"
                                 title="מחק עמודה זו"
                               >
                                 <X className="w-3 h-3" />
                               </button>
                             )}
                           </div>
+
+                          {/* Excel-style Drag-to-Resize Handle */}
+                          <div
+                            onMouseDown={(e) => handleCrmResizeStart(col.key, colWidth, e)}
+                            onDoubleClick={(e) => {
+                              e.stopPropagation();
+                              setCrmColumnWidths(prev => {
+                                const next = { ...prev };
+                                delete next[col.key];
+                                try { localStorage.setItem(CRM_COL_WIDTHS_KEY, JSON.stringify(next)); } catch {}
+                                return next;
+                              });
+                            }}
+                            className={`absolute left-0 top-0 bottom-0 w-2.5 -ml-1 cursor-col-resize z-30 transition-all ${
+                              crmResizingColKey === col.key
+                                ? 'bg-blue-500 shadow-lg scale-x-125'
+                                : 'hover:bg-blue-500/60 active:bg-blue-400 bg-transparent'
+                            }`}
+                            title="גרור כדי להרחיב או לצמצם רוחב (דאבל-קליק לאיפוס)"
+                            onClick={(e) => e.stopPropagation()}
+                          />
                         </th>
                       );
                     })}
