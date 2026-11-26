@@ -801,7 +801,6 @@ export const ClientTable: React.FC<ClientTableProps> = ({
                       setEditingCrmCell(null);
                     }
                   }}
-                  onBlur={() => handleSaveCrmCell(client, 'lastNote')}
                   className="flex-1 text-[9px] bg-slate-850 text-white border border-blue-500 rounded px-2 py-1 focus:outline-none shadow-inner w-full resize-none"
                   placeholder="הזן הערה (Enter לשמירה, Shift+Enter לירידת שורה)"
                 />

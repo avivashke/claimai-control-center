@@ -236,11 +236,13 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
     performSave(updated);
   };
 
-  // Safe close drawer ensuring any unsaved note gets committed
+  // Safe close drawer
   const handleSafeClose = () => {
-    if (newNote.trim() && canEdit) {
-      handleAddNoteDirect(newNote.trim());
+    if (noteDebounceTimerRef.current) {
+      clearTimeout(noteDebounceTimerRef.current);
+      noteDebounceTimerRef.current = null;
     }
+    setNewNote('');
     onClose();
   };
 
@@ -1043,26 +1045,9 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
                 </div>
                 <textarea
                   rows={3}
-                  placeholder={`הקלד הערה או סיכום שיחה כאן... (נשמר אוטומטית ללא צורך בלחיצה על שום כפתור)`}
+                  placeholder="הקלד הערה או סיכום שיחה כאן... (שמירה ב-Enter או בלחיצה על כפתור שמירה)"
                   value={newNote}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setNewNote(val);
-                    if (noteDebounceTimerRef.current) {
-                      clearTimeout(noteDebounceTimerRef.current);
-                    }
-                    if (val.trim().length > 3) {
-                      setSaveStatus('saving');
-                      noteDebounceTimerRef.current = setTimeout(() => {
-                        handleAddNoteDirect(val);
-                      }, 2000);
-                    }
-                  }}
-                  onBlur={() => {
-                    if (newNote.trim()) {
-                      handleAddNoteDirect(newNote);
-                    }
-                  }}
+                  onChange={(e) => setNewNote(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
@@ -1071,11 +1056,19 @@ export const ClientDrawer: React.FC<ClientDrawerProps> = ({
                   }}
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
-                <div className="flex items-center justify-between pt-1">
-                  <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20">
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>נשמר אוטומטית בעת סיום הקלדה, בלחיצה על Enter או בסגירת הכרטיס</span>
-                  </div>
+                <div className="flex items-center justify-between pt-1 flex-wrap gap-2">
+                  <span className="text-[11px] text-slate-400">
+                    💡 <strong>Enter</strong> לשמירה · <strong>Shift+Enter</strong> לירידת שורה
+                  </span>
+                  <button
+                    type="button"
+                    disabled={!newNote.trim()}
+                    onClick={() => handleAddNoteDirect(newNote)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold shadow-md shadow-blue-600/30 transition-all cursor-pointer"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>שמור הערה (Enter)</span>
+                  </button>
                 </div>
               </div>
             ) : (
